@@ -3,7 +3,7 @@ package vava33.plot2d.auxi;
 import java.awt.Color;
 import java.util.ArrayList;
 
-public class OrientSolucio {
+public class OrientSolucio implements Comparable{
     // statics aplicables a totes les solucions, es a dir caracteristiques de les solucions
     public static int grainIdent; // ens diu si al fitxer hi ha varies solucions(grans) o les d'un sol gra (i properes), 0 o N
     public static int hasFc; // variable de classe que indica si s'especifiquen els factors d'estructura (0=no, 1=si)
@@ -107,5 +107,46 @@ public class OrientSolucio {
 
     public void setValorFrot(float valorFrot) {
         this.valorFrot = valorFrot;
+    }
+    
+//    //Compares its two arguments for order. Returns a negative 
+//    //integer, zero, or a positive integer as the first argument 
+//    //is less than, equal to, or greater than the second.
+//    public int compare(Object arg1, Object arg2) {
+//        try{
+//            OrientSolucio os1=(OrientSolucio)arg1;
+//            OrientSolucio os2=(OrientSolucio)arg2;
+//            if(os1.getValorFrot()>os2.getValorFrot()){
+//                return 1;
+//            }
+//            if(os1.getValorFrot()<os2.getValorFrot()){
+//                return -1;
+//            }
+//            return 0;
+//        }catch(Exception e){
+//            e.printStackTrace();
+//            System.err.println("comparing different object types");
+//            return 0;
+//        }
+//    }
+    @Override
+    //Compares this object with the specified object for order. Returns a 
+    //negative integer, zero, or a positive integer as this object is less 
+    //than, equal to, or greater than the specified object. 
+    public int compareTo(Object arg0) {
+        try{
+            OrientSolucio os=(OrientSolucio)arg0;
+            if(this.getValorFrot()>os.getValorFrot()){
+              return 1;
+            }
+            if(this.getValorFrot()<os.getValorFrot()){
+              return -1;
+            }
+            return 0;
+        }catch(Exception e){
+          e.printStackTrace();
+          System.err.println("comparing different object types");
+          return 0;
+        }
     }
 }

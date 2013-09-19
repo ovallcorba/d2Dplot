@@ -2,6 +2,26 @@ package vava33.plot2d;
 
 /**    
  * // TODO: es podrien unificar les classes Punt...
+ *    ATENCIO!! COMPROVAR A FILEUTILS FILENAMENOEXT QUE ES MENJA UNA LLETRA DE MES, HO HE CANVIAT JA A -1 (130723) pero el
+ *    proper cop comprovar-ho
+ *    
+ * 131008
+ *  - Ordenem arraylist orientSolucio segons Fsum abans d'omplir la llista
+ *  
+ * 130923
+ *  - Cal reestructurar tot lo de les zones excloses per acceptar trapezoides.
+ *  - CurrentRect es seguirà fent servir per Calibració, però generaré un de nou que sigui CurrentShape que serà el que
+ *    treballarà amb ExZones i tot es definirà amb Shape.Polygon. Aleshores també cal canviar la crida a editquadrat per
+ *    la crida a una nova subrutina editpoligon quan s'esta definint les zones excloses i es clica.
+ *  - Save BIN ara també considera Y0toMask (afegit a patt2D el Y0toMask option)
+ *    
+ * 130918
+ *  - Obertura fitxers EDF (ALBA)
+ *  - ImagePanel, prova de flexibilitzar contrast (posant dinamics max, min)
+ *  
+ * 130611
+ *  - Adaptacio D2Dsub nova versio amb més opcions
+ *  - Canvi noms opcions D2Dsub
  * 
  * 130604
  *  - TREC el CODI de D2Dsub
@@ -107,6 +127,7 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.Collections;
 import java.util.Scanner;
 
 import javax.swing.DefaultListModel;
@@ -135,9 +156,10 @@ public class MainFrame extends JFrame {
     private static String separator = System.getProperty("file.separator");
     private static String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     private static String d2dsubExec = "d2Dsub";
-    private static String welcomeMSG = "d2Dplot v1306 (130606) by OV";
-    private static String workdir = "C:\\Ori_TMP\\PROVES_JAVA_D2DSUBEXEC\\";
-
+    private static String welcomeMSG = "d2Dplot v1309 (131126) by OV";
+//    private static String workdir = "C:\\Ori_TMP\\PROVES_JAVA_D2DSUBEXEC\\";
+    private static String workdir = "C:\\ovallcorba\\Dades_difraccio\\2D-INCO\\Mesures-Juliol-ALBA\\";
+    
     private JButton btn05x;
     private JButton btn2x;
     private JButton btnD2Dint;
@@ -213,6 +235,7 @@ public class MainFrame extends JFrame {
                 try {
                     MainFrame frame = new MainFrame();
                     frame.inicialitza();
+                    frame.setLocationRelativeTo(null);
                     frame.setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -701,8 +724,8 @@ public class MainFrame extends JFrame {
 
         File d2File;
         JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm)", "bin", "img",
-                "spr", "gfrm");
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm,edf)", "bin", "img",
+                "spr", "gfrm", "edf");
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setCurrentDirectory(new File(workdir));
         int selection = fileChooser.showOpenDialog(null);
@@ -736,6 +759,8 @@ public class MainFrame extends JFrame {
         } else {
             // afegim les solucions a la llista
             DefaultListModel lm = new DefaultListModel();
+            // ordenem arraylist
+            Collections.sort(panelImatge.getSolucions(),Collections.reverseOrder());
             for (int i = 0; i < panelImatge.getSolucions().size(); i++) {
                 lm.addElement((i + 1) + " " + panelImatge.getSolucions().get(i).getNumReflexions() + " "
                         + panelImatge.getSolucions().get(i).getValorFrot());
@@ -863,7 +888,11 @@ public class MainFrame extends JFrame {
     }
 
     private void inicialitza() {
-        this.setBounds(25, 25, 840, 760); // TODO: podriem mirar de centrar-ho millor...
+        this.setSize(1200, 960); //ho centra el metode main
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        if(this.getWidth()>screenSize.width||this.getHeight()>screenSize.height){
+            this.setSize(screenSize.width-100,screenSize.height-100);
+        }
         tAOut.stat(welcomeMSG);
         FileUtils.setLocale();
     }
@@ -900,11 +929,15 @@ public class MainFrame extends JFrame {
                     endSol = false;
                     panelImatge.getSolucions().get(i).setGrainNr(scSolfile.nextInt());
                     line = scSolfile.nextLine();
+//                    System.out.println(scSolfile.nextLine());// CENTRE
                     scSolfile.nextLine();// CENTRE
                     panelImatge.getSolucions().get(i).setNumReflexions(scSolfile.nextInt());
                     line = scSolfile.nextLine();
                     panelImatge.getSolucions().get(i).setValorFrot(Float.parseFloat(line)); // valor funcio rotacio
-                    scSolfile.nextLine();
+//                    System.out.println(scSolfile.nextLine());
+//                    System.out.println(scSolfile.nextLine());// matriu Rot
+//                    System.out.println(scSolfile.nextLine());// matriu Rot
+//                    System.out.println(scSolfile.nextLine());// matriu Rot
                     scSolfile.nextLine();// matriu Rot
                     scSolfile.nextLine();// matriu Rot
                     scSolfile.nextLine();// matriu Rot
@@ -915,6 +948,7 @@ public class MainFrame extends JFrame {
                             continue;
                         }
                         line = scSolfile.nextLine();
+                        System.out.println("bona "+line);
                         if (line.trim().isEmpty())
                             continue;
                         if (line.trim().startsWith("GRAIN")) {

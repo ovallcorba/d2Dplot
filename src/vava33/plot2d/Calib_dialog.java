@@ -358,15 +358,28 @@ public class Calib_dialog extends JDialog {
         int d1 = Integer.parseInt(this.txt_r1.getText());
         int d2 = Integer.parseInt(this.txt_r2.getText());
 
+        //calculem excentricitat elipses
+        float majRr1=Math.max(anells[0].height, anells[0].width);
+        float menRr1=Math.min(anells[0].height, anells[0].width);
+        float majRr2=Math.max(anells[1].height, anells[1].width);
+        float menRr2=Math.min(anells[1].height, anells[1].width);
+        float ex1=(float)Math.sqrt(1-(menRr1/majRr1)*(menRr1/majRr1));
+        float ex2=(float)Math.sqrt(1-(menRr2/majRr2)*(menRr2/majRr2));
+
+        tAOut.ln("Eccentricity");
+        tAOut.ln(" (ring"+d1+")= "+ex1);
+        tAOut.ln(" (ring"+d2+")= "+ex2);        
+//        tAOut.ln("Angular Eccentricity (º)");
+//        tAOut.ln(" (ring"+d1+")= "+Math.toDegrees(Math.asin(ex1)));
+//        tAOut.ln(" (ring"+d2+")= "+Math.toDegrees(Math.asin(ex2)));        
+
         // primer mirem els radis verticals
-        float r1 = (anells[0].height / 2.f) * pixSize; // mida pixel la fixo per
-                                                       // fer proves
+        float r1 = (anells[0].height / 2.f) * pixSize; 
         float r2 = (anells[1].height / 2.f) * pixSize;
         float vertMD = getMDdist(iniDist, r1, r2, d1, d2);
 
         // segon mirem els radis horitzontals
-        r1 = (anells[0].width / 2.f) * pixSize; // mida pixel la fixo per fer
-                                                // proves
+        r1 = (anells[0].width / 2.f) * pixSize;
         r2 = (anells[1].width / 2.f) * pixSize;
         float horMD = getMDdist(iniDist, r1, r2, d1, d2);
 
@@ -382,10 +395,8 @@ public class Calib_dialog extends JDialog {
         Ymean = (float) (anells[0].getCenterY() + anells[1].getCenterY()) / 2;
 
         tAOut.ln("Beam center (pixel)");
-        tAOut.ln(" (ring2)= [" + FileUtils.dfX_3.format(anells[0].getCenterX()) + ";" + FileUtils.dfX_3.format(anells[0].getCenterY())
-                + "]");
-        tAOut.ln(" (ring8)= [" + FileUtils.dfX_3.format(anells[1].getCenterX()) + ";" + FileUtils.dfX_3.format(anells[1].getCenterY())
-                + "]");
+        tAOut.ln(" (ring"+d1+")= [" + FileUtils.dfX_3.format(anells[0].getCenterX()) + ";" + FileUtils.dfX_3.format(anells[0].getCenterY())+"]");
+        tAOut.ln(" (ring"+d2+")= [" + FileUtils.dfX_3.format(anells[1].getCenterX()) + ";" + FileUtils.dfX_3.format(anells[1].getCenterY())+"]");
         tAOut.ln("  (mean)= [" + FileUtils.dfX_3.format(Xmean) + ";" + FileUtils.dfX_3.format(Ymean) + "]");
 
         // estimacio de la lambda
@@ -393,8 +404,8 @@ public class Calib_dialog extends JDialog {
         float lambdaR8 = (float) (2 * LaB6_d[d2] * (Math.sin(0.5 * Math.atan(r2 / MDmean))));
         WLmean = (lambdaR2 + lambdaR8) / 2;
         tAOut.ln("Wavelength (A)");
-        tAOut.ln(" (ring2)= " + FileUtils.dfX_5.format(lambdaR2));
-        tAOut.ln(" (ring8)= " + FileUtils.dfX_5.format(lambdaR8));
+        tAOut.ln(" (ring"+d1+")= " + FileUtils.dfX_5.format(lambdaR2));
+        tAOut.ln(" (ring"+d2+")= " + FileUtils.dfX_5.format(lambdaR8));
         tAOut.ln(" (mean)= " + FileUtils.dfX_5.format(WLmean));
 
         btnNewButton.setEnabled(true);

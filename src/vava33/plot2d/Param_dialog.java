@@ -38,6 +38,8 @@ public class Param_dialog extends JDialog {
     private Color[] col = { Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW };
     private int counter = 0;
     private Pattern2D patt2D;
+    private JLabel lblWavelengtha;
+    private JTextField txtWave;
 
     /**
      * Create the dialog.
@@ -54,15 +56,15 @@ public class Param_dialog extends JDialog {
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 400, 300);
+        setBounds(x, y, 400, 331);
         getContentPane().setLayout(new BorderLayout());
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         GridBagLayout gbl_contentPanel = new GridBagLayout();
         gbl_contentPanel.columnWidths = new int[] { 0, 0, 0 };
-        gbl_contentPanel.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
+        gbl_contentPanel.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0 };
         gbl_contentPanel.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
-        gbl_contentPanel.rowWeights = new double[] { 1.0, 1.0, 1.0, 1.0, 1.0, Double.MIN_VALUE };
+        gbl_contentPanel.rowWeights = new double[] { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, Double.MIN_VALUE };
         contentPanel.setLayout(gbl_contentPanel);
         {
             JLabel lblSampledetectorDistancemm = new JLabel("Sample-Detector distance (mm)=");
@@ -148,7 +150,7 @@ public class Param_dialog extends JDialog {
             JLabel lblBeamCentreY = new JLabel("Beam centre Y (pixel)=");
             GridBagConstraints gbc_lblBeamCentreY = new GridBagConstraints();
             gbc_lblBeamCentreY.anchor = GridBagConstraints.EAST;
-            gbc_lblBeamCentreY.insets = new Insets(0, 0, 0, 5);
+            gbc_lblBeamCentreY.insets = new Insets(0, 0, 5, 5);
             gbc_lblBeamCentreY.gridx = 0;
             gbc_lblBeamCentreY.gridy = 4;
             contentPanel.add(lblBeamCentreY, gbc_lblBeamCentreY);
@@ -157,11 +159,31 @@ public class Param_dialog extends JDialog {
             this.txtCentrY = new JTextField();
             this.txtCentrY.setText("1024");
             GridBagConstraints gbc_txtCentrY = new GridBagConstraints();
+            gbc_txtCentrY.insets = new Insets(0, 0, 5, 0);
             gbc_txtCentrY.fill = GridBagConstraints.HORIZONTAL;
             gbc_txtCentrY.gridx = 1;
             gbc_txtCentrY.gridy = 4;
             contentPanel.add(this.txtCentrY, gbc_txtCentrY);
             this.txtCentrY.setColumns(10);
+        }
+        {
+            this.lblWavelengtha = new JLabel("Wavelength (A)=");
+            GridBagConstraints gbc_lblWavelengtha = new GridBagConstraints();
+            gbc_lblWavelengtha.anchor = GridBagConstraints.EAST;
+            gbc_lblWavelengtha.insets = new Insets(0, 0, 0, 5);
+            gbc_lblWavelengtha.gridx = 0;
+            gbc_lblWavelengtha.gridy = 5;
+            contentPanel.add(this.lblWavelengtha, gbc_lblWavelengtha);
+        }
+        {
+            this.txtWave = new JTextField();
+            this.txtWave.setText("0.0");
+            GridBagConstraints gbc_txtWave = new GridBagConstraints();
+            gbc_txtWave.fill = GridBagConstraints.HORIZONTAL;
+            gbc_txtWave.gridx = 1;
+            gbc_txtWave.gridy = 5;
+            contentPanel.add(this.txtWave, gbc_txtWave);
+            this.txtWave.setColumns(10);
         }
         {
             JPanel buttonPane = new JPanel();
@@ -175,7 +197,7 @@ public class Param_dialog extends JDialog {
                 buttonPane.setLayout(gbl_buttonPane);
             }
             {
-                this.btnDef1 = new JButton("Def1");
+                this.btnDef1 = new JButton("ESRF");
                 this.btnDef1.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
@@ -189,8 +211,12 @@ public class Param_dialog extends JDialog {
                 buttonPane.add(this.btnDef1, gbc_btnDef1);
             }
             {
-                this.btnDef2 = new JButton("Def2");
-                this.btnDef2.setEnabled(false);
+                this.btnDef2 = new JButton("ALBA");
+                this.btnDef2.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent arg0) {
+                        do_btnDef2_actionPerformed(arg0);
+                    }
+                });
                 GridBagConstraints gbc_btnDef2 = new GridBagConstraints();
                 gbc_btnDef2.insets = new Insets(5, 0, 0, 5);
                 gbc_btnDef2.gridx = 1;
@@ -265,6 +291,7 @@ public class Param_dialog extends JDialog {
         this.txtPicSizeY.setText("0.1024");
         this.txtCentrX.setText("995.81");
         this.txtCentrY.setText("1038.76");
+        this.txtWave.setText("0.7378");
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
@@ -286,6 +313,7 @@ public class Param_dialog extends JDialog {
         this.txtPicSizeY.setText(Float.toString(this.patt2D.getPixSy()));
         this.txtCentrX.setText(Float.toString(this.patt2D.getCentrX()));
         this.txtCentrY.setText(Float.toString(this.patt2D.getCentrY()));
+        this.txtWave.setText(Float.toString(this.patt2D.getWavel()));
         this.counter = 0;
     }
 
@@ -297,10 +325,19 @@ public class Param_dialog extends JDialog {
             this.patt2D.setPixSy(Float.parseFloat(this.txtPicSizeY.getText()));
             this.patt2D.setCentrX(Float.parseFloat(this.txtCentrX.getText()));
             this.patt2D.setCentrY(Float.parseFloat(this.txtCentrY.getText()));
+            this.patt2D.setWavel(Float.parseFloat(this.txtWave.getText()));
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
         return true;
+    }
+    protected void do_btnDef2_actionPerformed(ActionEvent arg0) {
+        this.txtDistOD.setText("225.389");
+        this.txtPicSizeX.setText("0.079");
+        this.txtPicSizeY.setText("0.079");
+        this.txtCentrX.setText("1029.341");
+        this.txtCentrY.setText("1031.164");
+        this.txtWave.setText("0.4243");
     }
 }

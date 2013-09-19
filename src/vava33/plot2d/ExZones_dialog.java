@@ -8,6 +8,8 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Polygon;
+import java.awt.Shape;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,6 +18,7 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.Rectangle2D.Float;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,6 +33,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -42,6 +46,7 @@ import javax.swing.event.DocumentListener;
 
 import vava33.plot2d.auxi.FileUtils;
 import vava33.plot2d.auxi.JtxtAreaOut;
+import vava33.plot2d.auxi.MyPolygon4;
 import vava33.plot2d.auxi.Pattern2D;
 
 public class ExZones_dialog extends JDialog {
@@ -68,6 +73,7 @@ public class ExZones_dialog extends JDialog {
     private File dataFile;
     private Pattern2D patt2D;
     private boolean setExZones;
+    private JCheckBox chckbxYToMask;
 
     /**
      * Create the dialog.
@@ -104,9 +110,9 @@ public class ExZones_dialog extends JDialog {
                 this.splitPane.setLeftComponent(this.panel_left);
                 GridBagLayout gbl_panel_left = new GridBagLayout();
                 gbl_panel_left.columnWidths = new int[] { 0, 0, 0, 0, 0 };
-                gbl_panel_left.rowHeights = new int[] { 0, 0, 0, 0, 0 };
+                gbl_panel_left.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
                 gbl_panel_left.columnWeights = new double[] { 0.0, 0.0, 0.0, 1.0, 0.0 };
-                gbl_panel_left.rowWeights = new double[] { 0.0, 0.0, 1.0, 0.0, Double.MIN_VALUE };
+                gbl_panel_left.rowWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
                 this.panel_left.setLayout(gbl_panel_left);
                 {
                     this.chckbxExZones = new JCheckBox("Show Excluded Zones");
@@ -194,7 +200,7 @@ public class ExZones_dialog extends JDialog {
                         GridBagConstraints gbc_scrollPane = new GridBagConstraints();
                         gbc_scrollPane.gridwidth = 5;
                         gbc_scrollPane.fill = GridBagConstraints.BOTH;
-                        gbc_scrollPane.insets = new Insets(0, 5, 5, 5);
+                        gbc_scrollPane.insets = new Insets(0, 5, 5, 0);
                         gbc_scrollPane.gridx = 0;
                         gbc_scrollPane.gridy = 2;
                         this.panel_left.add(this.scrollPane, gbc_scrollPane);
@@ -233,7 +239,7 @@ public class ExZones_dialog extends JDialog {
                             }
                         });
                         GridBagConstraints gbc_btnWriteExzFile = new GridBagConstraints();
-                        gbc_btnWriteExzFile.insets = new Insets(0, 0, 5, 5);
+                        gbc_btnWriteExzFile.insets = new Insets(0, 0, 5, 0);
                         gbc_btnWriteExzFile.anchor = GridBagConstraints.EAST;
                         gbc_btnWriteExzFile.gridwidth = 3;
                         gbc_btnWriteExzFile.gridx = 2;
@@ -242,7 +248,7 @@ public class ExZones_dialog extends JDialog {
                     }
                     this.lblHelp.setFont(new Font("Tahoma", Font.BOLD, 14));
                     GridBagConstraints gbc_lbllist = new GridBagConstraints();
-                    gbc_lbllist.insets = new Insets(0, 0, 5, 5);
+                    gbc_lbllist.insets = new Insets(0, 0, 5, 0);
                     gbc_lbllist.gridx = 4;
                     gbc_lbllist.gridy = 1;
                     this.panel_left.add(this.lblHelp, gbc_lbllist);
@@ -344,6 +350,20 @@ public class ExZones_dialog extends JDialog {
         patt2D = mf.getPatt2D();
         lm = new DefaultListModel();
         listZones.setModel(lm);
+        {
+            this.chckbxYToMask = new JCheckBox("Y0 to Mask");
+            this.chckbxYToMask.addItemListener(new ItemListener() {
+                public void itemStateChanged(ItemEvent arg0) {
+                    do_chckbxYToMask_itemStateChanged(arg0);
+                }
+            });
+            GridBagConstraints gbc_chckbxYToMask = new GridBagConstraints();
+            gbc_chckbxYToMask.gridwidth = 2;
+            gbc_chckbxYToMask.insets = new Insets(0, 0, 0, 5);
+            gbc_chckbxYToMask.gridx = 0;
+            gbc_chckbxYToMask.gridy = 4;
+            this.panel_left.add(this.chckbxYToMask, gbc_chckbxYToMask);
+        }
 
         if (this.readEXZfile()) {
             tAOut.ln("Excluded zones file (.EXZ) found!");
@@ -371,8 +391,10 @@ public class ExZones_dialog extends JDialog {
     //
     // }
     protected void do_btnAdd_actionPerformed(ActionEvent arg0) {
-        patt2D.getExZones().add(new Rectangle2D.Float(200, 200, 200, 200));
-        lm.addElement("200 200 200 200");
+        //afegeix poligon per defecte
+        MyPolygon4 p = new MyPolygon4();
+        patt2D.getExZones().add(p);
+        lm.addElement(p.printLnVertexs());
     }
 
     protected void do_btnDel_actionPerformed(ActionEvent e) {
@@ -382,31 +404,64 @@ public class ExZones_dialog extends JDialog {
 
     protected void do_btnWriteExzFile_actionPerformed(ActionEvent arg0) {
         File exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
+        if(exfile.exists()){
+            //avisem que es sobreescriurà
+            Object[] options = {"Yes","No"};
+            int n = JOptionPane.showOptionDialog(this,
+                    "EXZ file will be overwritten. Continue?",
+                    "File exists",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null, //do not use a custom Icon
+                    options, //the titles of buttons
+                    options[1]); //default button title
+            if (n!=0){return;} // si s'ha cancelat o tancat la finestra no es segueix salvant 
+        }
         // creem un printwriter amb el fitxer file (el que estem escribint)
         try {
             PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(exfile)));
             // ESCRIBIM AL FITXER:
             output.println("! Excluded zones file for: " + dataFile.getName());
-            output.println("! UL: upper-left corner of a rectangle");
-            output.println("! BR: bottom-right corner of a rectangle");
-            output.println("!");
-            output.println("! Margin (px)");
-            output.println(" " + patt2D.getMargin());
-            output.println("! Number of Excluded Zones");
-            output.println(" " + patt2D.getExZones().size());
-            output.println("! Excluded Zones (as Rectangles: ULpx,ULpy,BRpx,BRpy) (in pixels)");
-            Iterator<Rectangle2D.Float> it = patt2D.getExZones().iterator();
-            while (it.hasNext()) {
-                Rectangle2D.Float r = it.next();
-                int ULx = Math.round(r.x);
-                int ULy = Math.round(r.y);
-                int BRx = Math.round(r.x + r.width - 1); // -1 perquè al representar fem +1
-                int BRy = Math.round(r.y + r.height - 1);
-                String element = ULx + " " + ULy + " " + BRx + " " + BRy;
-                output.println(" " + element.trim());
-            }
-            output.close();
+            output.println("MARGIN="+ patt2D.getMargin());
+            int y0msk=0;
+            if(chckbxYToMask.isSelected()) y0msk=1;
+            output.println("Y0TOMASK="+ y0msk);
+            output.println("NEXZONES="+ patt2D.getExZones().size());
 
+            Iterator<MyPolygon4> it = patt2D.getExZones().iterator();
+            while (it.hasNext()) {
+                MyPolygon4 p = it.next();
+                StringBuilder sb = new StringBuilder();
+                for (int i=0;i<p.npoints;i++){
+                    sb.append(p.getXYvertex(i)).append(" ");
+                }
+//                int ULx = p.getXVertex(0);
+//                int ULy = Math.round(r.y);
+//                int URx = Math.round(r.x + r.width - 1);
+//                int URy = Math.round(r.y);
+//                int BRx = Math.round(r.x + r.width - 1); // -1 perquè al representar fem +1
+//                int BRy = Math.round(r.y + r.height - 1);
+//                int BLx = Math.round(r.x);
+//                int BLy = Math.round(r.y + r.height - 1);
+//                String element = ULx + " " + ULy + " " + URx + " " + URy + " " + BRx + " " + BRy + " " + BLx + " " + BLy;
+                output.println(" " + sb.toString().trim());
+            }
+            
+            //COMENTARIS INFO
+            output.println("!");
+            output.println("! MARGIN    Margin of the image in pixels");
+            output.println("! Y0TOMASK  Set pixels with intensity=0 to intensity=-1 (masouk) [values 1=Yes, 0=No]");
+            output.println("! NEXZONES  Number of Excluded Zones. ");
+            output.println("!           This line is followed by the N excluded zones defined as four vertex");
+            output.println("!           polygons in clockwise order. For example for a rectangle-like shape:");
+            output.println("!           ULx ULy URx URy BRx BRy BLx BLy");
+            output.println("!           (space separated and in pixel units. UL: upper-left corner of a rectangle,");
+            output.println("!           UR: upper-right corner of a rectangle, BR: bottom-right corner of a rectangle,");
+            output.println("!           BL: bottom-left corner of a rectangle)");
+            
+            output.close();
+            tAOut.ln("EXZ file saved successfully");
+            
         } catch (IOException e) {
             e.printStackTrace();
             tAOut.ln("Error writing EXZ file");
@@ -430,6 +485,7 @@ public class ExZones_dialog extends JDialog {
         lblHelp.setForeground(Color.black);
     }
 
+    //TODO: A ACTUALIZAR (ara son 4 vertexs)
     protected void do_lbllist_mouseReleased(MouseEvent e) {
         tAOut.ln("");
         tAOut.ln("** EXCLUDED ZONES HELP **");
@@ -451,7 +507,7 @@ public class ExZones_dialog extends JDialog {
         this.dispose();
     }
 
-    public Rectangle2D.Float getCurrentZone() {
+    public MyPolygon4 getCurrentZone() {
         if (listZones.getSelectedIndex() >= 0) {
             return patt2D.getExZones().get(listZones.getSelectedIndex());
         } else {
@@ -474,73 +530,55 @@ public class ExZones_dialog extends JDialog {
         String line;
         try {
             Scanner scExFile = new Scanner(exfile);
-            if (scExFile.hasNextLine()) {
-                line = scExFile.nextLine();
-            } else {
-                scExFile.close();
-                return false;
-            }
-
-            while (line.startsWith("!")) {
+            boolean llegint = true;
+            
+            while(llegint){
                 if (scExFile.hasNextLine()) {
                     line = scExFile.nextLine();
                 } else {
                     scExFile.close();
-                    return false;
+                    llegint=false;
+                    continue;
+                }
+                
+                if(line.startsWith("!")){
+                    continue;
+                }
+                
+                int iigual=line.indexOf("=")+1;
+                
+                if(line.trim().startsWith("MARGIN")){
+                    patt2D.setMargin(Integer.parseInt(line.substring(iigual, line.trim().length()).trim()));
+                    txtMargin.setText(Integer.toString(patt2D.getMargin()));
+                    continue;
+                }
+                if(line.trim().startsWith("Y0TOMASK")){
+                    int ytm = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
+                    if(ytm==1){
+                        chckbxYToMask.setSelected(true);    
+                        patt2D.setY0toMask(1);
+                    }else{
+                        chckbxYToMask.setSelected(false);
+                        patt2D.setY0toMask(0);
+                    }
+                    continue;
+                }
+                if(line.trim().startsWith("NEXZONES")){
+                    int nexz = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
+                    //ara llegim les zones
+                    for (int i = 0; i < nexz; i++) {
+                        line = scExFile.nextLine();
+                        //tolerem una linia de comentari
+                        if(line.trim().startsWith("!"))line = scExFile.nextLine();
+                        String[] zona = line.trim().split(" ");
+                        patt2D.getExZones().add(new MyPolygon4(Integer.parseInt(zona[0]),
+                                Integer.parseInt(zona[1]),Integer.parseInt(zona[2]),Integer.parseInt(zona[3]),
+                                Integer.parseInt(zona[4]),Integer.parseInt(zona[5]),Integer.parseInt(zona[6]),
+                                Integer.parseInt(zona[7])));
+                    }
+                    continue;
                 }
             }
-            // no es comentari, la primera es el marge:
-            txtMargin.setText(line.trim());
-
-            // seguim llegint
-            if (scExFile.hasNextLine()) {
-                line = scExFile.nextLine();
-            } else {
-                scExFile.close();
-                return false;
-            }
-            while (line.startsWith("!")) {
-                if (scExFile.hasNextLine()) {
-                    line = scExFile.nextLine();
-                } else {
-                    scExFile.close();
-                    return false;
-                }
-            }
-            int nexz = Integer.parseInt(line.trim());
-            // seguim llegint
-            if (scExFile.hasNextLine()) {
-                line = scExFile.nextLine();
-            } else {
-                scExFile.close();
-                return false;
-            }
-            while (line.startsWith("!")) {
-                if (scExFile.hasNextLine()) {
-                    line = scExFile.nextLine();
-                } else {
-                    scExFile.close();
-                    return false;
-                }
-            }
-            // ara ja tindrem les nexz en linies consecutives
-            String[] zona = line.trim().split(" ");
-            float ULx = java.lang.Float.parseFloat(zona[0]);
-            float ULy = java.lang.Float.parseFloat(zona[1]);
-            float width = java.lang.Float.parseFloat(zona[2]) - ULx + 1; // +1 perque a fortran incloem el BR pixel
-            float height = java.lang.Float.parseFloat(zona[3]) - ULy + 1;
-            patt2D.getExZones().add(new Rectangle2D.Float(ULx, ULy, width, height));
-            for (int i = 0; i < nexz - 1; i++) {
-                line = scExFile.nextLine();
-                zona = line.trim().split(" ");
-                ULx = java.lang.Float.parseFloat(zona[0]);
-                ULy = java.lang.Float.parseFloat(zona[1]);
-                width = java.lang.Float.parseFloat(zona[2]) - ULx + 1; // +1 perque a fortran incloem el BR pixel
-                height = java.lang.Float.parseFloat(zona[3]) - ULy + 1;
-                patt2D.getExZones().add(new Rectangle2D.Float(ULx, ULy, width, height));
-            }
-            // ja hem llegit tot el fitxer
-            scExFile.close();
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -551,28 +589,26 @@ public class ExZones_dialog extends JDialog {
 
     public void updateList() {
         lm.clear();
-        Iterator<Rectangle2D.Float> it = patt2D.getExZones().iterator();
+        Iterator<MyPolygon4> it = patt2D.getExZones().iterator();
         while (it.hasNext()) {
-            Rectangle2D.Float r = it.next();
-            int ULx = Math.round(r.x);
-            int ULy = Math.round(r.y);
-            int BRx = Math.round(r.x + r.width - 1); // -1 perquè al representar fem +1
-            int BRy = Math.round(r.y + r.height - 1);
-            String element = ULx + " " + ULy + " " + BRx + " " + BRy;
-            lm.addElement(element.trim());
+            MyPolygon4 p = it.next();
+            lm.addElement(p.printLnVertexs().trim());
         }
     }
 
     public void updateSelectedElement() {
         if (listZones.getSelectedIndex() >= 0) {
-            Rectangle2D.Float r = patt2D.getExZones().get(listZones.getSelectedIndex());
-            int ULx = Math.round(r.x);
-            int ULy = Math.round(r.y);
-            int BRx = Math.round(r.x + r.width - 1);
-            int BRy = Math.round(r.y + r.height - 1);
-            String element = ULx + " " + ULy + " " + BRx + " " + BRy;
-            lm.set(listZones.getSelectedIndex(), element);
+            MyPolygon4 p =  patt2D.getExZones().get(listZones.getSelectedIndex());
+            lm.set(listZones.getSelectedIndex(), p.printLnVertexs().trim());
         }
     }
 
+    protected void do_chckbxYToMask_itemStateChanged(ItemEvent arg0) {
+        if(arg0.getStateChange()==ItemEvent.SELECTED){
+            patt2D.setY0toMask(1);
+        }else{
+            patt2D.setY0toMask(0);
+        }
+           
+    }
 }
