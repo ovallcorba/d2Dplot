@@ -4,6 +4,8 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
@@ -19,6 +21,7 @@ import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -33,6 +36,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import vava33.plot2d.auxi.FileUtils;
+import vava33.plot2d.auxi.MyPolygon4;
 import vava33.plot2d.auxi.OrientSolucio;
 import vava33.plot2d.auxi.Pattern2D;
 import vava33.plot2d.auxi.PuntCercle;
@@ -58,6 +62,7 @@ public class ImagePanel extends JPanel {
 
     private Calib_dialog calibration;
     private Rectangle2D.Float currentRect;
+    private MyPolygon4 currentPol4;
     private ExZones_dialog exZones;
     boolean fit = true;
     private BufferedImage image;
@@ -75,7 +80,11 @@ public class ImagePanel extends JPanel {
     private ArrayList<OrientSolucio> solucions; // contindra les solucions
     private BufferedImage subimage;
     private Point2D.Float zoomPoint, dragPoint;
+    private float factorContrast;
 
+    private static float swinglim=4.5f;
+    private static int hklfontSize=14;
+    
     /**
      * Create the panel.
      */
@@ -157,6 +166,12 @@ public class ImagePanel extends JPanel {
         this.panel.add(this.lblIntensity, gbc_lblIntensity);
         this.lbl2t.setText("");
         this.lblContrast = new JLabel("Contrast");
+        this.lblContrast.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent arg0) {
+                do_lblContrast_mouseReleased(arg0);
+            }
+        });
         GridBagConstraints gbc_lblContrast = new GridBagConstraints();
         gbc_lblContrast.anchor = GridBagConstraints.EAST;
         gbc_lblContrast.insets = new Insets(0, 5, 0, 5);
@@ -210,6 +225,8 @@ public class ImagePanel extends JPanel {
         gbc_chckbxInvertY.gridy = 2;
         add(this.chckbxInvertY, gbc_chckbxInvertY);
 
+        //iniciem
+        this.factorContrast=3;
         this.resetView();
     }
 
@@ -296,7 +313,8 @@ public class ImagePanel extends JPanel {
             incY = (p.y - dragPoint.y) / this.getScalefit();
             // hem d'enviar el punt clicat i l'increment a panel imatge perquè
             // s'encarregui de moure el quadrat o redimensionar-lo
-            this.editQuadrat(dragPoint, incX, incY, true);
+            if (estaCalibrant()) {this.editQuadrat(dragPoint, incX, incY, true);}
+            if (estaDefinintEXZ()) {this.editPolygon(dragPoint, incX, incY, true);}            
             this.dragPoint = p;
         }
     }
@@ -401,8 +419,9 @@ public class ImagePanel extends JPanel {
         float LRy = currentRect.y + currentRect.height;
         // tolerancia pot ser diferent segons el cas
         float tol = 20;
-        if (estaDefinintEXZ())
-            tol = 1;
+//        130923 aquesta subrutina ja no es crida per definir zones excloses (nomes calibracio)
+//        if (estaDefinintEXZ())
+//            tol = 1;
         // System.out.println(ULx+" "+ULy);
         // System.out.println(URx+" "+URy);
         // System.out.println(LLx+" "+LLy);
@@ -447,16 +466,17 @@ public class ImagePanel extends JPanel {
 
         // sino mirem si està dins
         if (!xMatch && !xwidMatch && !yMatch && !yheiMatch) {
-            // if (currentRect.contains(clic)) {
+            if (currentRect.contains(clic)) {
             // if(currentRect.x>0&&currentRect.x<patt2D.getDimX()-1){
             // currentRect.x += incX;
             // }
             // if(currentRect.y>0&&currentRect.y<patt2D.getDimY()-1){
             // currentRect.y += incY;
             // }
-            // }
+            
             currentRect.x += incX;
             currentRect.y += incY;
+            }
         }
 
         // COMPROVEM LIMITS
@@ -476,6 +496,94 @@ public class ImagePanel extends JPanel {
         }
         ;
 
+    }
+    
+    public void editPolygon(java.awt.geom.Point2D.Float dragPoint, float incX, float incY, boolean repaint) {
+        Point2D.Float clic = getPixel(dragPoint);
+//        float tolVertex = 10; //+-5 pixels
+//        float tolArista = 5; //+-5 pixels
+        
+        //provem de fer la tolerancia en relacio a scalefit
+        float tolVertex = Math.max(5/scalefit,2);
+        float tolArista = Math.max(5/scalefit,2);
+        
+        
+        //primer mirem si hem clicat sobre algun vertex per moure'l
+        int vertex=-1; //el vertex que cliquem
+        for(int i=0;i<currentPol4.npoints;i++){
+            Rectangle2D.Float r = new Rectangle2D.Float(currentPol4.getXVertex(i)-tolVertex,currentPol4.getYVertex(i)-tolVertex,tolVertex*2,tolVertex*2);
+            if (r.contains(clic)){
+                vertex=i;
+                break;
+            }
+        }
+        //ara vertex assenyala el vertex que hem clicat o bé -1 si no s'ha clicat a cap
+        if(vertex>=0){
+            currentPol4.incXVertex(vertex, incX);
+            currentPol4.incYVertex(vertex, incY);
+            if(repaint)this.repaint();
+            return;
+        }
+        
+        //mirem si cliquem a una arista i movem els 2 vertexs que la formen
+        //hi ha 4 arestes (0-1,1-2,2-3,3-0), mirarem una a una si el punt clicat s'apropa a una tolerancia
+        Line2D.Float li = new Line2D.Float(currentPol4.getXVertex(0), currentPol4.getYVertex(0),
+                currentPol4.getXVertex(1), currentPol4.getYVertex(1));
+        if(li.ptLineDist(clic)<tolArista){
+            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
+            //movem els dos vertexs que formen la linia
+            currentPol4.incXVertex(0, incX);
+            currentPol4.incYVertex(0, incY);
+            currentPol4.incXVertex(1, incX);
+            currentPol4.incYVertex(1, incY);
+            if(repaint)this.repaint();
+            return;
+        }
+        li = new Line2D.Float(currentPol4.getXVertex(1), currentPol4.getYVertex(1),
+                currentPol4.getXVertex(2), currentPol4.getYVertex(2));
+        if(li.ptLineDist(clic)<tolArista){
+            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
+            //movem els dos vertexs que formen la linia
+            currentPol4.incXVertex(1, incX);
+            currentPol4.incYVertex(1, incY);
+            currentPol4.incXVertex(2, incX);
+            currentPol4.incYVertex(2, incY);
+            if(repaint)this.repaint();
+            return;
+        }
+        li = new Line2D.Float(currentPol4.getXVertex(2), currentPol4.getYVertex(2),
+                currentPol4.getXVertex(3), currentPol4.getYVertex(3));
+        if(li.ptLineDist(clic)<tolArista){
+            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
+            //movem els dos vertexs que formen la linia
+            currentPol4.incXVertex(2, incX);
+            currentPol4.incYVertex(2, incY);
+            currentPol4.incXVertex(3, incX);
+            currentPol4.incYVertex(3, incY);
+            if(repaint)this.repaint();
+            return;
+        }
+        li = new Line2D.Float(currentPol4.getXVertex(3), currentPol4.getYVertex(3),
+                currentPol4.getXVertex(0), currentPol4.getYVertex(0));
+        if(li.ptLineDist(clic)<tolArista){
+            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
+            //movem els dos vertexs que formen la linia
+            currentPol4.incXVertex(3, incX);
+            currentPol4.incYVertex(3, incY);
+            currentPol4.incXVertex(0, incX);
+            currentPol4.incYVertex(0, incY);
+            if(repaint)this.repaint();
+            return;
+        }
+        
+        //si no hem clicat a cap vertex mirem si hem clicat a dins i movem tota la zona
+        if(currentPol4.contains(clic)){
+            currentPol4.translate(Math.round(incX), Math.round(incY));
+            if(repaint)this.repaint();
+            return;
+        }
+        
+        
     }
 
     protected Ellipse2D.Float ellipseToFrameCoords(Ellipse2D.Float c) {
@@ -725,7 +833,7 @@ public class ImagePanel extends JPanel {
         BufferedImage im = new BufferedImage(patt2D.getDimX(), patt2D.getDimY(), type);
 
         float maxValSlider = (this.slider_contrast.getMaximum() - this.slider_contrast.getMinimum());
-        float factorContrast = 3; // prova de multiplicar el maxVal per un factor (ja que sempre cal tirar "avall" el control)
+//        float factorContrast = 3; // prova de multiplicar el maxVal per un factor (ja que sempre cal tirar "avall" el control)
 
         Color col;
         if (!this.chckbxInvertY.isSelected()) {
@@ -779,6 +887,15 @@ public class ImagePanel extends JPanel {
         float width = (float) (r.getWidth() * scalefit);
         float height = (float) (r.getHeight() * scalefit);
         return new Rectangle2D.Float(vertex.x, vertex.y, width, height);
+    }
+    
+    protected MyPolygon4 Pol4ToFrameCoords(MyPolygon4 p) {
+        Point2D.Float v1 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(0),p.getYVertex(0)));
+        Point2D.Float v2 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(1),p.getYVertex(1)));
+        Point2D.Float v3 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(2),p.getYVertex(2)));
+        Point2D.Float v4 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(3),p.getYVertex(3)));
+        return new MyPolygon4(Math.round(v1.x),Math.round(v1.y), Math.round(v2.x),Math.round(v2.y),
+                Math.round(v3.x),Math.round(v3.y),Math.round(v4.x),Math.round(v4.y));
     }
 
     // donat un punt clicat mirarem si hi ha cercle a aquest pixel i en cas que aixi sigui el borrarem
@@ -963,12 +1080,12 @@ public class ImagePanel extends JPanel {
         }
 
         private void drawExZones(Graphics2D g1) {
-            currentRect = exZones.getCurrentZone();
+            currentPol4 = exZones.getCurrentZone();
             g1.setPaint(Color.CYAN);
             BasicStroke stroke = new BasicStroke(1.0f);
             g1.setStroke(stroke);
-            if (currentRect != null) {
-                g1.draw(rectangleToFrameCoords(currentRect));
+            if (currentPol4 != null) {
+                g1.draw(Pol4ToFrameCoords(currentPol4));
                 exZones.updateSelectedElement();
             }
             // dibuixem el marge
@@ -1014,8 +1131,17 @@ public class ImagePanel extends JPanel {
                         Ellipse2D.Float e = ellipseToFrameCoords(s);
                         g1.draw(e);
                         g1.fill(e);
-                        if (showHKLsol)
+                        if (showHKLsol){
+                            Font font = new Font("Dialog", Font.PLAIN,hklfontSize+1);
+                            if(s.getOscil()>swinglim){
+                                font = new Font("Dialog", Font.ITALIC,hklfontSize-1);
+                            }
+                            g1.setFont(font);
+                            g1.setRenderingHint(
+                                    RenderingHints.KEY_TEXT_ANTIALIASING,
+                                    RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
                             g1.drawString(s.getHKL(), e.x + (float) s.getWidth() * scalefit, e.y);
+                        }
                     }
                 }
             }
@@ -1069,5 +1195,23 @@ public class ImagePanel extends JPanel {
             this.repaint();
 
         }
+    }
+    
+    public JSlider getSlider_contrast() {
+        return slider_contrast;
+    }
+
+    public float getFactorContrast() {
+        return factorContrast;
+    }
+
+    public void setFactorContrast(float factorContrast) {
+        this.factorContrast = factorContrast;
+    }
+
+    //Farem que surti un dialog que pregunti els valors MIN MAX I FACTOR de la barra de contrast
+    protected void do_lblContrast_mouseReleased(MouseEvent arg0) {
+        Contrast_dialog cd = new Contrast_dialog(this);
+        cd.setVisible(true);
     }
 }

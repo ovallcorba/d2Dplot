@@ -1,7 +1,7 @@
 package vava33.plot2d.auxi;
 
+import java.awt.Polygon;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -15,8 +15,9 @@ public class Pattern2D {
     float centrX, centrY;
     int dimX, dimY;
     private static int MAX_ZONES = 20;
-    private ArrayList<Rectangle2D.Float> exZones;
-    private int margin = 0;
+    private ArrayList<MyPolygon4> exZones;
+    private int margin = 0; //per salvar el bin (zones excloses)
+    private int y0toMask = 0; //per salvar el bin (zones excloses)
 
     // PARAMETRES INSTRUMENTALS:
     float distMD, pixSx, pixSy, wavel;
@@ -45,7 +46,7 @@ public class Pattern2D {
         this.wavel = -1;
 
         // inicialitzem arraylist
-        this.exZones = new ArrayList<Rectangle2D.Float>(MAX_ZONES);
+        this.exZones = new ArrayList<MyPolygon4>(MAX_ZONES);
         
         this.oldBIN=false;
     }
@@ -92,7 +93,7 @@ public class Pattern2D {
         return distMD;
     }
 
-    public ArrayList<Rectangle2D.Float> getExZones() {
+    public ArrayList<MyPolygon4> getExZones() {
         return exZones;
     }
 
@@ -156,7 +157,7 @@ public class Pattern2D {
 
     // metode que indica si un pixel (x,y) es troba dins d'una zona exclosa
     public boolean isInExZone(int x, int y) {
-        Iterator<Rectangle2D.Float> it = exZones.iterator();
+        Iterator<MyPolygon4> it = exZones.iterator();
         // primer comprovem el marge
         if (x <= margin || x >= dimX - margin)
             return true;
@@ -164,7 +165,7 @@ public class Pattern2D {
             return true;
         // ara les zones
         while (it.hasNext()) {
-            Rectangle2D.Float r = it.next();
+            MyPolygon4 r = it.next();
             if (r.contains(new Point2D.Float(x, y)))
                 return true;
         }
@@ -284,6 +285,14 @@ public class Pattern2D {
         // corregim maxI i minI
         this.setMaxI((int) (this.getMaxI() / this.getScale()));
         this.setMinI((int) (this.getMinI() / this.getScale()));
+    }
+
+    public int getY0toMask() {
+        return y0toMask;
+    }
+
+    public void setY0toMask(int y0toMask) {
+        this.y0toMask = y0toMask;
     }
     
     // public void printParameters(){
