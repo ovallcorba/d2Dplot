@@ -181,7 +181,7 @@ public final class FileUtils {
     public static String getFNameNoExt(String fn) {
         String ext = getExtension(fn);
         if (ext.length() > 0) {
-            return fn.substring(0, fn.length() - ext.length() - 2);
+            return fn.substring(0, fn.length() - ext.length() - 1);
         } else {
             return fn;
         }
@@ -704,14 +704,132 @@ public final class FileUtils {
         return patt2D; // correcte
     }
 
+    public static Pattern2D openEDFfile(File d2File) {
+        Pattern2D patt2D = null;
+        long start = System.nanoTime(); // control temps
+        int headerSize = 0;
+        int binSize = 0;
+        float pixSize = 0;
+        float distOD = 0;
+        float beamCX = 0, beamCY = 0, wl = 0;
+        int dimX = 0, dimY = 0, maxI = 0, minI = 0;
+
+        //primer treiem la info de les linies de text
+        try {
+            Scanner scD2file = new Scanner(d2File);
+            for (int i = 0; i < 50; i++) {
+                if (scD2file.hasNextLine()) {
+                    String line = scD2file.nextLine();
+                    int iigual=line.indexOf("=")+1;;
+                    if (line.contains("Size =")) {
+                        binSize = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Dim_1")) {
+                        dimX = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Dim_2")) {
+                        dimY = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("beam_center_x")) {
+                        beamCX = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("beam_center_y")) {
+                        beamCY = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("pixel_size_x")) {
+                        pixSize = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                        pixSize = pixSize/1000.f;
+                    }
+                    if (line.contains("exp_distance")) {
+                        distOD = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("exp_wavelength")) {
+                        wl = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                }
+            }
+            headerSize = (int) (d2File.length()-binSize);
+
+            // calculem el pixel central
+//            beamCX = beamCX / pixSize;
+//            beamCY = beamCY / pixSize;
+
+            scD2file.close();
+
+            // ARA LLEGIREM ELS BYTES
+            InputStream in = new BufferedInputStream(new FileInputStream(d2File));
+            byte[] buff = new byte[2];
+            byte[] header = new byte[headerSize];
+            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI, -1.0f, false);
+            int count = 0;
+            in.read(header);
+
+            // Haurem de fer dues passades, una per determinar el maxI, minI i
+            // factor d'escala i l'altre per
+            // llegir totes les intensitats i aplicar el factor d'escala per
+            // encabir-ho a short.
+            for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+                for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+                                                             // (X)
+                    in.read(buff);
+                    int valorLlegit = B2toInt(buff);
+                    count = count + 1;
+                    // nomes considerem valors superiors a zero pel minI
+                    if (valorLlegit >= 0) {  //fem >= o > directament sense considerar els zeros??!
+                        if (valorLlegit > patt2D.getMaxI()) {
+                            patt2D.setMaxI(valorLlegit);
+                        }
+                        if (valorLlegit < patt2D.getMinI()) {
+                            patt2D.setMinI(valorLlegit);
+                        }
+                    }
+                }
+            }
+
+            // calculem el factor d'escala (valor maxim entre quocient i 1, mai
+            // escalem per sobre)
+            patt2D.setScale(Math.max(patt2D.getMaxI() / 32767.f, 1.000f));
+
+            in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
+                                                                       // buffer
+                                                                       // lectura
+            in.read(header);
+
+            // ara aplico factor escala i guardo on i com toca
+            for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+                for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+                                                             // (X)
+                    in.read(buff);
+                    patt2D.setIntenB2(j, i, (short) (B2toInt(buff) / patt2D.getScale()));
+                }
+            }
+            // corregim maxI i minI
+            patt2D.setMaxI((int) (patt2D.getMaxI() / patt2D.getScale()));
+            patt2D.setMinI((int) (patt2D.getMinI() / patt2D.getScale()));
+
+            in.close();
+            long end = System.nanoTime();
+            patt2D.setMillis((float) ((end - start) / 1000000d));
+            patt2D.setPixCount(count);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        // parametres instrumentals
+        patt2D.setExpParam(pixSize, pixSize, distOD, wl);
+
+        return patt2D; // correcte
+    }
+    
     // OBERTURA DELS DIFERENTS FORMATS DE DADES2D
     public static Pattern2D openPatternFile(File d2File) {
         Pattern2D patt2D = null;
         // comprovem extensio
         String ext = FileUtils.getExtension(d2File);
         if (!ext.equalsIgnoreCase("bin") && !ext.equalsIgnoreCase("img") && !ext.equalsIgnoreCase("spr")
-                && !ext.equalsIgnoreCase("gfrm")) {
-            Object[] possibilities = { "BIN", "IMG", "SPR", "GFRM" };
+                && !ext.equalsIgnoreCase("gfrm")  && !ext.equalsIgnoreCase("edf")) {
+            Object[] possibilities = { "BIN", "IMG", "SPR", "GFRM", "EDF" };
             String s = (String) JOptionPane.showInputDialog(null, "Input format:", "Open File",
                     JOptionPane.PLAIN_MESSAGE, null, possibilities, "BIN");
             if (s == null || s.length() < 3) {
@@ -736,6 +854,9 @@ public final class FileUtils {
         }
         if (ext.equalsIgnoreCase("GFRM")) {
             patt2D = FileUtils.openGFRMfile(d2File);
+        }
+        if (ext.equalsIgnoreCase("EDF")) {
+            patt2D = FileUtils.openEDFfile(d2File);
         }
 
         return patt2D;
@@ -795,7 +916,7 @@ public final class FileUtils {
                                                              // (X)
                     String r = scD2file.next();
                     int in = new BigDecimal(r).intValue();
-                    patt2D.setIntenB2(j, in, (short) (in / patt2D.getScale()));
+                    patt2D.setIntenB2(j, i, (short) (in / patt2D.getScale()));
                 }
             }
             // corregim maxI i minI
@@ -896,7 +1017,11 @@ public final class FileUtils {
                     if (patt2D.isInExZone(j, i)) {
                         bb.putShort((short) -1);
                     } else {
-                        bb.putShort(patt2D.getIntenB2(j, i));
+                        if((patt2D.getY0toMask()==1)&&(patt2D.getIntenB2(j, i)==0)){
+                            bb.putShort((short) -1);
+                        }else{
+                            bb.putShort(patt2D.getIntenB2(j, i));
+                        }
                     }
                     output.write(bb.array());
                     bb.clear();
