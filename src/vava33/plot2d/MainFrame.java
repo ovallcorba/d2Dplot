@@ -5,6 +5,10 @@ package vava33.plot2d;
  *    ATENCIO!! COMPROVAR A FILEUTILS FILENAMENOEXT QUE ES MENJA UNA LLETRA DE MES, HO HE CANVIAT JA A -1 (130723) pero el
  *    proper cop comprovar-ho
  *    
+ * 140127
+ *  - Contrast   
+ *  - Canvi a recalcScale a pattern2D que dividia per l'escala quan havia de multiplicar
+ *    
  * 131008
  *  - Ordenem arraylist orientSolucio segons Fsum abans d'omplir la llista
  *  
@@ -157,8 +161,8 @@ public class MainFrame extends JFrame {
     private static String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     private static String d2dsubExec = "d2Dsub";
     private static String welcomeMSG = "d2Dplot v1309 (131126) by OV";
-//    private static String workdir = "C:\\Ori_TMP\\PROVES_JAVA_D2DSUBEXEC\\";
-    private static String workdir = "C:\\ovallcorba\\Dades_difraccio\\2D-INCO\\Mesures-Juliol-ALBA\\";
+    private static String workdir = "C:\\Ori_TMP\\proves_bin_scale\\";
+//    private static String workdir = "C:\\ovallcorba\\Dades_difraccio\\2D-INCO\\Mesures-Juliol-ALBA\\";
     
     private JButton btn05x;
     private JButton btn2x;
@@ -209,6 +213,7 @@ public class MainFrame extends JFrame {
     public static String getD2dsubExec() {return d2dsubExec;}
     public static String getSeparator() {return separator;}
     public static String getWorkdir() {return workdir;}
+    public static final int shortsize = 32767;
 
     /**
      * Launch the application. ES POT PASSAR COM A ARGUMENT EL DIRECTORI DE TREBALL ON S'OBRIRAN PER DEFECTE ELS DIALEGS

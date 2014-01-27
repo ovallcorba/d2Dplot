@@ -81,9 +81,11 @@ public class ImagePanel extends JPanel {
     private BufferedImage subimage;
     private Point2D.Float zoomPoint, dragPoint;
     private float factorContrast;
+    private static int contrast_fun=0;
 
     private static float swinglim=4.5f;
     private static int hklfontSize=14;
+    private static float factSliderMax=3.f;
     
     /**
      * Create the panel.
@@ -180,14 +182,15 @@ public class ImagePanel extends JPanel {
         add(this.lblContrast, gbc_lblContrast);
         this.slider_contrast = new JSlider();
         this.slider_contrast.setPaintTicks(true);
-        this.slider_contrast.setInverted(true);
+        this.slider_contrast.setInverted(false);
         this.slider_contrast.setMinorTickSpacing(1);
-        this.slider_contrast.setSnapToTicks(true);
+        this.slider_contrast.setSnapToTicks(false);
         this.slider_contrast.setMinimumSize(new Dimension(30, 23));
         this.slider_contrast.setMaximumSize(new Dimension(1000, 23));
         this.slider_contrast.setPreferredSize(new Dimension(150, 35));
-        this.slider_contrast.setValue(3);
-        this.slider_contrast.setMaximum(30);
+//        this.slider_contrast.setValue(3);
+        this.slider_contrast.setMaximum(0);
+        this.slider_contrast.setValue(this.slider_contrast.getMaximum()/2);
         this.slider_contrast.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent arg0) {
@@ -400,6 +403,9 @@ public class ImagePanel extends JPanel {
     protected void do_slider_contrast_stateChanged(ChangeEvent arg0) {
         this.pintaImatge();
         getPanelImatge().repaint();
+//        System.out.println("max= "+slider_contrast.getMaximum());
+//        System.out.println("min= "+slider_contrast.getMinimum());
+//        System.out.println("val= "+slider_contrast.getValue());
     }
 
     /*
@@ -690,7 +696,56 @@ public class ImagePanel extends JPanel {
         return subimage;
     }
 
-    protected Color intensityBW(int intensity, int maxInt, int minInt, float val) {
+    //valor interpolat sobre una recta (fun=0) o una parabola (fun=1)
+    protected Color intensityBW(int intensity, int maxInt, int minInt) {
+    	
+        if (intensity < 0) {// es mascara, el pintem magenta
+            return new Color(255, 0, 255);
+        }
+
+    	float sliderMin = (float)slider_contrast.getMinimum();
+    	float sliderMax = (float)slider_contrast.getMaximum();
+    	float sliderVal = (float)slider_contrast.getValue();
+        float ccomponent=-1.f;
+
+        switch(contrast_fun){
+        case 0:
+        	// el valor s'interpolara sobre la recta (sliderMin,0) a (sliderMax,1)
+            //interpolem
+            float x1 = sliderMin+0.01f; // evitem diviso zero
+            float y1 = 0.0f;
+            float x2 = sliderVal;
+            float y2 = 1.0f;
+            ccomponent = ((y2 - y1) / (x2 - x1)) * intensity + y1 - ((y2 - y1) / (x2 - x1)) * x1;
+
+        	break;
+        case 1:
+        	// el valor s'interpolara sobre una quadràtica y=ax2 (centrat a 0,0)
+        	//nomes varia el parametre a
+        	float a=(1.f/(sliderVal*sliderVal));
+        	ccomponent = a*(intensity*intensity);
+        	break;
+        case 2:
+        	// el valor s'interpolara sobre una quadràtica cap avall y=ax2 + 1 (centrat a 0,1)
+        	//nomes varia el parametre a
+        	a=(-1.f/(sliderVal*sliderVal));
+        	ccomponent = a*(intensity*intensity)+1;
+        	break;
+        }
+
+        if(ccomponent == -1.f){return new Color(255, 0, 255);}
+        
+        if (ccomponent < 0) {
+            ccomponent = 0;
+        }
+        if (ccomponent > 1) {
+            ccomponent = 1;
+        }
+        
+        return new Color(ccomponent, ccomponent, ccomponent);
+    }
+
+    protected Color intensityBW_old(int intensity, int maxInt, int minInt, float val) {
         // canviarem la pendent mantenint el punt (0,0), es a dir, recta que passa pel punt (0,0) i (val,0.5)
 
         if (intensity < 0) {// es mascara, el pintem magenta
@@ -726,7 +781,7 @@ public class ImagePanel extends JPanel {
 
         return new Color(ccomponent, ccomponent, ccomponent);
     }
-
+    
     // maxInt i minInt per normalitzar intensitats a 1, val es el valor per ajustar el contrast
     protected Color intensityColor(int intensity, int maxInt, int minInt, float val) {
 
@@ -846,8 +901,7 @@ public class ImagePanel extends JPanel {
                                 this.slider_contrast.getValue() / (maxValSlider * factorContrast));
                     } else {
                         // pintem en BW
-                        col = intensityBW(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI(),
-                                this.slider_contrast.getValue() / (maxValSlider * factorContrast));
+                        col = intensityBW(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI());
                     }
                     im.setRGB(j, i, col.getRGB());
                 }
@@ -863,8 +917,7 @@ public class ImagePanel extends JPanel {
                                 this.slider_contrast.getValue() / (maxValSlider * factorContrast));
                     } else {
                         // pintem en BW
-                        col = intensityBW(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI(),
-                                this.slider_contrast.getValue() / (maxValSlider * factorContrast));
+                        col = intensityBW(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI());
                     }
                     im.setRGB(j, fila, col.getRGB());
                 }
@@ -942,7 +995,14 @@ public class ImagePanel extends JPanel {
     }
 
     public void setImagePatt2D(Pattern2D pattern) {
-        this.patt2D = pattern;
+    	this.patt2D = pattern;
+    	
+    	//slider contrast reinici
+    	if(pattern!=null){
+    		this.slider_contrast.setValue(0); //per tal que es reinici al centre
+        	this.contrast_slider_properties(this.patt2D.getMinI(),this.calcOptMaxISlider());	
+        }
+        
         this.pintaImatge();
         getPanelImatge().repaint();
         puntsCercles = new ArrayList<PuntCercle>();
@@ -1214,4 +1274,50 @@ public class ImagePanel extends JPanel {
         Contrast_dialog cd = new Contrast_dialog(this);
         cd.setVisible(true);
     }
+
+	public static int getContrast_fun() {
+		return contrast_fun;
+	}
+
+	public static void setContrast_fun(int contrast_fun) {
+		ImagePanel.contrast_fun = contrast_fun;
+	}
+	
+	//hem fet varies proves
+	//finalment farem:
+	//  maxI-minI/fact (fact entre 2 i 10)
+	//es el mes simple i general
+	private int calcOptMaxISlider(){
+//		return this.patt2D.calcMeanI((int)(this.patt2D.getMeanI()+factSliderMax*this.patt2D.getSdevI()));
+//		return (int)((float)(this.patt2D.getMaxI()-this.patt2D.getMinI())/2.f);
+		return (int)((float)(this.patt2D.getMaxI()-this.patt2D.getMinI())/factSliderMax);
+	}
+	
+	//max=-1 for auto calc max intensity
+	public void contrast_slider_properties(int min, int max){
+		int old_val = slider_contrast.getValue();
+		if(old_val==0){old_val=-1;}
+//		int old_max = slider_contrast.getMaximum();
+//		int old_min = slider_contrast.getMinimum();
+		this.slider_contrast.setMaximum(max);
+		this.slider_contrast.setMinimum(min);
+        this.slider_contrast.setMinorTickSpacing((int)((float)(max-min)/50.f));
+        //posicionem al valor que teniem si encara està a l'escala i sino mantenim
+        //la posicio en el nou valor (no cal, es posa a l'extrem més proper possible)
+        if(old_val>0){
+        	this.slider_contrast.setValue(old_val);	
+        }else{
+        	//posem al mig
+        	this.slider_contrast.setValue((slider_contrast.getMaximum()-slider_contrast.getMinimum())/2);
+        }
+        
+//        if(old_val>=this.slider_contrast.getMinimum()&&old_val<=this.slider_contrast.getMaximum()){
+//        	this.slider_contrast.setValue(old_val);
+//        }else{
+//            float newVal=(float)(max-min)*((float)old_val/(float)(old_max-old_min));
+//            this.slider_contrast.setValue((int)newVal);
+//        }
+
+        
+	}
 }

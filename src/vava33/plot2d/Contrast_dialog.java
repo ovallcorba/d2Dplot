@@ -15,19 +15,22 @@ import java.awt.Insets;
 import javax.swing.JTextField;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import javax.swing.JComboBox;
+import javax.swing.DefaultComboBoxModel;
 
 public class Contrast_dialog extends JDialog {
 
     private final JPanel contentPanel = new JPanel();
     private JTextField txtMinval;
     private JTextField txtMaxval;
-    private JTextField txtContrastfact;
     private ImagePanel ip;
     
-    private static final float factor_default = 3.0f;
     private static final int min_default = 0;
-    private static final int max_default = 30;
-    
+    private static final int max_default = 32000;
+    private static final int fun_default = 0;
+    private JComboBox cbox_fun;
+    private JTextField txtCurrentvalue;
+
 
     /**
      * Launch the application.
@@ -57,9 +60,9 @@ public class Contrast_dialog extends JDialog {
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         GridBagLayout gbl_contentPanel = new GridBagLayout();
         gbl_contentPanel.columnWidths = new int[]{0, 0, 0, 0, 0};
-        gbl_contentPanel.rowHeights = new int[]{0, 0, 0, 0, 0};
+        gbl_contentPanel.rowHeights = new int[]{0, 0, 0, 0, 0, 0};
         gbl_contentPanel.columnWeights = new double[]{1.0, 0.0, 1.0, 1.0, Double.MIN_VALUE};
-        gbl_contentPanel.rowWeights = new double[]{1.0, 1.0, 1.0, 1.0, Double.MIN_VALUE};
+        gbl_contentPanel.rowWeights = new double[]{1.0, 1.0, 1.0, 0.0, 1.0, Double.MIN_VALUE};
         contentPanel.setLayout(gbl_contentPanel);
         {
             JLabel lblContrastparaminfo = new JLabel("<html>Here you can define the parameters for the slide bar that control the contrast of the image. Modify them only in the case you do not see the image properly, otherwise leave the default parameters.\r\n</html>");
@@ -72,7 +75,7 @@ public class Contrast_dialog extends JDialog {
             contentPanel.add(lblContrastparaminfo, gbc_lblContrastparaminfo);
         }
         {
-            JLabel lblMinValuedef = new JLabel("Min Value (def=0)");
+            JLabel lblMinValuedef = new JLabel("Min Value");
             GridBagConstraints gbc_lblMinValuedef = new GridBagConstraints();
             gbc_lblMinValuedef.anchor = GridBagConstraints.EAST;
             gbc_lblMinValuedef.insets = new Insets(0, 0, 5, 5);
@@ -92,7 +95,7 @@ public class Contrast_dialog extends JDialog {
             this.txtMinval.setColumns(10);
         }
         {
-            JLabel lblMaxValuedef = new JLabel("Max Value (def=30)");
+            JLabel lblMaxValuedef = new JLabel("Max Value");
             GridBagConstraints gbc_lblMaxValuedef = new GridBagConstraints();
             gbc_lblMaxValuedef.anchor = GridBagConstraints.EAST;
             gbc_lblMaxValuedef.insets = new Insets(0, 0, 5, 5);
@@ -112,24 +115,56 @@ public class Contrast_dialog extends JDialog {
             this.txtMaxval.setColumns(10);
         }
         {
-            JLabel lblFactordef = new JLabel("Factor (def=3)");
-            GridBagConstraints gbc_lblFactordef = new GridBagConstraints();
-            gbc_lblFactordef.anchor = GridBagConstraints.EAST;
-            gbc_lblFactordef.insets = new Insets(0, 0, 0, 5);
-            gbc_lblFactordef.gridx = 1;
-            gbc_lblFactordef.gridy = 3;
-            contentPanel.add(lblFactordef, gbc_lblFactordef);
+        	JLabel lblCurrentValue = new JLabel("Current Value");
+        	GridBagConstraints gbc_lblCurrentValue = new GridBagConstraints();
+        	gbc_lblCurrentValue.anchor = GridBagConstraints.EAST;
+        	gbc_lblCurrentValue.insets = new Insets(0, 0, 5, 5);
+        	gbc_lblCurrentValue.gridx = 1;
+        	gbc_lblCurrentValue.gridy = 3;
+        	contentPanel.add(lblCurrentValue, gbc_lblCurrentValue);
         }
         {
-            this.txtContrastfact = new JTextField();
-            this.txtContrastfact.setText("3");
-            GridBagConstraints gbc_txtContrastfact = new GridBagConstraints();
-            gbc_txtContrastfact.insets = new Insets(0, 0, 0, 5);
-            gbc_txtContrastfact.fill = GridBagConstraints.HORIZONTAL;
-            gbc_txtContrastfact.gridx = 2;
-            gbc_txtContrastfact.gridy = 3;
-            contentPanel.add(this.txtContrastfact, gbc_txtContrastfact);
-            this.txtContrastfact.setColumns(10);
+        	txtCurrentvalue = new JTextField();
+        	txtCurrentvalue.setEditable(false);
+        	GridBagConstraints gbc_txtCurrentvalue = new GridBagConstraints();
+        	gbc_txtCurrentvalue.insets = new Insets(0, 0, 5, 5);
+        	gbc_txtCurrentvalue.fill = GridBagConstraints.HORIZONTAL;
+        	gbc_txtCurrentvalue.gridx = 2;
+        	gbc_txtCurrentvalue.gridy = 3;
+        	contentPanel.add(txtCurrentvalue, gbc_txtCurrentvalue);
+        	txtCurrentvalue.setColumns(10);
+        }
+        {
+        	JButton btnSetAsMax = new JButton("Set as Max");
+        	btnSetAsMax.addActionListener(new ActionListener() {
+        		public void actionPerformed(ActionEvent e) {
+        			do_btnSetAsMax_actionPerformed(e);
+        		}
+        	});
+        	GridBagConstraints gbc_btnSetAsMax = new GridBagConstraints();
+        	gbc_btnSetAsMax.insets = new Insets(0, 0, 5, 0);
+        	gbc_btnSetAsMax.gridx = 3;
+        	gbc_btnSetAsMax.gridy = 3;
+        	contentPanel.add(btnSetAsMax, gbc_btnSetAsMax);
+        }
+        {
+        	JLabel lblFunction = new JLabel("Function");
+        	GridBagConstraints gbc_lblFunction = new GridBagConstraints();
+        	gbc_lblFunction.anchor = GridBagConstraints.EAST;
+        	gbc_lblFunction.insets = new Insets(0, 0, 0, 5);
+        	gbc_lblFunction.gridx = 1;
+        	gbc_lblFunction.gridy = 4;
+        	contentPanel.add(lblFunction, gbc_lblFunction);
+        }
+        {
+        	cbox_fun = new JComboBox();
+        	cbox_fun.setModel(new DefaultComboBoxModel(new String[] {"linear", "quadratic (+)", "quadratic (-)"}));
+        	GridBagConstraints gbc_cbox_fun = new GridBagConstraints();
+        	gbc_cbox_fun.insets = new Insets(0, 0, 0, 5);
+        	gbc_cbox_fun.fill = GridBagConstraints.HORIZONTAL;
+        	gbc_cbox_fun.gridx = 2;
+        	gbc_cbox_fun.gridy = 4;
+        	contentPanel.add(cbox_fun, gbc_cbox_fun);
         }
         {
             JPanel buttonPane = new JPanel();
@@ -162,35 +197,39 @@ public class Contrast_dialog extends JDialog {
     }
     
     private void loadParam(){
-        txtContrastfact.setText(String.valueOf(ip.getFactorContrast()));
         txtMinval.setText(String.valueOf(ip.getSlider_contrast().getMinimum()));
         txtMaxval.setText(String.valueOf(ip.getSlider_contrast().getMaximum()));
+        cbox_fun.setSelectedIndex(ImagePanel.getContrast_fun());
+        txtCurrentvalue.setText(Integer.toString(ip.getSlider_contrast().getValue()));
     }
 
     protected void do_cancelButton_actionPerformed(ActionEvent arg0) {
         this.dispose();
     }
     protected void do_okButton_actionPerformed(ActionEvent e) {  
-        try{
-            ip.setFactorContrast(Float.parseFloat(txtContrastfact.getText()));
+        int minI=min_default;
+        int maxI=max_default;
+        int fun=fun_default;
+    	try{
+            minI=Integer.parseInt(txtMinval.getText());
         }catch(Exception ex){
             ex.printStackTrace();
-            ip.setFactorContrast(factor_default);
+            minI=min_default;
         }
         try{
-            ip.getSlider_contrast().setMinimum(Integer.parseInt(txtMinval.getText()));
+            maxI=Integer.parseInt(txtMaxval.getText());
         }catch(Exception ex){
             ex.printStackTrace();
-            ip.getSlider_contrast().setMinimum(min_default);
+            maxI=max_default;
         }
-        try{
-            ip.getSlider_contrast().setMaximum(Integer.parseInt(txtMaxval.getText()));
-        }catch(Exception ex){
-            ex.printStackTrace();
-            ip.getSlider_contrast().setMaximum(max_default);
-        }
+        fun=cbox_fun.getSelectedIndex();
+        ImagePanel.setContrast_fun(fun);
+        ip.contrast_slider_properties(minI, maxI);
         ip.pintaImatge();
         ip.getPanelImatge().repaint();
         this.dispose();
     }
+	protected void do_btnSetAsMax_actionPerformed(ActionEvent e) {
+		this.txtMaxval.setText(this.txtCurrentvalue.getText());
+	}
 }

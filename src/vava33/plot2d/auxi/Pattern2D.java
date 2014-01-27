@@ -5,12 +5,15 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import vava33.plot2d.MainFrame;
+
 public class Pattern2D {
     
     // PARAMETRES IMATGE:
     short[][] intensityB2; // guardem [columna][fila] atencio: columnes=coordX,files=cordY
     int[][] intensityB4; // per si es volgués ampliar a utilitzar enters de moment no es pot
-    int maxI, minI;
+    int maxI, minI, meanI, nSatur;
+    float sdevI;
     boolean B4intensities;
     float centrX, centrY;
     int dimX, dimY;
@@ -99,11 +102,16 @@ public class Pattern2D {
 
     public String getInfo() {
         
-        String info = "  NX(cols)= " + dimX + " NY(rows)= " + dimY + "\n" + "  minI=" + minI + " maxI=" + maxI
-                + "  (Scale factor= " + FileUtils.dfX_3.format(1/scale) +")\n" + "  Xcent=" + FileUtils.dfX_3.format(centrX)
-                + " Ycent=" + FileUtils.dfX_3.format(centrY) + "\n" + "  Distance Sample-Detector (mm)=" 
-                + FileUtils.dfX_3.format(distMD) + "\n" + "  Pixel Size X Y (mm)= " + FileUtils.dfX_4.format(pixSx) + " "
-                + FileUtils.dfX_4.format(pixSy);
+//        String info = "  NX(cols)= " + dimX + " NY(rows)= " + dimY + "\n" + "  minI=" + minI + " maxI=" + maxI
+//                + "  (Scale factor= " + FileUtils.dfX_3.format(1/scale) +")\n" + "  Xcent=" + FileUtils.dfX_3.format(centrX)
+//                + " Ycent=" + FileUtils.dfX_3.format(centrY) + "\n" + "  Distance Sample-Detector (mm)=" 
+//                + FileUtils.dfX_3.format(distMD) + "\n" + "  Pixel Size X Y (mm)= " + FileUtils.dfX_4.format(pixSx) + " "
+//                + FileUtils.dfX_4.format(pixSy);
+        String info = "  NX(cols)= " + dimX + " NY(rows)= " + dimY + "\n" + 
+                "  minI=" + minI + " maxI=" + maxI + "  (Scale factor= " + FileUtils.dfX_3.format(1/scale) +"; Saturated= "+nSatur+")\n" + 
+                "  Xcent=" + FileUtils.dfX_3.format(centrX) + " Ycent=" + FileUtils.dfX_3.format(centrY) + "\n" + 
+                "  Distance Sample-Detector (mm)=" + FileUtils.dfX_3.format(distMD) + "\n" + 
+                "  Pixel Size X Y (mm)= " + FileUtils.dfX_4.format(pixSx) + " " + FileUtils.dfX_4.format(pixSy);
         return info;
     }
 
@@ -261,7 +269,7 @@ public class Pattern2D {
                     continue;
                 }
                 if(this.getIntenB2(j, i)<0)continue;
-                int inten=Math.round(this.getIntenB2(j, i)/this.getScale());
+                int inten=Math.round(this.getIntenB2(j, i)*this.getScale());
                 if(inten>this.getMaxI())this.setMaxI(inten);
                 if(inten<this.getMinI())this.setMinI(inten);
             }
@@ -278,7 +286,7 @@ public class Pattern2D {
                     continue;
                 }
                 if(this.getIntenB2(j, i)<0)continue;
-                int inten=Math.round(this.getIntenB2(j, i)/oldScale);
+                int inten=Math.round(this.getIntenB2(j, i)*oldScale);
                 this.setIntenB2(j, i, (short) (inten / this.getScale()));
             }
         }
@@ -294,6 +302,70 @@ public class Pattern2D {
     public void setY0toMask(int y0toMask) {
         this.y0toMask = y0toMask;
     }
+    
+    //calcula i estableix els valors de meanI i sdevI de tota la imatge excepte mascares
+    //també calcula els nombre de pixels saturats
+    public void calcMeanI(){
+    	int yacum=0;
+    	int npix=0;
+    	int satur=0;
+        for (int i = 0; i < this.getDimY(); i++) { // per cada fila (Y)
+            for (int j = 0; j < this.getDimX(); j++) { // per cada columna (X)
+                if(this.getIntenB2(j, i)<0)continue;
+                yacum=yacum+this.getIntenB2(j, i);
+                npix=npix+1;
+                
+                if(this.getIntenB2(j, i)>=MainFrame.shortsize){
+                	satur=satur+1;
+                }
+            }
+        }
+        this.nSatur=satur;
+        
+        this.meanI= Math.round((float)yacum/(float)npix);
+        //desviacio
+        int numerador=0;
+        for (int i = 0; i < this.getDimY(); i++) { // per cada fila (Y)
+            for (int j = 0; j < this.getDimX(); j++) { // per cada columna (X)
+                if(this.getIntenB2(j, i)<0)continue;
+                numerador=numerador + (this.getIntenB2(j, i)-this.meanI)*(this.getIntenB2(j, i)-this.meanI);
+            }
+        }
+        this.sdevI=(float) Math.sqrt((float)numerador/(float)npix);
+    }
+    
+    //retorna la mitjana de les intensitats de la imatge per sobre un llindar d'intensitat
+    public int calcMeanI(int llindar){
+    	int yacum=0;
+    	int npix=0;
+        for (int i = 0; i < this.getDimY(); i++) { // per cada fila (Y)
+            for (int j = 0; j < this.getDimX(); j++) { // per cada columna (X)
+                short iB2=this.getIntenB2(j, i);
+            	if(iB2<0)continue;
+            	if(iB2<llindar)continue;
+                yacum=yacum+iB2;
+                npix=npix+1;
+            }
+        }
+        System.out.println("Imean(llindar)= "+Math.round((float)yacum/(float)npix));
+        return Math.round((float)yacum/(float)npix);
+    }
+
+	public int getMeanI() {
+		return meanI;
+	}
+
+	public void setMeanI(int meanI) {
+		this.meanI = meanI;
+	}
+
+	public float getSdevI() {
+		return sdevI;
+	}
+
+	public void setSdevI(float sdevI) {
+		this.sdevI = sdevI;
+	}
     
     // public void printParameters(){
     // this.stat(" Instrumental Parameters:");

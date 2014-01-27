@@ -20,6 +20,8 @@ import java.util.Scanner;
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 
+import vava33.plot2d.MainFrame;
+
 public final class FileUtils {
     
     private static Locale currentlocale = Locale.getDefault();
@@ -299,7 +301,7 @@ public final class FileUtils {
                 }
 
                 // calculem el factor d'escala
-                patt2D.setScale(patt2D.getMaxI() / 32767.f);
+                patt2D.setScale(patt2D.getMaxI() / (float)MainFrame.shortsize);
 
                 in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                            // buffer
@@ -403,7 +405,7 @@ public final class FileUtils {
                 }     
                 
                 //calculem el factor d'escala
-                patt2D.setScale((float)patt2D.getMaxI()/32767.f);    
+                patt2D.setScale((float)patt2D.getMaxI()/(float)MainFrame.shortsize);    
 
                 in = new BufferedInputStream(new FileInputStream(d2File)); //reiniciem buffer lectura
                 in.read(buff); //dimx
@@ -508,7 +510,7 @@ public final class FileUtils {
             in.read(header);
 
             // si la intensitat màxima supera el short escalem
-            patt2D.setScale(Math.max(maxI / 32767.f, 1.000f));
+            patt2D.setScale(Math.max(maxI / (float)MainFrame.shortsize, 1.000f));
 
             // llegim els bytes
             for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
@@ -670,7 +672,7 @@ public final class FileUtils {
 
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
-            patt2D.setScale(Math.max(patt2D.getMaxI() / 32767.f, 1.000f));
+            patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
@@ -788,7 +790,7 @@ public final class FileUtils {
 
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
-            patt2D.setScale(Math.max(patt2D.getMaxI() / 32767.f, 1.000f));
+            patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
@@ -859,6 +861,12 @@ public final class FileUtils {
             patt2D = FileUtils.openEDFfile(d2File);
         }
 
+        //operacions generals despres d'obrir
+        patt2D.calcMeanI();
+        //debug:
+        System.out.println("meanI= "+patt2D.getMeanI());
+        System.out.println("sdevI= "+patt2D.getSdevI());
+        
         return patt2D;
     }
 
@@ -900,7 +908,7 @@ public final class FileUtils {
                 }
             }
             // calculem el factor d'escala
-            patt2D.setScale(Math.max(patt2D.getMaxI() / 32767.f, 1.000f));
+            patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
             scD2file = new Scanner(d2File);
             scD2file.next();// x
@@ -1155,7 +1163,7 @@ public final class FileUtils {
 
                   // calculem el factor d'escala (valor maxim entre quocient i 1, mai
                   // escalem per sobre)
-                  patt2D.setScale(Math.max(patt2D.getMaxI() / 32767.f, 1.000f));
+                  patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
                   in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                              // buffer
