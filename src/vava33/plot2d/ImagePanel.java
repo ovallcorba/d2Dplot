@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
@@ -35,8 +34,9 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import vava33.plot2d.auxi.FileUtils;
-import vava33.plot2d.auxi.MyPolygon4;
+import com.vava33.jutils.FileUtils;
+
+import vava33.plot2d.auxi.ExZone;
 import vava33.plot2d.auxi.OrientSolucio;
 import vava33.plot2d.auxi.Pattern2D;
 import vava33.plot2d.auxi.PuntCercle;
@@ -62,7 +62,7 @@ public class ImagePanel extends JPanel {
 
     private Calib_dialog calibration;
     private Rectangle2D.Float currentRect;
-    private MyPolygon4 currentPol4;
+    private ExZone currentPol4;
     private ExZones_dialog exZones;
     boolean fit = true;
     private BufferedImage image;
@@ -129,7 +129,7 @@ public class ImagePanel extends JPanel {
             }
         });
         GridBagConstraints gbc_panelImatge = new GridBagConstraints();
-        gbc_panelImatge.gridwidth = 5;
+        gbc_panelImatge.gridwidth = 4;
         gbc_panelImatge.insets = new Insets(0, 0, 5, 0);
         gbc_panelImatge.fill = GridBagConstraints.BOTH;
         gbc_panelImatge.gridx = 0;
@@ -942,12 +942,12 @@ public class ImagePanel extends JPanel {
         return new Rectangle2D.Float(vertex.x, vertex.y, width, height);
     }
     
-    protected MyPolygon4 Pol4ToFrameCoords(MyPolygon4 p) {
+    protected ExZone Pol4ToFrameCoords(ExZone p) {
         Point2D.Float v1 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(0),p.getYVertex(0)));
         Point2D.Float v2 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(1),p.getYVertex(1)));
         Point2D.Float v3 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(2),p.getYVertex(2)));
         Point2D.Float v4 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(3),p.getYVertex(3)));
-        return new MyPolygon4(Math.round(v1.x),Math.round(v1.y), Math.round(v2.x),Math.round(v2.y),
+        return new ExZone(Math.round(v1.x),Math.round(v1.y), Math.round(v2.x),Math.round(v2.y),
                 Math.round(v3.x),Math.round(v3.y),Math.round(v4.x),Math.round(v4.y));
     }
 
@@ -999,7 +999,7 @@ public class ImagePanel extends JPanel {
     	
     	//slider contrast reinici
     	if(pattern!=null){
-    		this.slider_contrast.setValue(0); //per tal que es reinici al centre
+//    		this.slider_contrast.setValue(0); //per tal que es reinici al centre
         	this.contrast_slider_properties(this.patt2D.getMinI(),this.calcOptMaxISlider());	
         }
         

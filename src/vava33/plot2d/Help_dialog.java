@@ -74,20 +74,18 @@ public class Help_dialog extends JDialog {
         GridBagLayout gbl_contentPanel = new GridBagLayout();
         gbl_contentPanel.columnWidths = new int[] { 0, 0, 0 };
         gbl_contentPanel.rowHeights = new int[] { 0, 0, 0, 0, 0 };
-        gbl_contentPanel.columnWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
+        gbl_contentPanel.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
         gbl_contentPanel.rowWeights = new double[] { 1.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
         contentPanel.setLayout(gbl_contentPanel);
         {
             JPanel buttonPane = new JPanel();
             getContentPane().add(buttonPane, BorderLayout.SOUTH);
-            {
-                GridBagLayout gbl_buttonPane = new GridBagLayout();
-                gbl_buttonPane.columnWidths = new int[] { 468, 103, 0 };
-                gbl_buttonPane.rowHeights = new int[] { 25, 0 };
-                gbl_buttonPane.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-                gbl_buttonPane.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
-                buttonPane.setLayout(gbl_buttonPane);
-            }
+            GridBagLayout gbl_buttonPane = new GridBagLayout();
+            gbl_buttonPane.columnWidths = new int[] {0, 0, 0};
+            gbl_buttonPane.rowHeights = new int[] {0, 0};
+            gbl_buttonPane.columnWeights = new double[]{0.0, 1.0};
+            gbl_buttonPane.rowWeights = new double[]{0.0, Double.MIN_VALUE};
+            buttonPane.setLayout(gbl_buttonPane);
             JButton okButton = new JButton("Close");
             okButton.addActionListener(new ActionListener() {
                 @Override
@@ -97,7 +95,7 @@ public class Help_dialog extends JDialog {
             });
             okButton.setActionCommand("OK");
             GridBagConstraints gbc_okButton = new GridBagConstraints();
-            gbc_okButton.insets = new Insets(0, 5, 5, 5);
+            gbc_okButton.insets = new Insets(0, 0, 5, 5);
             gbc_okButton.anchor = GridBagConstraints.NORTHEAST;
             gbc_okButton.gridx = 1;
             gbc_okButton.gridy = 0;
@@ -142,9 +140,9 @@ public class Help_dialog extends JDialog {
         lblTalplogo.setText("");
         lblTalplogo.setIcon(logo);
         {
-            JLabel lbloriolVallcorbaJordi = new JLabel("<html>\r\n<div style=\"text-align:left\"> \r\n<b>Oriol Vallcorba, Jordi Rius, Carlos Frontera</b><br>\r\nInstitut de Ci\u00E8ncia de Materials de Barcelona (ICMAB-CSIC)<br>\r\nFor comments/errors/suggestions, please contact to: <strong>ovallcorba@icmab.es</strong><br>\r\n</div>\r\n</html>");
+            JLabel lbloriolVallcorbaJordi = new JLabel("<html>\r\n<div style=\"text-align:left\"> \r\n<b>Oriol Vallcorba</b><br>\r\nALBA Synchrotron Light Source - CELLS (www.cells.es)<br>\r\nFor comments/errors/suggestions, please contact to: <strong>ovallcorba@cells.es</strong><br>\r\n</div>\r\n</html>");
             GridBagConstraints gbc_lbloriolVallcorbaJordi = new GridBagConstraints();
-            gbc_lbloriolVallcorbaJordi.anchor = GridBagConstraints.WEST;
+            gbc_lbloriolVallcorbaJordi.fill = GridBagConstraints.HORIZONTAL;
             gbc_lbloriolVallcorbaJordi.insets = new Insets(0, 0, 5, 0);
             gbc_lbloriolVallcorbaJordi.gridx = 1;
             gbc_lbloriolVallcorbaJordi.gridy = 2;

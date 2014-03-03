@@ -8,8 +8,6 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.Polygon;
-import java.awt.Shape;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -17,8 +15,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.Rectangle2D;
-import java.awt.geom.Rectangle2D.Float;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -44,9 +40,10 @@ import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import vava33.plot2d.auxi.FileUtils;
-import vava33.plot2d.auxi.JtxtAreaOut;
-import vava33.plot2d.auxi.MyPolygon4;
+import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.LogJTextArea;
+
+import vava33.plot2d.auxi.ExZone;
 import vava33.plot2d.auxi.Pattern2D;
 
 public class ExZones_dialog extends JDialog {
@@ -66,7 +63,7 @@ public class ExZones_dialog extends JDialog {
     private JScrollPane scrollPane;
     private JScrollPane scrollPane_1;
     private JSplitPane splitPane;
-    private JtxtAreaOut tAOut;
+    private LogJTextArea tAOut;
     private JTextField txtMargin;
     
     private DefaultListModel lm;
@@ -274,7 +271,7 @@ public class ExZones_dialog extends JDialog {
                     gbc_scrollPane_1.gridy = 0;
                     this.panel_right.add(this.scrollPane_1, gbc_scrollPane_1);
                     {
-                        this.tAOut = new JtxtAreaOut();
+                        this.tAOut = new LogJTextArea();
                         this.tAOut.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
                         this.tAOut.setWrapStyleWord(true);
                         this.tAOut.setLineWrap(true);
@@ -392,7 +389,7 @@ public class ExZones_dialog extends JDialog {
     // }
     protected void do_btnAdd_actionPerformed(ActionEvent arg0) {
         //afegeix poligon per defecte
-        MyPolygon4 p = new MyPolygon4();
+        ExZone p = new ExZone();
         patt2D.getExZones().add(p);
         lm.addElement(p.printLnVertexs());
     }
@@ -428,9 +425,9 @@ public class ExZones_dialog extends JDialog {
             output.println("Y0TOMASK="+ y0msk);
             output.println("NEXZONES="+ patt2D.getExZones().size());
 
-            Iterator<MyPolygon4> it = patt2D.getExZones().iterator();
+            Iterator<ExZone> it = patt2D.getExZones().iterator();
             while (it.hasNext()) {
-                MyPolygon4 p = it.next();
+                ExZone p = it.next();
                 StringBuilder sb = new StringBuilder();
                 for (int i=0;i<p.npoints;i++){
                     sb.append(p.getXYvertex(i)).append(" ");
@@ -507,7 +504,7 @@ public class ExZones_dialog extends JDialog {
         this.dispose();
     }
 
-    public MyPolygon4 getCurrentZone() {
+    public ExZone getCurrentZone() {
         if (listZones.getSelectedIndex() >= 0) {
             return patt2D.getExZones().get(listZones.getSelectedIndex());
         } else {
@@ -563,6 +560,8 @@ public class ExZones_dialog extends JDialog {
                     }
                     continue;
                 }
+                //reiniciem zones excloses de la imatge
+                patt2D.getExZones().clear();
                 if(line.trim().startsWith("NEXZONES")){
                     int nexz = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
                     //ara llegim les zones
@@ -571,7 +570,7 @@ public class ExZones_dialog extends JDialog {
                         //tolerem una linia de comentari
                         if(line.trim().startsWith("!"))line = scExFile.nextLine();
                         String[] zona = line.trim().split(" ");
-                        patt2D.getExZones().add(new MyPolygon4(Integer.parseInt(zona[0]),
+                        patt2D.addExZone(new ExZone(Integer.parseInt(zona[0]),
                                 Integer.parseInt(zona[1]),Integer.parseInt(zona[2]),Integer.parseInt(zona[3]),
                                 Integer.parseInt(zona[4]),Integer.parseInt(zona[5]),Integer.parseInt(zona[6]),
                                 Integer.parseInt(zona[7])));
@@ -589,16 +588,16 @@ public class ExZones_dialog extends JDialog {
 
     public void updateList() {
         lm.clear();
-        Iterator<MyPolygon4> it = patt2D.getExZones().iterator();
+        Iterator<ExZone> it = patt2D.getExZones().iterator();
         while (it.hasNext()) {
-            MyPolygon4 p = it.next();
+            ExZone p = it.next();
             lm.addElement(p.printLnVertexs().trim());
         }
     }
 
     public void updateSelectedElement() {
         if (listZones.getSelectedIndex() >= 0) {
-            MyPolygon4 p =  patt2D.getExZones().get(listZones.getSelectedIndex());
+            ExZone p =  patt2D.getExZones().get(listZones.getSelectedIndex());
             lm.set(listZones.getSelectedIndex(), p.printLnVertexs().trim());
         }
     }

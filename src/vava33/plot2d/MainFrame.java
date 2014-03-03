@@ -1,120 +1,5 @@
 package vava33.plot2d;
 
-/**    
- * // TODO: es podrien unificar les classes Punt...
- *    ATENCIO!! COMPROVAR A FILEUTILS FILENAMENOEXT QUE ES MENJA UNA LLETRA DE MES, HO HE CANVIAT JA A -1 (130723) pero el
- *    proper cop comprovar-ho
- *    
- * 140127
- *  - Contrast   
- *  - Canvi a recalcScale a pattern2D que dividia per l'escala quan havia de multiplicar
- *    
- * 131008
- *  - Ordenem arraylist orientSolucio segons Fsum abans d'omplir la llista
- *  
- * 130923
- *  - Cal reestructurar tot lo de les zones excloses per acceptar trapezoides.
- *  - CurrentRect es seguirà fent servir per Calibració, però generaré un de nou que sigui CurrentShape que serà el que
- *    treballarà amb ExZones i tot es definirà amb Shape.Polygon. Aleshores també cal canviar la crida a editquadrat per
- *    la crida a una nova subrutina editpoligon quan s'esta definint les zones excloses i es clica.
- *  - Save BIN ara també considera Y0toMask (afegit a patt2D el Y0toMask option)
- *    
- * 130918
- *  - Obertura fitxers EDF (ALBA)
- *  - ImagePanel, prova de flexibilitzar contrast (posant dinamics max, min)
- *  
- * 130611
- *  - Adaptacio D2Dsub nova versio amb més opcions
- *  - Canvi noms opcions D2Dsub
- * 
- * 130604
- *  - TREC el CODI de D2Dsub
- *  - S'ha fet que abans de guardar el BIN es faci un REESCALAT rellegint si cal les intensitats originals per tal d'aplicar
- *    les possibles zones excloses que s'han afegit
- *  - Poso a FileUtils els DecimalFormats i el locale
- *  - Faig que no apliqui l'escala al mostrar la intensitat
- *  - Faig que consideri les intensitats ZERO pel calcul de minI
- *  - Canvi color lletra consola a groc
- *  - Obertura fitxers bin antics? -> deteccio automatica segons num de bytes (capçalera de 20 (old) vs 60 (new) bytes)
- * 
- * 130601 ** AQUESTA ÉS LA VERSIÓ CONSIDERADA "ACABADA" PER 1306 **
- *  - Hem fet que el fortran escrigui molts !! per omplir el buffer de consola i així poder mostrar els missatges que volem
- *    i QUAN volem per pantalla. Simplement ignorarem les linies que comencin per !!!!! (a veure si funciona)
- *  - TextArea output amb boto dret.
- *  - Neteja general i preparacio per distribuïr.
- *  
- * 130530
- * - Escrits els HELP dels diferents dialogs.
- * - Reset IMATGE complert
- * - Al tancar finestres es deseleccionen checkboxes que afecten el que es mostra a la imatge (calibracio i exZ son exclusius)
- * - SaveBin contempla zones excloses (es guarden a pattern2d) i s'ha passat a FileUtils (igual que savePNG)
- * - Acabada la implementacio de zones excloses (writeEXZ,etc..)
- * - Determinacio de les zones excloses passa a ser responsabilitat del programa principal. 
- * 
- * 130529 
- * - inici implemetnacio d2DExZones 
- * - Centratge imatge al panell amb reset view
- * - Neteja fitxers i opcio clean up.
- * 
- * 130528-2 
- * - Petites correccions de varis errors de nullpointers, access directe a camps privats, etc...
- * - Redissenyat el d2Dsub, ara tot es fa a la mateixa finestra. Ja funciona tot menys zones excloses.
- * - Classe fileUtils, amb operacions fitxers i LECTURA FITXERS DADES
- * - Canvi filosofia: Tota la responsabilitat de representacio (mouse, etc..) a Imagepanel (per reaprofitar-la a altres llocs)
- * 
- * 130528
- * - Execucio del d2dsub des  de D2Dsub_dialog
- * - Canvi workdir a string i afegides variables static globals per execucions
- * - Creacio classe output text area (JtxtAreaOut)
- * 
- * Changes (130523):
- * - Finestra FONS
- * - CANVI FORMAT BIN ACTUAL (capçalera 60) per open i save. 
- * - Del IMG ara es llegeixen tots els parametres.
- * 
- * Changes (130517-21):
- * - Intentat aproximar millor els pixels en pantalla
- * - Calibració amb el·lipse dibuixada i ara es poden triar quins anells s'utilitzen per calibrar
- * 
- * Changes (130515):
- * - UI amb parts resizables (Splitpanes)
- * - LaB6 calibració centre, distOD i Lambda?.
- * 
- * Changes (130514):
- * - Classe Pattern2D, canvi a tot arreu.
- *  
- * Changes (130510,13,14):
- * - Format sol, 1a linia NPEAKS FSUMVAL
- * - Canvi funcions botó esquerra i central
- * - SetParams -> nova finestra amb tots els parameters
- * - Canvi centrX,centrY a float
- * - Reacalcul dels PuntCercles si es canvia el cercle
- * - Llista pics a dialog apart
- * - labels HKL a les reflexions solucio (showHKLsol)
- * - Passat tot a pixels fraccionaris (getPixel, getFrameFromPixel...)
- * - Obrir fitxers de bruker GADDS .gfrm
- * 
- * Changes (130318):
- * - obre el format SOL nou (shape and all)
- * - Moguda la comprovacio de parametres entrats dins la subrutina d'entrada de parametres instrumentals
- * - tret el color gris fosc de la representacio de solucions
- * 
- * Old changes:
- * - CANVI FILOSOFIA GENERAL DE REPRESENTACIO I PER APROXIMAR MILLOR LES COORDENADES... ara es
- *   pot moure i ampliar la imatge millor, es representa més lliure.
- * - NETEJA general, tretes les opcions d'utilitzar Enters per guardar la imatge o de fer servir capçalera antiga
- *   si es vol, fer servir una version anterior (130219-2)
- * - Opcio d'entrar informacio per mostrar 2T a sota
- * - Valors defecte JSlide contrast (aplicat factorContrast)
- * - Creacio classe OrientSolucio i reestructuracio de tota la representacio de solucions de forma
- *   que es poden obrir mes d'una alhora.
- * - Zoom amb botó dret del mouse i movent.
- * - Creacio classe puntCercle i canvi dels mètodes de ImagePanel que l'afecten
- * - recorda el directori (i se li pot passar com a paràmetre l'inicial)
- * - Opcio de capçalera amb integer*4
- * - Considerem valors de zero pel minI
- */
-
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -131,7 +16,6 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-import java.util.Collections;
 import java.util.Scanner;
 
 import javax.swing.DefaultListModel;
@@ -160,10 +44,9 @@ public class MainFrame extends JFrame {
     private static String separator = System.getProperty("file.separator");
     private static String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     private static String d2dsubExec = "d2Dsub";
-    private static String welcomeMSG = "d2Dplot v1309 (131126) by OV";
-    private static String workdir = "C:\\Ori_TMP\\proves_bin_scale\\";
-//    private static String workdir = "C:\\ovallcorba\\Dades_difraccio\\2D-INCO\\Mesures-Juliol-ALBA\\";
-    
+    private static String welcomeMSG = "d2Dplot v1306 (130606) by OV";
+    private static String workdir = "C:\\Ori_TMP\\PROVES_JAVA_D2DSUBEXEC\\";
+
     private JButton btn05x;
     private JButton btn2x;
     private JButton btnD2Dint;
@@ -213,7 +96,6 @@ public class MainFrame extends JFrame {
     public static String getD2dsubExec() {return d2dsubExec;}
     public static String getSeparator() {return separator;}
     public static String getWorkdir() {return workdir;}
-    public static final int shortsize = 32767;
 
     /**
      * Launch the application. ES POT PASSAR COM A ARGUMENT EL DIRECTORI DE TREBALL ON S'OBRIRAN PER DEFECTE ELS DIALEGS
@@ -240,7 +122,6 @@ public class MainFrame extends JFrame {
                 try {
                     MainFrame frame = new MainFrame();
                     frame.inicialitza();
-                    frame.setLocationRelativeTo(null);
                     frame.setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -729,8 +610,8 @@ public class MainFrame extends JFrame {
 
         File d2File;
         JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm,edf)", "bin", "img",
-                "spr", "gfrm", "edf");
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm)", "bin", "img",
+                "spr", "gfrm");
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setCurrentDirectory(new File(workdir));
         int selection = fileChooser.showOpenDialog(null);
@@ -764,8 +645,6 @@ public class MainFrame extends JFrame {
         } else {
             // afegim les solucions a la llista
             DefaultListModel lm = new DefaultListModel();
-            // ordenem arraylist
-            Collections.sort(panelImatge.getSolucions(),Collections.reverseOrder());
             for (int i = 0; i < panelImatge.getSolucions().size(); i++) {
                 lm.addElement((i + 1) + " " + panelImatge.getSolucions().get(i).getNumReflexions() + " "
                         + panelImatge.getSolucions().get(i).getValorFrot());
@@ -779,7 +658,7 @@ public class MainFrame extends JFrame {
         panelImatge.resetView();
     }
 
-    // 130523: canvi a format bin nou (capçalera 60)
+    // 130523: canvi a format bin nou (capï¿½alera 60)
     protected void do_btnSaveBin_actionPerformed(ActionEvent arg0) {
 
         //si teniem obert un fitxer img el reobrim per recalcular l'escala en cas que
@@ -893,11 +772,7 @@ public class MainFrame extends JFrame {
     }
 
     private void inicialitza() {
-        this.setSize(1200, 960); //ho centra el metode main
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        if(this.getWidth()>screenSize.width||this.getHeight()>screenSize.height){
-            this.setSize(screenSize.width-100,screenSize.height-100);
-        }
+        this.setBounds(25, 25, 840, 760); // TODO: podriem mirar de centrar-ho millor...
         tAOut.stat(welcomeMSG);
         FileUtils.setLocale();
     }
@@ -918,13 +793,13 @@ public class MainFrame extends JFrame {
             scSolfile.nextLine(); // grain identificator
             OrientSolucio.setGrainIdent(scSolfile.nextInt());
             scSolfile.nextLine();
-            scSolfile.nextLine(); // grain nr (capçalera) comença el primer gra
+            scSolfile.nextLine(); // grain nr (capï¿½alera) comenï¿½a el primer gra
 
             /*
-             * En el cas que grain identificator sigui 0, hi ha #NumSolucions mostrant només la solucio amb major Frot
+             * En el cas que grain identificator sigui 0, hi ha #NumSolucions mostrant nomï¿½s la solucio amb major Frot
              * (CENTRE). En cas que sigui 1, hi ha X solucions properes a la del gra seleccionat (indicat per grain
-             * identificator). Les solucions estan etiquetades per la capçalera ORIENT excepte la de major valor de Frot
-             * que és CENTRE.
+             * identificator). Les solucions estan etiquetades per la capï¿½alera ORIENT excepte la de major valor de Frot
+             * que ï¿½s CENTRE.
              */
 
             if (OrientSolucio.getGrainIdent() == 0) {
@@ -934,15 +809,11 @@ public class MainFrame extends JFrame {
                     endSol = false;
                     panelImatge.getSolucions().get(i).setGrainNr(scSolfile.nextInt());
                     line = scSolfile.nextLine();
-//                    System.out.println(scSolfile.nextLine());// CENTRE
                     scSolfile.nextLine();// CENTRE
                     panelImatge.getSolucions().get(i).setNumReflexions(scSolfile.nextInt());
                     line = scSolfile.nextLine();
                     panelImatge.getSolucions().get(i).setValorFrot(Float.parseFloat(line)); // valor funcio rotacio
-//                    System.out.println(scSolfile.nextLine());
-//                    System.out.println(scSolfile.nextLine());// matriu Rot
-//                    System.out.println(scSolfile.nextLine());// matriu Rot
-//                    System.out.println(scSolfile.nextLine());// matriu Rot
+                    scSolfile.nextLine();
                     scSolfile.nextLine();// matriu Rot
                     scSolfile.nextLine();// matriu Rot
                     scSolfile.nextLine();// matriu Rot
@@ -953,7 +824,6 @@ public class MainFrame extends JFrame {
                             continue;
                         }
                         line = scSolfile.nextLine();
-                        System.out.println("bona "+line);
                         if (line.trim().isEmpty())
                             continue;
                         if (line.trim().startsWith("GRAIN")) {
@@ -980,14 +850,14 @@ public class MainFrame extends JFrame {
                     grainNr = scSolfile.nextInt();
                     line = scSolfile.nextLine();
                     if (grainNr != OrientSolucio.getGrainIdent()) {
-                        // no es el gra del que trobem orientacions properes, llegim seguent capçalera i el saltem
+                        // no es el gra del que trobem orientacions properes, llegim seguent capï¿½alera i el saltem
                         if (scSolfile.hasNextLine()) {
                             scSolfile.nextLine();
-                        } // capçalera GRAIN NR.
+                        } // capï¿½alera GRAIN NR.
                         continue;
                     }
                     // es el gra correcte
-                    scSolfile.nextLine();// ORIENT o CENTRE (capçalera)
+                    scSolfile.nextLine();// ORIENT o CENTRE (capï¿½alera)
                     int i = 0;
                     boolean endGrain = false;
                     while (!endGrain) {

@@ -2,20 +2,20 @@ package vava33.plot2d.auxi;
 
 import java.awt.Polygon;
 
-public class MyPolygon4 extends Polygon {
+public class ExZone extends Polygon {
 
     int[] defXpoints = {200,400,400,200};
     int[] defYpoints = {200,200,400,400};
 
     //genera un poligon de 4 vertexs per defecte: rectangle 200,200,200,200 (x,y,w,h)
-    public MyPolygon4(){
+    public ExZone(){
         super();
         this.xpoints=defXpoints;
         this.ypoints=defYpoints;
         this.npoints=4;
     }
     
-    public MyPolygon4(int v1x, int v1y, int v2x, int v2y, int v3x, int v3y, int v4x, int v4y){
+    public ExZone(int v1x, int v1y, int v2x, int v2y, int v3x, int v3y, int v4x, int v4y){
         super();
         this.addPoint(v1x, v1y);
         this.addPoint(v2x, v2y);

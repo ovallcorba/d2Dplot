@@ -29,9 +29,11 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
 
-import vava33.plot2d.auxi.FileUtils;
-import vava33.plot2d.auxi.JtxtAreaOut;
+import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.LogJTextArea;
+
 import vava33.plot2d.auxi.Pattern2D;
+
 
 public class Calib_dialog extends JDialog {
 
@@ -59,7 +61,7 @@ public class Calib_dialog extends JDialog {
     private JTextField txt_r1;
     private JTextField txt_r2;
     private JTextField txtDistOD;
-    private JtxtAreaOut tAOut;
+    private LogJTextArea tAOut;
     private float WLmean;
     private float Xmean, Ymean;
     private float MDmean;
@@ -286,7 +288,7 @@ public class Calib_dialog extends JDialog {
                     gbc_scrollPane_1.gridy = 0;
                     this.panel_right.add(this.scrollPane_1, gbc_scrollPane_1);
                     {
-                        this.tAOut = new JtxtAreaOut();
+                        this.tAOut = new LogJTextArea();
                         this.tAOut.setTabSize(4);
                         this.tAOut.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
                         this.tAOut.setWrapStyleWord(true);

@@ -20,174 +20,11 @@ import java.util.Scanner;
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 
+import com.vava33.jutils.FileUtils;
+
 import vava33.plot2d.MainFrame;
 
-public final class FileUtils {
-    
-    private static Locale currentlocale = Locale.getDefault();
-    private static DecimalFormatSymbols mySymbols = new DecimalFormatSymbols(currentlocale);
-    public static DecimalFormat dfX_1 = new DecimalFormat("#0.0");
-    public static DecimalFormat dfX_2 = new DecimalFormat("#0.00");
-    public static DecimalFormat dfX_3 = new DecimalFormat("#0.000");
-    public static DecimalFormat dfX_4 = new DecimalFormat("#0.0000");
-    public static DecimalFormat dfX_5 = new DecimalFormat("#0.00000");
-
-    public static void setLocale(){
-        //PER TEST:
-//        System.out.println(mySymbols.getDecimalSeparator());
-//        mySymbols.setDecimalSeparator('.');
-//        System.out.println(mySymbols.getDecimalSeparator());
-//        System.out.println(mySymbols.getGroupingSeparator());
-//        System.out.println(dfX_3.format(12345678.009921));
-//        dfX_3.setDecimalFormatSymbols(mySymbols);
-//        System.out.println(dfX_3.format(12345678.009921));
-        
-        mySymbols.setDecimalSeparator('.');
-        dfX_1.setDecimalFormatSymbols(mySymbols);
-        dfX_2.setDecimalFormatSymbols(mySymbols);
-        dfX_3.setDecimalFormatSymbols(mySymbols);
-        dfX_4.setDecimalFormatSymbols(mySymbols);
-        dfX_5.setDecimalFormatSymbols(mySymbols);
-        dfX_1.setGroupingUsed(false);
-        dfX_2.setGroupingUsed(false);
-        dfX_3.setGroupingUsed(false);
-        dfX_4.setGroupingUsed(false);
-        dfX_5.setGroupingUsed(false);
-
-    }
-    
-
-    
-    public static int B1UnsigtoInt(byte b) {
-        int result = (0xFF & b);
-        return result;
-    }
-
-    // little endian
-    public static int B2toInt(byte[] b) {
-        int result = (((0xFF & b[1]) << 8) | (0xFF & b[0]));
-        return result;
-    }
-
-    public static float B4toFloat(byte[] b) {
-        int asInt = (b[0] & 0xFF) | ((b[1] & 0xFF) << 8) | ((b[2] & 0xFF) << 16) | ((b[3] & 0xFF) << 24);
-        return Float.intBitsToFloat(asInt);
-    }
-
-    // Canvia l'extensio del file f, a newExt. Si no en te l'afegeix
-    public static File canviExtensio(File f, String newExt) {
-        String path = f.toString(); // cami complert al fitxer
-        String fname = f.getName(); // nom del fitxer (amb extensio si en té)
-        path = path.substring(0, path.length() - fname.length()); // directori
-                                                                  // del fitxer
-
-        int i = fname.lastIndexOf('.');
-        if (i > 0) { // si té extensio
-            int midaExt = fname.length() - i;
-            fname = fname.substring(0, fname.length() - midaExt);
-            if (newExt.equals("")) {// volem treure l'extensio, la nova es sense
-                                    // ext
-                f = new File(path + fname);
-            } else {// afegim l'extensio normal
-                f = new File(path + fname + "." + newExt);
-            }
-        } else { // no té extensio
-            if (newExt.equals("")) {// volem treure l'extensio, la nova es sense
-                                    // ext
-                f = new File(path + fname);
-            } else {// afegim l'extensio normal
-                f = new File(path + fname + "." + newExt);
-            }
-        }
-        return f;
-    }
-
-    // Canvia el nom del file f, a nouNom. Deixa l'extensio que tenia.
-    public static File canviNomFitxer(File f, String nouNom) {
-        String path = f.toString(); // cami complert al fitxer
-        String fname = f.getName(); // nom del fitxer (amb extensio si en te)
-        path = path.substring(0, path.length() - fname.length()); // directori
-                                                                  // del fitxer
-
-        int i = fname.lastIndexOf('.');
-        if (i > 0) { // si te extensio
-            String ext = fname.substring(i + 1);
-            f = new File(path + nouNom + "." + ext);
-        } else { // no té extensio
-            f = new File(path + nouNom);
-        }
-        return f;
-    }
-
-    // metode que copia un fitxer, torna 0 si correcte o -1 si no ha anat be
-    public static int copyFile(File srFile, File dtFile) {
-        int ret = -1;
-        try {
-            InputStream in = new FileInputStream(srFile);
-
-            // For Append the file.
-            // OutputStream out = new FileOutputStream(dtFile,true);
-
-            // For Overwrite the file.
-            OutputStream out = new FileOutputStream(dtFile);
-
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
-            in.close();
-            out.close();
-            // log.addtxt(true,true,srFile.toString()+" copied to: "+dtFile.toString());
-
-            ret = 0;
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-        return ret;
-    }
-
-    // Get the extension of a file.
-    public static String getExtension(File f) {
-        String ext = "";
-        String s = f.getName();
-        int i = s.lastIndexOf('.');
-
-        if (i > 0 && i < s.length() - 1) {
-            ext = s.substring(i + 1).toLowerCase();
-        }
-        return ext;
-    }
-
-    // igual pero a partir d'un string (path o filename)
-    public static String getExtension(String s) {
-        String ext = "";
-        int i = s.lastIndexOf('.');
-
-        if (i > 0 && i < s.length() - 1) {
-            ext = s.substring(i + 1).toLowerCase();
-        }
-        return ext;
-    }
-
-    public static String getFNameNoExt(File fn) {
-        String ext = getExtension(fn);
-        if (ext.length() > 0) {
-            return fn.getPath().substring(0, fn.getPath().length() - ext.length() - 1);
-        } else {
-            return fn.getPath();
-        }
-    }
-
-    // retorna el nom del fitxer sense extensio
-    public static String getFNameNoExt(String fn) {
-        String ext = getExtension(fn);
-        if (ext.length() > 0) {
-            return fn.substring(0, fn.length() - ext.length() - 1);
-        } else {
-            return fn;
-        }
-    }
+public final class ImgFileUtils {
 
     public static Pattern2D openBinaryFile(File d2File) {
         Pattern2D patt2D = null;
@@ -225,25 +62,25 @@ public final class FileUtils {
             dimY = bb.getInt();
 
             in.read(buff4);
-            scale = B4toFloat(buff4);
+            scale = FileUtils.B4toFloat(buff4);
 
             in.read(buff4);
-            centrX = B4toFloat(buff4);
+            centrX = FileUtils.B4toFloat(buff4);
 
             in.read(buff4);
-            centrY = B4toFloat(buff4);
+            centrY = FileUtils.B4toFloat(buff4);
 
             in.read(buff4);
-            pixlx = B4toFloat(buff4) / 1000.f; // passem a mm
+            pixlx = FileUtils.B4toFloat(buff4) / 1000.f; // passem a mm
 
             in.read(buff4);
-            pixly = B4toFloat(buff4) / 1000.f;
+            pixly = FileUtils.B4toFloat(buff4) / 1000.f;
 
             in.read(buff4);
-            sepod = B4toFloat(buff4);
+            sepod = FileUtils.B4toFloat(buff4);
 
             in.read(buff4);
-            wl = B4toFloat(buff4);
+            wl = FileUtils.B4toFloat(buff4);
 
             in.read(new byte[60 - dataHeaderBytes]);
 
@@ -263,7 +100,7 @@ public final class FileUtils {
                     for (int j = 0; j < patt2D.getDimX(); j++) { // per cada
                                                                  // columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j, i, (short) B2toInt(buff));
+                        patt2D.setIntenB2(j, i, (short) FileUtils.B2toInt(buff));
                         count = count + 1;
                         // nomes considerem valors superiors a zero pel minI
                         if (patt2D.getIntenB2(j, i) >= 0) {
@@ -286,7 +123,7 @@ public final class FileUtils {
                     for (int j = 0; j < patt2D.getDimX(); j++) { // per cada
                                                                  // columna (X)
                         in.read(buff);
-                        int valorLlegit = B2toInt(buff);
+                        int valorLlegit = FileUtils.B2toInt(buff);
                         count = count + 1;
                         // nomes considerem valors superiors a zero pel minI
                         if (valorLlegit >= 0) {
@@ -315,7 +152,7 @@ public final class FileUtils {
                     for (int j = 0; j < patt2D.getDimX(); j++) { // per cada
                                                                  // columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j, i, (short) (B2toInt(buff) / patt2D.getScale()));
+                        patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                     }
                 }
                 // corregim maxI i minI
@@ -358,7 +195,7 @@ public final class FileUtils {
             bb.order(ByteOrder.LITTLE_ENDIAN);
             dimY=bb.getInt();
             in.read(buff4);
-            scale=B4toFloat(buff4);
+            scale=FileUtils.B4toFloat(buff4);
             in.read(buff4);
             bb = ByteBuffer.wrap(buff4);
             bb.order(ByteOrder.LITTLE_ENDIAN);
@@ -379,7 +216,7 @@ public final class FileUtils {
                 for (int i=0;i<patt2D.getDimY();i++){ //per cada fila (Y)
                     for (int j=0;j<patt2D.getDimX();j++){  //per cada columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j,i,(short)((float)B2toInt(buff)));
+                        patt2D.setIntenB2(j,i,(short)((float)FileUtils.B2toInt(buff)));
                         count = count+1;
                         //nomes considerem valors superiors a zero pel minI
                         if(patt2D.getIntenB2(j,i)>=0){
@@ -394,7 +231,7 @@ public final class FileUtils {
                 for (int i=0;i<patt2D.getDimY();i++){ //per cada fila (Y)
                     for (int j=0;j<patt2D.getDimX();j++){  //per cada columna (X)
                         in.read(buff);
-                        int valorLlegit=B2toInt(buff);
+                        int valorLlegit=FileUtils.B2toInt(buff);
                         count = count+1;
                         //nomes considerem valors superiors a zero pel minI
                         if(valorLlegit>=0){
@@ -418,7 +255,7 @@ public final class FileUtils {
                 for (int i=0;i<patt2D.getDimY();i++){ //per cada fila (Y)
                     for (int j=0;j<patt2D.getDimX();j++){  //per cada columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j,i,(short)((float)B2toInt(buff)/patt2D.getScale()));
+                        patt2D.setIntenB2(j,i,(short)((float)FileUtils.B2toInt(buff)/patt2D.getScale()));
                     }
                 }   
                 //corregim maxI i minI
@@ -524,10 +361,10 @@ public final class FileUtils {
                     switch (nbytePerPixel) {
                         case 1:
                             // valorLlegit= buffer.get();
-                            valorLlegit = B1UnsigtoInt(buff[0]);
+                            valorLlegit = FileUtils.B1UnsigtoInt(buff[0]);
                             break;
                         case 2:
-                            valorLlegit = B2toInt(buff);
+                            valorLlegit = FileUtils.B2toInt(buff);
                             break;
                     // case 4:
                     // valorLlegit=buffer.getInt();
@@ -656,7 +493,7 @@ public final class FileUtils {
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
                                                              // (X)
                     in.read(buff);
-                    int valorLlegit = B2toInt(buff);
+                    int valorLlegit = FileUtils.B2toInt(buff);
                     count = count + 1;
                     // nomes considerem valors superiors a zero pel minI
                     if (valorLlegit >= 0) {  //fem >= o > directament sense considerar els zeros??!
@@ -684,7 +521,7 @@ public final class FileUtils {
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
                                                              // (X)
                     in.read(buff);
-                    patt2D.setIntenB2(j, i, (short) (B2toInt(buff) / patt2D.getScale()));
+                    patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                 }
             }
             // corregim maxI i minI
@@ -774,7 +611,7 @@ public final class FileUtils {
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
                                                              // (X)
                     in.read(buff);
-                    int valorLlegit = B2toInt(buff);
+                    int valorLlegit = FileUtils.B2toInt(buff);
                     count = count + 1;
                     // nomes considerem valors superiors a zero pel minI
                     if (valorLlegit >= 0) {  //fem >= o > directament sense considerar els zeros??!
@@ -802,7 +639,7 @@ public final class FileUtils {
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
                                                              // (X)
                     in.read(buff);
-                    patt2D.setIntenB2(j, i, (short) (B2toInt(buff) / patt2D.getScale()));
+                    patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                 }
             }
             // corregim maxI i minI
@@ -842,27 +679,30 @@ public final class FileUtils {
 
         if (ext.equalsIgnoreCase("BIN")) {
             if(isNewBIN(d2File)){
-                patt2D = FileUtils.openBinaryFile(d2File);    
+                patt2D = ImgFileUtils.openBinaryFile(d2File);    
             }else{
-                patt2D = FileUtils.openBinaryFileOLD(d2File);
+                patt2D = ImgFileUtils.openBinaryFileOLD(d2File);
                 patt2D.oldBIN=true;
             }
         }
         if (ext.equalsIgnoreCase("IMG")) {
-            patt2D = FileUtils.openIMGfile(d2File);
+            patt2D = ImgFileUtils.openIMGfile(d2File);
         }
         if (ext.equalsIgnoreCase("SPR")) {
-            patt2D = FileUtils.openSPRfile(d2File);
+            patt2D = ImgFileUtils.openSPRfile(d2File);
         }
         if (ext.equalsIgnoreCase("GFRM")) {
-            patt2D = FileUtils.openGFRMfile(d2File);
+            patt2D = ImgFileUtils.openGFRMfile(d2File);
         }
         if (ext.equalsIgnoreCase("EDF")) {
-            patt2D = FileUtils.openEDFfile(d2File);
+            patt2D = ImgFileUtils.openEDFfile(d2File);
         }
 
         //operacions generals despres d'obrir
         patt2D.calcMeanI();
+        patt2D.setImgfile(d2File);
+        ImgFileUtils.readEXZfile(patt2D);
+
         //debug:
         System.out.println("meanI= "+patt2D.getMeanI());
         System.out.println("sdevI= "+patt2D.getSdevI());
@@ -954,7 +794,7 @@ public final class FileUtils {
      */
     public static File saveBIN(File d2File, Pattern2D patt2D) {
         // Forcem extensio bin
-        d2File = new File(getFNameNoExt(d2File).concat(".bin"));
+        d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".bin"));
 
         int dataHeaderBytes = 36; // bytes de dades en el header
         OutputStream output = null;
@@ -1060,14 +900,6 @@ public final class FileUtils {
         }
         return null;
     }
-
-    // format little endian
-    public static byte[] toBytes2(int i) {
-        byte[] result = new byte[2];
-        result[1] = (byte) (i >> 8);
-        result[0] = (byte) (i >> 0);
-        return result;
-    }
     
     private static boolean isNewBIN(File d2File){
         //primer mirem la cap�alera
@@ -1149,7 +981,7 @@ public final class FileUtils {
                           in.read(buff);
                           //si esta en zona exclosa el saltem
                           if(patt2D.isInExZone(j, i))continue;
-                          int valorLlegit = B2toInt(buff);
+                          int valorLlegit = FileUtils.B2toInt(buff);
                           if (valorLlegit >= 0) {  //fem >= o > directament sense considerar els zeros??!
                               if (valorLlegit > patt2D.getMaxI()) {
                                   patt2D.setMaxI(valorLlegit);
@@ -1179,7 +1011,7 @@ public final class FileUtils {
                               patt2D.setIntenB2(j, i, (short)-1);
                               continue;
                           }
-                          patt2D.setIntenB2(j, i, (short) (B2toInt(buff) / patt2D.getScale()));
+                          patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                       }
                   }
                   // corregim maxI i minI
@@ -1198,6 +1030,71 @@ public final class FileUtils {
           
           return true; // correcte
           
+    }
+    
+    public static boolean readEXZfile(Pattern2D patt2D) {
+    	File dataFile = patt2D.getImgfile();
+        File exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".exz"));
+        if (!exfile.exists()) {
+            exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
+            if (!exfile.exists())
+                return false;
+        }
+        // aqui hauriem de tenir exfile ben assignada, la llegim
+        String line;
+        try {
+            Scanner scExFile = new Scanner(exfile);
+            boolean llegint = true;
+            
+            while(llegint){
+                if (scExFile.hasNextLine()) {
+                    line = scExFile.nextLine();
+                } else {
+                    scExFile.close();
+                    llegint=false;
+                    continue;
+                }
+                
+                if(line.startsWith("!")){
+                    continue;
+                }
+                
+                int iigual=line.indexOf("=")+1;
+                
+                if(line.trim().startsWith("MARGIN")){
+                    patt2D.setMargin(Integer.parseInt(line.substring(iigual, line.trim().length()).trim()));
+                    continue;
+                }
+                if(line.trim().startsWith("Y0TOMASK")){
+                    int ytm = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
+                    if(ytm==1){
+                        patt2D.setY0toMask(1);
+                    }else{
+                        patt2D.setY0toMask(0);
+                    }
+                    continue;
+                }
+                if(line.trim().startsWith("NEXZONES")){
+                    int nexz = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
+                    //ara llegim les zones
+                    for (int i = 0; i < nexz; i++) {
+                        line = scExFile.nextLine();
+                        //tolerem una linia de comentari
+                        if(line.trim().startsWith("!"))line = scExFile.nextLine();
+                        String[] zona = line.trim().split(" ");
+                        patt2D.addExZone(new ExZone(Integer.parseInt(zona[0]),
+                                Integer.parseInt(zona[1]),Integer.parseInt(zona[2]),Integer.parseInt(zona[3]),
+                                Integer.parseInt(zona[4]),Integer.parseInt(zona[5]),Integer.parseInt(zona[6]),
+                                Integer.parseInt(zona[7])));
+                    }
+                    continue;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
     
 //    public void reopenIMG(File d2dfile, Pattern2D patt2D){
