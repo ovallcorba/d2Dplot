@@ -34,6 +34,8 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.apache.commons.math3.util.FastMath;
+
 import com.vava33.jutils.FileUtils;
 
 import vava33.plot2d.auxi.ExZone;
@@ -76,8 +78,10 @@ public class ImagePanel extends JPanel {
     private float scalefit;
     private boolean showHKLsol = false;
     private boolean showIndexing = false; // indica si s'està en mode de seleccio de punts i si es visualitzen
+    private boolean showHKLIndexing = false; // indica si s'està en mode de seleccio de punts HKL per proximitat
     private boolean showSolPoints = true;
     private ArrayList<OrientSolucio> solucions; // contindra les solucions
+//    private ArrayList<OrientSolucio> hklClics; // contindra els clicks (provem de utilitzar el solucions igualment) 
     private BufferedImage subimage;
     private Point2D.Float zoomPoint, dragPoint;
     private float factorContrast;
@@ -250,10 +254,10 @@ public class ImagePanel extends JPanel {
         Point2D.Float startCoords = getPixel(new Point2D.Float(0, 0));
         Point2D.Float endCoords = getPixel(new Point2D.Float(getPanelImatge().getWidth() - 1, getPanelImatge()
                 .getHeight() - 1));
-        int panelX1 = Math.round(startCoords.x);
-        int panelY1 = Math.round(startCoords.y);
-        int panelX2 = Math.round(endCoords.x);
-        int panelY2 = Math.round(endCoords.y);
+        int panelX1 = FastMath.round(startCoords.x);
+        int panelY1 = FastMath.round(startCoords.y);
+        int panelX2 = FastMath.round(endCoords.x);
+        int panelY2 = FastMath.round(endCoords.y);
         // No intersection? (que no movem la imatge fora del panell)
         if (panelX1 >= getImage().getWidth() || panelX2 < 0 || panelY1 >= getImage().getHeight() || panelY2 < 0) {
             return null;
@@ -273,8 +277,8 @@ public class ImagePanel extends JPanel {
         float cy = patt2D.getCentrY();
         double x2 = (pixel.getX() * psx - cX * psx) * (pixel.getX() * psx - cX * psx);
         double y2 = (pixel.getY() * psy - cy * psy) * (pixel.getY() * psy - cy * psy);
-        double radi = Math.sqrt(x2 + y2);
-        double t2 = Math.atan(radi / patt2D.getDistMD());
+        double radi = FastMath.sqrt(x2 + y2);
+        double t2 = FastMath.atan(radi / patt2D.getDistMD());
         return t2;
     }
 
@@ -331,13 +335,13 @@ public class ImagePanel extends JPanel {
             }
             lblCoord.setText("[" + FileUtils.dfX_1.format(pix.x) + ";" + FileUtils.dfX_1.format(pix.y) + "]");
             int inten = 0;
-            // El math.round porta a 2048 i out of bound, millor no arrodonir i truncar aquí igual que al if anterior
-            // inten=(int)(patt2D.getIntenB2(Math.round(pix.x),Math.round(pix.y))*patt2D.getScale());
+            // El FastMath.round porta a 2048 i out of bound, millor no arrodonir i truncar aquí igual que al if anterior
+            // inten=(int)(patt2D.getIntenB2(FastMath.round(pix.x),FastMath.round(pix.y))*patt2D.getScale());
 //            inten = (int) (patt2D.getIntenB2((int) (pix.x), (int) (pix.y)) * patt2D.getScale());
             inten = (int) (patt2D.getIntenB2((int) (pix.x), (int) (pix.y)));
             lblIntensity.setText("I= " + inten);
             if (patt2D.checkExpParam()) {
-                lbl2t.setText("(2" + theta + "=" + FileUtils.dfX_3.format(Math.toDegrees(this.calcT2(pix))) + ")");
+                lbl2t.setText("(2" + theta + "=" + FileUtils.dfX_3.format(FastMath.toDegrees(this.calcT2(pix))) + ")");
             }
         }
     }
@@ -384,14 +388,68 @@ public class ImagePanel extends JPanel {
             if (e.getButton() == CLICAR) {
                 int inten;
                 Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
-//                inten = (int) (patt2D.getIntenB2(Math.round(pix.x), Math.round(pix.y)) * patt2D.getScale());
-                inten = (int) (patt2D.getIntenB2(Math.round(pix.x), Math.round(pix.y)));
+//                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)) * patt2D.getScale());
+                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)));
                 this.addPuntCercle(new Point2D.Float(e.getPoint().x, e.getPoint().y), inten);
             }
             if (e.getButton() == ZOOM_BORRAR) {
                 this.removePuntCercle(new Point2D.Float(e.getPoint().x, e.getPoint().y));
             }
         }
+        
+        // Si tenim marcada l'opcio showHKLindexing afegim a la llista HKL els punts clicats més propers
+        if (showHKLIndexing && this.isPatt2D()){
+        	// assignem les coordenades "clic" als puntSolucio
+            if (e.getButton() == CLICAR) {
+                int inten;
+                Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
+//                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)) * patt2D.getScale());
+                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)));
+                //busquem quin és l'HKL més proper i l'assignem
+                PuntSolucio nearestPS = getNearestPS(pix.x,pix.y);
+        		if (nearestPS!=null){
+        			nearestPS.setCoordXclic(pix.x);
+        			nearestPS.setCoordYclic(pix.y);
+            		nearestPS.setIntenClic(inten);
+        		}
+            }
+            //faig que amb el dret es retorna la posicio original de la SOLUCIO
+//            if (e.getButton() == ZOOM_BORRAR) {
+//            	Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
+//                //busquem quin és l'HKL més proper i l'assignem
+//                PuntSolucio nearestPS = getNearestPS(pix.x,pix.y);
+//        		if (nearestPS!=null){
+//        			nearestPS.setCoordXclic(-1);
+//        			nearestPS.setCoordYclic(-1);
+//            		nearestPS.setIntenClic(-1);
+//        		}
+//            }
+        }
+    }
+    
+    protected PuntSolucio getNearestPS(float px, float py){
+	    Iterator<OrientSolucio> itrOS = solucions.iterator();
+	    OrientSolucio os = null;
+	    while (itrOS.hasNext()) {
+	        os = itrOS.next();
+	        if (os.isShowSol()) {
+	        	break;
+	        }
+	    }
+	    if(os==null)return null;
+        // d'aquesta solucio, es busca el puntSolucio més proper al punt entrat
+        Iterator<PuntSolucio> itrS = os.getSol().iterator();
+        float minModul = Float.MAX_VALUE;
+        PuntSolucio nearestPS = null;
+        while (itrS.hasNext()) {
+            PuntSolucio s = itrS.next();
+            float modul = (float) FastMath.sqrt((s.getCoordX()-px)*(s.getCoordX()-px)+(s.getCoordY()-py)*(s.getCoordY()-py));
+            if (modul<minModul){
+            	nearestPS = s;
+            	minModul=modul;
+            }
+        }
+        return nearestPS;
     }
 
     protected void do_panelImatge_mouseWheelMoved(MouseWheelEvent e) {
@@ -403,9 +461,9 @@ public class ImagePanel extends JPanel {
     protected void do_slider_contrast_stateChanged(ChangeEvent arg0) {
         this.pintaImatge();
         getPanelImatge().repaint();
-//        System.out.println("max= "+slider_contrast.getMaximum());
-//        System.out.println("min= "+slider_contrast.getMinimum());
-//        System.out.println("val= "+slider_contrast.getValue());
+//        VavaLogger.LOG.info("max= "+slider_contrast.getMaximum());
+//        VavaLogger.LOG.info("min= "+slider_contrast.getMinimum());
+//        VavaLogger.LOG.info("val= "+slider_contrast.getValue());
     }
 
     /*
@@ -428,10 +486,10 @@ public class ImagePanel extends JPanel {
 //        130923 aquesta subrutina ja no es crida per definir zones excloses (nomes calibracio)
 //        if (estaDefinintEXZ())
 //            tol = 1;
-        // System.out.println(ULx+" "+ULy);
-        // System.out.println(URx+" "+URy);
-        // System.out.println(LLx+" "+LLy);
-        // System.out.println(LRx+" "+LRy);
+        // VavaLogger.LOG.info(ULx+" "+ULy);
+        // VavaLogger.LOG.info(URx+" "+URy);
+        // VavaLogger.LOG.info(LLx+" "+LLy);
+        // VavaLogger.LOG.info(LRx+" "+LRy);
 
         // PRIMER mirem si està a una arista
         boolean xMatch = false; // coicideix la x
@@ -510,8 +568,8 @@ public class ImagePanel extends JPanel {
 //        float tolArista = 5; //+-5 pixels
         
         //provem de fer la tolerancia en relacio a scalefit
-        float tolVertex = Math.max(5/scalefit,2);
-        float tolArista = Math.max(5/scalefit,2);
+        float tolVertex = FastMath.max(5/scalefit,2);
+        float tolArista = FastMath.max(5/scalefit,2);
         
         
         //primer mirem si hem clicat sobre algun vertex per moure'l
@@ -584,7 +642,7 @@ public class ImagePanel extends JPanel {
         
         //si no hem clicat a cap vertex mirem si hem clicat a dins i movem tota la zona
         if(currentPol4.contains(clic)){
-            currentPol4.translate(Math.round(incX), Math.round(incY));
+            currentPol4.translate(FastMath.round(incX), FastMath.round(incY));
             if(repaint)this.repaint();
             return;
         }
@@ -628,16 +686,16 @@ public class ImagePanel extends JPanel {
         // més petita segons la mida del frame i la imatge
         double xScale = (double) getPanelImatge().getWidth() / getImage().getWidth(this);
         double yScale = (double) getPanelImatge().getHeight() / getImage().getHeight(this);
-        scalefit = (float) Math.min(xScale, yScale);
+        scalefit = (float) FastMath.min(xScale, yScale);
         // CENTREM LA IMATGE AL PANELL
         if (scalefit == xScale) {
             // hem de centrar en y
             float gap = (getPanelImatge().getHeight() - (getImage().getHeight()) * scalefit) / 2.f;
-            originY = originY + Math.round(gap);
+            originY = originY + FastMath.round(gap);
         } else {
             // hem de centrar en x
             float gap = (getPanelImatge().getWidth() - (getImage().getWidth()) * scalefit) / 2.f;
-            originX = originX + Math.round(gap);
+            originX = originX + FastMath.round(gap);
         }
     }
 
@@ -858,13 +916,17 @@ public class ImagePanel extends JPanel {
         return showHKLsol;
     }
 
-    // es mou l'origen a traves d'un increment de les coordenades
+    public boolean isShowIndexing() {
+		return showIndexing;
+	}
+
+	// es mou l'origen a traves d'un increment de les coordenades
     public void moveOrigin(float incX, float incY, boolean repaint) {
         // assignem un nou origen de la imatge amb un increment a les coordenades anteriors
         //  (util per moure'l fen drag del mouse)
         // hem de vigilar no sortir-nos de la imatge (igual que al fer zoom)
-        originX = originX + Math.round(incX);
-        originY = originY + Math.round(incY);
+        originX = originX + FastMath.round(incX);
+        originY = originY + FastMath.round(incY);
 
         // TODO:els limits han de ser per:
         // -superior: image.height
@@ -947,8 +1009,8 @@ public class ImagePanel extends JPanel {
         Point2D.Float v2 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(1),p.getYVertex(1)));
         Point2D.Float v3 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(2),p.getYVertex(2)));
         Point2D.Float v4 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(3),p.getYVertex(3)));
-        return new ExZone(Math.round(v1.x),Math.round(v1.y), Math.round(v2.x),Math.round(v2.y),
-                Math.round(v3.x),Math.round(v3.y),Math.round(v4.x),Math.round(v4.y));
+        return new ExZone(FastMath.round(v1.x),FastMath.round(v1.y), FastMath.round(v2.x),FastMath.round(v2.y),
+                FastMath.round(v3.x),FastMath.round(v3.y),FastMath.round(v4.x),FastMath.round(v4.y));
     }
 
     // donat un punt clicat mirarem si hi ha cercle a aquest pixel i en cas que aixi sigui el borrarem
@@ -1046,8 +1108,8 @@ public class ImagePanel extends JPanel {
         // ara tenim el punt del jframe que ha de quedar on tenim el mouse
         // apuntant, per tant hem de moure l'origen de
         // la imatge conforme això (vector nouCentre-mousePosition)
-        originX = originX + Math.round(centrePanel.x - centre.x);
-        originY = originY + Math.round(centrePanel.y - centre.y);
+        originX = originX + FastMath.round(centrePanel.x - centre.x);
+        originY = originY + FastMath.round(centrePanel.y - centre.y);
 
         this.repaint();
     }
@@ -1060,7 +1122,15 @@ public class ImagePanel extends JPanel {
         this.showIndexing = show;
     }
 
-    public void setShowSolPoints(boolean show) {
+    public boolean isShowHKLIndexing() {
+		return showHKLIndexing;
+	}
+
+	public void setShowHKLIndexing(boolean showHKLIndexing) {
+		this.showHKLIndexing = showHKLIndexing;
+	}
+
+	public void setShowSolPoints(boolean show) {
         this.showSolPoints = show;
     }
 
@@ -1097,8 +1167,8 @@ public class ImagePanel extends JPanel {
         // ara tenim el punt del jframe que ha de quedar on tenim el mouse
         // apuntant, per tant hem de moure l'origen de
         // la imatge conforme això (vector nouCentre-mousePosition)
-        originX = originX + Math.round(mousePosition.x - centre.x);
-        originY = originY + Math.round(mousePosition.y - centre.y);
+        originX = originX + FastMath.round(mousePosition.x - centre.x);
+        originY = originY + FastMath.round(mousePosition.y - centre.y);
 
         this.repaint();
     }
@@ -1176,6 +1246,41 @@ public class ImagePanel extends JPanel {
             }
         }
 
+//        private void drawHKLIndexing(Graphics2D g1) {
+//            Iterator<OrientSolucio> itrOS = solucions.iterator();
+//            while (itrOS.hasNext()) {
+//                OrientSolucio os = itrOS.next();
+//                if (os.isShowSol()) {
+//                    // es mostra la solucio
+//                    Iterator<PuntSolucio> itrS = os.getSol().iterator();
+//                    while (itrS.hasNext()) {
+//                        PuntSolucio s = itrS.next();
+//                        
+//                    }
+//                }
+//            }
+            //realment ha de mostrar només el matix que showIndexing no? o fer
+            //desapareixer els que ja s'han assignat (aixo estaria bé... i no
+            //caldria canviar-los de color...)
+            
+//            Iterator<PuntCercle> itrPC = puntsCercles.iterator();
+//            while (itrPC.hasNext()) {
+//                PuntCercle pc = itrPC.next();
+//                Ellipse2D.Float e = pc.getCercle();
+//                Ellipse2D.Float p = pc.getPunt();
+//                g1.setPaint(PuntCercle.getColorCercle());
+//                BasicStroke stroke = new BasicStroke(1.5f);
+//                g1.setStroke(stroke);
+//                // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
+//                g1.draw(ellipseToFrameCoords(e));
+//                g1.setPaint(PuntCercle.getColorPunt());
+//                stroke = new BasicStroke(3.0f);
+//                g1.setStroke(stroke);
+//                g1.draw(ellipseToFrameCoords(p));
+//                g1.fill(ellipseToFrameCoords(p));
+//            }
+//        }
+        
         private void drawSolPoints(Graphics2D g1) {
             Iterator<OrientSolucio> itrOS = solucions.iterator();
             while (itrOS.hasNext()) {
@@ -1189,6 +1294,17 @@ public class ImagePanel extends JPanel {
                         BasicStroke stroke = new BasicStroke(3.0f);
                         g1.setStroke(stroke);
                         Ellipse2D.Float e = ellipseToFrameCoords(s);
+                        //si estem a HKLindexing NO mostrem els punts que s'han assignat
+                        //provem de mostrar els actualitzats (els "clic")
+                        if(showHKLIndexing){
+                        	if(s.getCoordXclic()>0){
+                        		float xe = s.getCoordXclic() - s.getMidaPunt()/2;
+                        		float ye = s.getCoordYclic() - s.getMidaPunt()/2;
+                        		Ellipse2D.Float el = new Ellipse2D.Float(xe,ye,s.getMidaPunt(),s.getMidaPunt());
+                        		e = ellipseToFrameCoords(el);
+                        		g1.setPaint(s.getColorPunt().darker().darker());
+                        	}
+                        }
                         g1.draw(e);
                         g1.fill(e);
                         if (showHKLsol){
@@ -1230,9 +1346,9 @@ public class ImagePanel extends JPanel {
                     e.printStackTrace();
                 }
                 // Rectangle r = g2.getClipBounds();
-                g2.drawImage(getSubimage(), Math.max(0, originX), Math.max(0, originY),
-                        Math.round(getSubimage().getWidth() * scalefit),
-                        Math.round(getSubimage().getHeight() * scalefit), null);
+                g2.drawImage(getSubimage(), FastMath.max(0, originX), FastMath.max(0, originY),
+                        FastMath.round(getSubimage().getWidth() * scalefit),
+                        FastMath.round(getSubimage().getHeight() * scalefit), null);
 
                 final Graphics2D g1 = (Graphics2D) g2.create();
 
@@ -1242,11 +1358,12 @@ public class ImagePanel extends JPanel {
 
                 if (showSolPoints) {drawSolPoints(g1);}
 
-                if (showIndexing) {drawIndexing(g1);}
-
+                // nomes hauria d'haver-hi la possibilitat d'1 opcio, drawIndexing o drawHKLindexing
+                if (showIndexing || showHKLIndexing) {drawIndexing(g1);}
+//                if (showHKLIndexing) {drawHKLIndexing(g1);}
+                
                 // nomes hauria d'haver-hi la possibilitat d'1 opcio, calibracio o zones excloses
                 if (estaCalibrant()) {drawCalibration(g1);}
-
                 if (estaDefinintEXZ()) {drawExZones(g1);}
 
                 g1.dispose();

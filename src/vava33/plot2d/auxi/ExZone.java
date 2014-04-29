@@ -2,6 +2,8 @@ package vava33.plot2d.auxi;
 
 import java.awt.Polygon;
 
+import org.apache.commons.math3.util.FastMath;
+
 public class ExZone extends Polygon {
 
     int[] defXpoints = {200,400,400,200};
@@ -42,10 +44,10 @@ public class ExZone extends Polygon {
     
     //incrementa +val a la X del vertex i
     public void incXVertex(int i,float val){
-        this.xpoints[i]=this.xpoints[i]+Math.round(val);
+        this.xpoints[i]=this.xpoints[i]+FastMath.round(val);
     }
     public void incYVertex(int i,float val){
-        this.ypoints[i]=this.ypoints[i]+Math.round(val);
+        this.ypoints[i]=this.ypoints[i]+FastMath.round(val);
     }
     
     public String getXYvertex(int i){

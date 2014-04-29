@@ -1,13 +1,18 @@
 package vava33.plot2d.auxi;
 
+import java.io.File;
 import java.util.Locale;
 
 import javax.swing.JProgressBar;
 
 import com.vava33.jutils.LogJTextArea;
 
+import org.apache.commons.math3.util.FastMath;
+
+import vava33.plot2d.MainFrame;
+
 /*
- * Operacions sobre imatges (sostracció fons, correccions, etc...)
+ * Operacions sobre imatges (sostracciï¿½ fons, correccions, etc...)
  */
 public final class ImgOps {
 	
@@ -29,7 +34,7 @@ public final class ImgOps {
 				countPoints++;
 			}
 		}
-		Iacum=Math.round(Iacum/countPoints);
+		Iacum=FastMath.round(Iacum/countPoints);
 		Imean = (int) Iacum;
 		
 		//si la intensitat mitjana es zero, abortem el firstBkgPass
@@ -74,7 +79,7 @@ public final class ImgOps {
 							//estem dins la imatge
 							//el propi punt no el considerem
 							if((k==i)&&(l==j))continue;
-							//comprovem si el punt es mascara, si es així el "restem" (no el
+							//comprovem si el punt es mascara, si es aixï¿½ el "restem" (no el
 							//tenim en compte) i saltem al seguent
 							if(dataIn.getIntenB2(l, k)<0){
 								nMaskP++;
@@ -85,10 +90,10 @@ public final class ImgOps {
 							sumI=sumI+dataIn.getIntenB2(l, k);
 						}else{
 							//ESTEM FORA LA IMAGE
-//			                  !Agafarem el punt mes proper al punt en questió, sempre i quant no sigui mascara
+//			                  !Agafarem el punt mes proper al punt en questiï¿½, sempre i quant no sigui mascara
 //			                  !calcularem els nous indexs l,k
 //			                  !EN TOTS ELS CASOS QUE SOBRESURT HEM DE VIGILAR AMB ELS MARGES DE LA IMATGE
-//			                  !SI ES QUE N'HI HA, és a dir:
+//			                  !SI ES QUE N'HI HA, ï¿½s a dir:
 //			                    ! - (0,0) sera (it0%margin, it0%margin)
 //			                    ! - (nxmx,nymx) sera (nxmx-it0%margin-1, nymx-it0%margin-1)
 //			                  !valors newL,newK inicials l,k
@@ -122,7 +127,10 @@ public final class ImgOps {
 			}//dimX
 			//PROGRESS BAR:
 			if(progress!=null){
-				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %%",bkgIter,((float)i/(float)dataOut.getDimY())*100));
+				long elapTime = (System.currentTimeMillis() - startTime)/1000;
+				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
+				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %% (est. time %6.2f min.)",bkgIter,percent,estTime));
 			}
 			//per si s'ha aturat
 			if (Thread.interrupted()) {
@@ -132,6 +140,9 @@ public final class ImgOps {
 		
 		long endTime   = System.currentTimeMillis();
 		float totalTime = (endTime - startTime)/1000;
+		if(progress!=null){
+			progress.setString("Iteration finished!");
+		}
 		if(txtOut!=null){
 			txtOut.addtxt(true, true, "fi iter. "+bkgIter+" (time: "+totalTime+" s)");
 		}
@@ -144,7 +155,7 @@ public final class ImgOps {
 		dataSub.setMinI(9999999);
 		for(int i=0; i<dataSub.getDimY();i++){
 			for(int j=0; j<dataSub.getDimX();j++){
-				//si la intensitat és zero saltem
+				//si la intensitat ï¿½s zero saltem
 				if(dataIn.getIntenB2(j, i)<0){
 					dataSub.setIntenB2(j, i, dataIn.getIntenB2(j, i));
 					continue;
@@ -172,43 +183,45 @@ public final class ImgOps {
 		int nover = 0;
 		for(int i=0; i<dataSub[0].getDimY();i++){
 			for(int j=0; j<dataSub[0].getDimX();j++){
-				//dataMask comença amb el pixel a zero
+				//dataMask comenï¿½a amb el pixel a zero
 				dataSub[1].setIntenB2(j, i, (short)0);
-				//si la intensitat és zero saltem
+				//si la intensitat ï¿½s zero saltem
 				if(dataIn.getIntenB2(j, i)<0){
 					dataSub[0].setIntenB2(j, i, dataIn.getIntenB2(j, i));
 					continue;
 				}
 				//si la intensitat es menor a LA FEM ZERO
-				if(dataIn.getIntenB2(j, i)<dataToSubtract.getIntenB2(j, i)){
+				if(dataIn.getIntenB2(j, i)<(dataToSubtract.getIntenB2(j, i)*factor)){
 					dataSub[0].setIntenB2(j, i, (short) 0);
-					dataSub[1].setIntenB2(j, i, (short) Math.abs(dataIn.getIntenB2(j, i)-dataToSubtract.getIntenB2(j, i)));
+					dataSub[1].setIntenB2(j, i, (short) FastMath.abs(dataIn.getIntenB2(j, i)-dataToSubtract.getIntenB2(j, i)));
 					nover=nover+1;
 					continue;
 				}
 				dataSub[0].setIntenB2(j, i, (short) (dataIn.getIntenB2(j, i) - (dataToSubtract.getIntenB2(j, i)*factor)));
-				if(dataSub[0].getIntenB2(j, i)>dataSub[0].getMaxI())dataSub[0].setMaxI(dataSub[0].getIntenB4(j, i));
-				if(dataSub[0].getIntenB2(j, i)<dataSub[0].getMinI())dataSub[0].setMinI(dataSub[0].getIntenB4(j, i));
-				
-				if(out!=null){
-		            String linia = String.format(Locale.ENGLISH, "No. of pixels with Ybkg>Ydata = %d (%.1f)",
-		            		nover,((float)(nover)/(float)(dataSub[0].getDimX()*dataSub[0].getDimY())*100));
-					out.ln(linia);
-				}
+				if(dataSub[0].getIntenB2(j, i)>dataSub[0].getMaxI())dataSub[0].setMaxI(dataSub[0].getIntenB2(j, i));
+				if(dataSub[0].getIntenB2(j, i)<dataSub[0].getMinI())dataSub[0].setMinI(dataSub[0].getIntenB2(j, i));
 			}
+		}
+		if(out!=null){
+            String linia = String.format(Locale.ENGLISH, "  No. of pixels with Ybkg>Ydata = %d (%.1f%%)",
+            		nover,((float)(nover)/(float)(dataSub[0].getDimX()*dataSub[0].getDimY())*100));
+			out.ln(linia);
+            linia = String.format(Locale.ENGLISH, "  Factor = %.5f",factor);
+			out.ln(linia);
 		}
 		return dataSub;
 	}
 	
 	public static float calcGlassScale(Pattern2D data, Pattern2D glass){
 		float scale = 10000000;
+		float tol = 0.025f;
 		for(int i=0; i<data.getDimY();i++){
 			for(int j=0; j<data.getDimX();j++){
 				//no considerem I=0 o mascara
 				if (data.getIntenB2(j, i)<0)continue;
 				if (glass.getIntenB2(j, i)<0)continue;
-				float sc = (float)(data.getIntenB2(j, i))-(float)Math.sqrt((float)data.getIntenB2(j, i))/(float)(glass.getIntenB2(j, i));
-				if (sc<scale)scale=sc;
+			    float sc = (float) ((data.getIntenB2(j, i))-(float)tol*FastMath.sqrt((float)data.getIntenB2(j, i)))/(float)(glass.getIntenB2(j, i));
+				if (sc<scale&&sc!=0)scale=sc;
 			}
 		}
 		return scale;
@@ -236,14 +249,14 @@ public final class ImgOps {
 				//2Theta pixel imatge per determinar amplada i angle
 				t2p = glass.calc2T(j, i, true);
 				//ara hem de mirar a quina posicio del vector desv es troba aquesta 2t
-				pos = Math.round(t2p/stepsize)-Math.round(t2ini/stepsize);
+				pos = FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize);
 	            //ara hem de decidir si es pic espuri o no
 	            //dos opcions, amb la mitjana+% o amb la fact*desviacio
 				float ysum = (float)intrad.getPoint(pos).getCounts();
 				float npix = (float)intrad.getPoint(pos).getNpix();
 				criteri= ysum/npix + (ysum/npix)*percent; //factDesv*desv(p)
 				//criteri=(real(ysum(p))/real(npix(p)))+factDesv*desv(p)		
-	            if(glass.getIntenB2(j,i)>criteri)glass.setIntenB2(j,i,(short) Math.round(ysum/npix));
+	            if(glass.getIntenB2(j,i)>criteri)glass.setIntenB2(j,i,(short) FastMath.round(ysum/npix));
 			}
 		}
 		return glass;
@@ -269,7 +282,7 @@ public final class ImgOps {
 		return minDiff;
 	}
 	
-//    !calcula una nova iteració del fons a partir de l'anterior
+//    !calcula una nova iteraciï¿½ del fons a partir de l'anterior
 //    !utilitza integracio RADIAL
 //    !parametres: -dataIn: iteracio anterior de referencia
 //    !            -stepsize: ...
@@ -300,7 +313,7 @@ public final class ImgOps {
    				}
    				t2p = dataOut.calc2T(j, i, true);
    				//pos al vector
-				pos = Math.round(t2p/stepsize)-Math.round(0.0f/stepsize);
+				pos = FastMath.round(t2p/stepsize)-FastMath.round(0.0f/stepsize);
 	            //ara hem de decidir si es pic espuri o no
 	            //dos opcions, amb la mitjana+% o amb la fact*desviacio
 				ysum = (float)intrad.getPoint(pos).getCounts();
@@ -310,7 +323,10 @@ public final class ImgOps {
    			
 			//PROGRESS BAR:
 			if(progress!=null){
-				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %%",bkgIter,((float)i/(float)dataOut.getDimY())*100));
+				long elapTime = (System.currentTimeMillis() - startTime)/1000;
+				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
+				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %% (est. time %6.2f min.)",bkgIter,percent,estTime));
 			}
 			//per si s'ha aturat
 			if (Thread.interrupted()) {
@@ -320,20 +336,23 @@ public final class ImgOps {
    		}
 		long endTime   = System.currentTimeMillis();
 		float totalTime = (endTime - startTime)/1000;
+		if(progress!=null){
+			progress.setString("Iteration finished!");
+		}
 		if(txtOut!=null){
 			txtOut.addtxt(true, true, "fi iter. "+bkgIter+" (time: "+totalTime+" s)");
 		}
 		return dataOut;
     }
     
-//    !calcula una nova iteració del fons a partir de l'anterior
+//    !calcula una nova iteraciï¿½ del fons a partir de l'anterior
 //    !parametres: -it0: iteracio anterior de referencia
 //    !            -it1: nova iteracio
 //    !            -N: pixels de la regio rectangular
 //    !els valors de -1 (mascara) els deixarem tal qual (no calcularem fons) i
 //    !tambe farem que no contribueixin a promitjar el fons d'altres punts. Per
-//    !això emmagatzemarem a una variable int (nMaskP) el nombre de punts d'aquests
-//    !que haguéssin contribuit i ho restarem al fer el promig
+//    !aixï¿½ emmagatzemarem a una variable int (nMaskP) el nombre de punts d'aquests
+//    !que haguï¿½ssin contribuit i ho restarem al fer el promig
     public static Pattern2D calcIterAvarc(Pattern2D dataIn,float ampladaArc, float oberturaArc, LogJTextArea txtOut,JProgressBar progress) throws InterruptedException{
   		long startTime = System.currentTimeMillis();
    		//PROGRESS BAR:
@@ -351,7 +370,7 @@ public final class ImgOps {
    					continue;
    				}
    				//per cada pixel mirem el promig (iteracio anterior)
-//   		    float angle = (float) (factAngle*Math.toRadians(((1-t2p)*1.5))); //TODO:revisar
+//   		    float angle = (float) (factAngle*FastMath.toRadians(((1-t2p)*1.5))); //TODO:revisar
 //   			float amplada = (1/t2p)*factAmplada;
    				float[] fact = dataIn.getFactAngleAmplada(j, i);
    				float obertura = oberturaArc * fact[0];
@@ -372,7 +391,10 @@ public final class ImgOps {
 			//PROGRESS BAR:
 //			if((progress!=null)&&(i%10==0)){
 			if((progress!=null)){
-				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %%",bkgIter,((float)i/(float)dataOut.getDimY())*100));
+				long elapTime = (System.currentTimeMillis() - startTime)/1000;
+				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
+				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %% (est. time %6.2f min.)",bkgIter,percent,estTime));
 			}
 			//per si s'ha aturat
 			if (Thread.interrupted()) {
@@ -386,7 +408,7 @@ public final class ImgOps {
 //   		dataOut=dataIn;
 //   		while(j<2048){
 //   			float t2p = dataOut.calc2T(j, i, false);
-//   			float angle = (float) (factAngle*Math.toRadians(((1-t2p)*1.5)));
+//   			float angle = (float) (factAngle*FastMath.toRadians(((1-t2p)*1.5)));
 //   			float amplada = (1/t2p)*factAmplada;
 //   			dataOut.Yarc(j, i, amplada, angle, false, 0, true);
 //   			j=j+300;
@@ -395,6 +417,9 @@ public final class ImgOps {
 
 		long endTime   = System.currentTimeMillis();
 		float totalTime = (endTime - startTime)/1000;
+		if(progress!=null){
+			progress.setString("Iteration finished!");
+		}
 		if(txtOut!=null){
 			txtOut.addtxt(true, true, "fi iter. "+bkgIter+" (time: "+totalTime+" s)");
 		}
@@ -413,7 +438,7 @@ public final class ImgOps {
     	boolean ver = (fver == 1) ? true:false;
     	boolean horver = (fhorver == 1) ? true:false;
     	
-   		bkgIter=bkgIter+1;
+//   	bkgIter=bkgIter+1;
    		Pattern2D dataOut = new Pattern2D(dataIn);
    		
    		int v0,v1,v2,v3; //valor pixel,valor flip hor, valor flip vert, valor fliphor-flipvert
@@ -432,7 +457,7 @@ public final class ImgOps {
    					continue;
    				}
    				//punt central (normalment mascara)
-   				if(i==Math.round(dataIn.getCentrX())&&j==Math.round(dataIn.getCentrY())){
+   				if(i==FastMath.round(dataIn.getCentrX())&&j==FastMath.round(dataIn.getCentrY())){
    					dataOut.setIntenB2(j, i, dataIn.getIntenB2(j, i));
    					continue;
    				}
@@ -443,13 +468,13 @@ public final class ImgOps {
    				float obertura = 1,amplada = 1;
    				if(minarc){
 //   					t2p = dataIn.calc2T(j, i, false);
-//   					angle = (float) (oberturaArc*Math.toRadians(((1-t2p)*1.5))); //TODO: revisar si cal passar a radiants
+//   					angle = (float) (oberturaArc*FastMath.toRadians(((1-t2p)*1.5))); //TODO: revisar si cal passar a radiants
 //   					amplada = (1.f/t2p) * ampladaArc;
    	   				float[] fact = dataIn.getFactAngleAmplada(j, i);
    	   				obertura = oberturaArc * fact[0];
    	   				amplada = ampladaArc * fact[1];
    					zone = dataIn.Yarc2(j, i, amplada, obertura, true, 0, false);
-   					v0 = Math.round(zone.getYmean());
+   					v0 = FastMath.round(zone.getYmean());
 //   					txtOut.ln("pix"+j+","+i);
    				}else{
    					v0 = dataIn.calcIntSquare(j, i, aresta, true);
@@ -458,22 +483,22 @@ public final class ImgOps {
    				v1=v0;
    				v2=v0;
    				v3=v0;
-   				newj=Math.round(dataIn.getCentrX()+(dataIn.getCentrX()-j));
-   				newi=Math.round(dataIn.getCentrY()+(dataIn.getCentrY()-i));
+   				newj=FastMath.round(dataIn.getCentrX()+(dataIn.getCentrX()-j));
+   				newi=FastMath.round(dataIn.getCentrY()+(dataIn.getCentrY()-i));
    				
    				if (minarc){
    					//prova amb integracio arc
    					if(hor){
    						zone = dataIn.Yarc2(newj, i, amplada, obertura, true, 0, false);
-   						if(zone.getNpix()>0)v1=Math.round(zone.getYmean());
+   						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    					if(ver){
    						zone = dataIn.Yarc2(j, newi, amplada, obertura, true, 0, false);
-   						if(zone.getNpix()>0)v1=Math.round(zone.getYmean());
+   						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    					if(horver){
    						zone = dataIn.Yarc2(newj, newi, amplada, obertura, true, 0, false);
-   						if(zone.getNpix()>0)v1=Math.round(zone.getYmean());
+   						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    				}else{
    					if(hor){
@@ -502,7 +527,10 @@ public final class ImgOps {
    			}
 			//PROGRESS BAR:
 			if(progress!=null){
-				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %%",bkgIter,((float)i/(float)dataOut.getDimY())*100));
+				long elapTime = (System.currentTimeMillis() - startTime)/1000;
+				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
+				progress.setString(String.format(Locale.ENGLISH, "Bkg sub. -> %6.2f %% (est. time %6.2f min.)",percent,estTime));
 			}
 			//per si s'ha aturat
 			if (Thread.interrupted()) {
@@ -512,8 +540,11 @@ public final class ImgOps {
    		}
 		long endTime   = System.currentTimeMillis();
 		float totalTime = (endTime - startTime)/1000;
+		if(progress!=null){
+			progress.setString("Bkg subtraction finished!");
+		}
 		if(txtOut!=null){
-			txtOut.addtxt(true, true, "fi iter. "+bkgIter+" (time: "+totalTime+" s)");
+			txtOut.addtxt(true, true, "Bkg subtraction finished (time: "+totalTime+" s)");
 		}
 		return dataOut; 
     }
@@ -526,7 +557,7 @@ public final class ImgOps {
 		
 //	    per cada pixel s'ha de calcular l'angle azimutal (entre la normal
 //	    (al pla de polaritzacio *i* el vector del centre de la imatge (xc,yc)
-//	    al pixel (x,y) en questió). També s'ha de calcular l'angle 2T del pixel
+//	    al pixel (x,y) en questiï¿½). Tambï¿½ s'ha de calcular l'angle 2T del pixel
 		for(int i=0; i<dataIn.getDimY();i++){
 			for(int j=0; j<dataIn.getDimX();j++){
 				//zona exclosa saltem
@@ -542,10 +573,10 @@ public final class ImgOps {
 				
 				float vecCPx = (float)(j-dataIn.getCentrX())*dataIn.pixSx;
 				float vecCPy = (float)(dataIn.getCentrY()-i)*dataIn.pixSy;
-				float vecCPmod = (float) Math.sqrt(vecCPx*vecCPx+vecCPy*vecCPy);
-				float t2 = (float) Math.atan(vecCPmod/dataIn.getDistMD());
+				float vecCPmod = (float) FastMath.sqrt(vecCPx*vecCPx+vecCPy*vecCPy);
+				float t2 = (float) FastMath.atan(vecCPmod/dataIn.getDistMD());
 				
-				//vector perpendicular al pla de polarització (el modul no importa)
+				//vector perpendicular al pla de polaritzaciï¿½ (el modul no importa)
 				float vecPerX=0;
 				float vecPerY=100;
 				//calculem l'angle amb prod. escalar
@@ -555,27 +586,27 @@ public final class ImgOps {
 				if((den<0.000001)&&(den>-0.000001)){
 					azim=0.f; //cas punt central
 				}else{
-					azim=(float) Math.acos(num/den);
+					azim=(float) FastMath.acos(num/den);
 				}
 				
-				//calcul de la polarització
+				//calcul de la polaritzaciï¿½
 				float pol = 1.0f;
 				if(iPol==1){
-					pol=(float) ((Math.cos(azim)*Math.cos(azim))+(Math.sin(azim)*Math.sin(azim))*(Math.cos(t2)*Math.cos(t2)));
+					pol=(float) ((FastMath.cos(azim)*FastMath.cos(azim))+(FastMath.sin(azim)*FastMath.sin(azim))*(FastMath.cos(t2)*FastMath.cos(t2)));
 				}
 				if(iPol==2){
-					pol=(float) (0.5f+0.5f*(Math.cos(t2)*Math.cos(t2)));
+					pol=(float) (0.5f+0.5f*(FastMath.cos(t2)*FastMath.cos(t2)));
 				}
 				
 				//calcul de lorentz
 				float lor = 1.0f;
 				if(iLor==1){
-					lor = (float) (Math.cos(t2)*Math.abs(vecCPy));
+					lor = (float) (FastMath.cos(t2)*FastMath.abs(vecCPy));
 				}
 				if(iLor==2){
-					lor = (float) (1/(Math.cos(t2/2)*Math.sin(t2/2)*Math.sin(t2/2))); //igual que el dajust
+					lor = (float) (1/(FastMath.cos(t2/2)*FastMath.sin(t2/2)*FastMath.sin(t2/2))); //igual que el dajust
 				}
-				dataI4temp.setIntenB4(j, i, Math.round((dataIn.getIntenB2(j, i)*lor)/pol));
+				dataI4temp.setIntenB4(j, i, FastMath.round((dataIn.getIntenB2(j, i)*lor)/pol));
 				//mirem si superem els limits (per escalar despres)
 				if (dataI4temp.getIntenB4(j, i)>maxVal) maxVal=dataI4temp.getIntenB4(j, i);
 			}
@@ -589,8 +620,11 @@ public final class ImgOps {
 		for(int i=0; i<dataIn.getDimY();i++){
 			for(int j=0; j<dataIn.getDimX();j++){
 				//mascara el deixem tal qual
-				if(dataIn.isInExZone(j, i))dataOut.setIntenB2(j, i, dataIn.getIntenB2(j, i));
-				dataOut.setIntenB2(j, i, (short) Math.round((float)dataI4temp.getIntenB4(j, i)*fscale));
+				if(dataIn.isInExZone(j, i)){
+					dataOut.setIntenB2(j, i, dataIn.getIntenB2(j, i));
+					continue;
+				}
+				dataOut.setIntenB2(j, i, (short) FastMath.round((float)dataI4temp.getIntenB4(j, i)*fscale));
 			}
 		}
 		
@@ -615,7 +649,69 @@ public final class ImgOps {
 		   }
 		   return min;
 	}
+
+	public static int getBkgIter() {
+		return bkgIter;
+	}
+
+	public static void setBkgIter(int bkgIter) {
+		ImgOps.bkgIter = bkgIter;
+	}
 	
-	
-	
+	public static Pattern2D sumImages(File[] files){
+		
+		Pattern2D patt = ImgFileUtils.openPatternFile(files[0]);
+		int dimY = patt.getDimY();
+		int dimX = patt.getDimX();
+		
+		Pattern2D pattsum = new Pattern2D(patt);
+		Pattern2D dataI4temp = new Pattern2D(dimX,dimY,true);
+		//inicialitzem a zero les dades
+		for(int i=0; i<dimY;i++){
+			for(int j=0; j<dimX;j++){
+				dataI4temp.setIntenB4(j, i, 0);
+			}
+		}
+		
+		int maxVal=0;
+		
+		//sumem
+		for(int k=0;k<files.length;k++){
+			//obrim el pattern i sumem
+			patt = ImgFileUtils.openPatternFile(files[k]);
+			for(int i=0; i<dimY;i++){
+				for(int j=0; j<dimX;j++){
+					//zona exclosa saltem
+					if (patt.isInExZone(j, i))continue;
+					int s = dataI4temp.getIntenB4(j, i) + patt.getIntenB2(j, i);
+					dataI4temp.setIntenB4(j, i, s);
+				}
+			}
+		}
+
+		for(int i=0; i<dimY;i++){
+			for(int j=0; j<dimX;j++){
+				//mirem si superem els limits (per escalar despres)
+				if (dataI4temp.getIntenB4(j, i)>maxVal) maxVal=dataI4temp.getIntenB4(j, i);
+			}
+		}
+		
+		//si ens hem passat del maxim calculem el factor d'escala i escalem
+		float fscale=1.0f;
+		if(maxVal>MainFrame.shortsize){
+			fscale = (float)(MainFrame.shortsize-1)/(float)maxVal; // -1 per assegurar-nos que entra
+		}
+		
+		for(int i=0; i<dimY;i++){
+			for(int j=0; j<dimX;j++){
+				//mascara el deixem tal qual
+//				if(dataIn.isInExZone(j, i)){
+//					dataOut.setIntenB2(j, i, dataIn.getIntenB2(j, i));
+//					continue;
+//				}
+				pattsum.setIntenB2(j, i, (short) FastMath.round((float)dataI4temp.getIntenB4(j, i)*fscale));
+			}
+		}
+		return pattsum;
+	}
 }

@@ -16,6 +16,8 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Scanner;
 
 import javax.swing.DefaultListModel;
@@ -34,19 +36,28 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import vava33.plot2d.auxi.FileUtils;
-import vava33.plot2d.auxi.JtxtAreaOut;
+import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.LogJTextArea;
+import com.vava33.jutils.VavaLogger;
+
+import vava33.plot2d.auxi.Ellipse;
+import vava33.plot2d.auxi.ImgFileUtils;
+import vava33.plot2d.auxi.ImgOps;
 import vava33.plot2d.auxi.OrientSolucio;
 import vava33.plot2d.auxi.Pattern2D;
+import vava33.plot2d.auxi.PuntCercle;
 
 public class MainFrame extends JFrame {
     private static final long serialVersionUID = 4368250280987133953L;
     private static String separator = System.getProperty("file.separator");
     private static String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     private static String d2dsubExec = "d2Dsub";
-    private static String welcomeMSG = "d2Dplot v1306 (130606) by OV";
-    private static String workdir = "C:\\Ori_TMP\\PROVES_JAVA_D2DSUBEXEC\\";
-
+    private static String welcomeMSG = "d2Dplot v1404 (140429) by OV";
+//    private static String workdir = System.getProperty("user.dir");
+    private static String workdir = "C:\\Ori_TMP\\";
+//    private static String workdir = "C:\\ovallcorba\\Dades_difraccio\\2D-INCO\\Mesures-Juliol-ALBA\\";
+    private static boolean debug = false;
+    
     private JButton btn05x;
     private JButton btn2x;
     private JButton btnD2Dint;
@@ -82,6 +93,7 @@ public class MainFrame extends JFrame {
     private JSplitPane splitPane_1;
     
     private D2Dsub_frame d2DsubWin;
+    private D2Dsub_batch d2DsubWinBatch;
     private Calib_dialog calibration;
     private ExZones_dialog exZones;
     private About_dialog p2dAbout;
@@ -90,18 +102,35 @@ public class MainFrame extends JFrame {
     private ImagePanel panelImatge;
     private Pattern2D patt2D;
     private Pklist_dialog pkListWin;
-    private JtxtAreaOut tAOut;
+    private LogJTextArea tAOut;
+    private IntegracioRadial irWin;
 
     public static String getBinDir() {return binDir;}
     public static String getD2dsubExec() {return d2dsubExec;}
     public static String getSeparator() {return separator;}
     public static String getWorkdir() {return workdir;}
+    public static final int shortsize = Short.MAX_VALUE;
+    private JButton btn_yarc;
+    private JButton btnRadialInteg;
+    private JButton btnProva;
+    private JButton btnSumImages;
+    private JCheckBox chckbxWorkSol;
 
     /**
      * Launch the application. ES POT PASSAR COM A ARGUMENT EL DIRECTORI DE TREBALL ON S'OBRIRAN PER DEFECTE ELS DIALEGS
      * 
      */
     public static void main(String[] args) {
+    	//LOGGER
+    	VavaLogger.initLogger();
+    	if(debug){
+    		VavaLogger.enableLogger();
+    		VavaLogger.LOG.info("LOGGING OF D2Dplot ENABLED");
+    	}else{
+    		VavaLogger.LOG.info("LOGGING OF D2Dplot DISABLED");
+    		VavaLogger.disableLogger();
+    	}
+    	
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             // UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName()); //java metal
@@ -114,7 +143,7 @@ public class MainFrame extends JFrame {
             path.append(args[i]).append(" ");
         }
         if (args.length > 0)
-            workdir = path.toString();
+            workdir = path.toString().trim();
 
         EventQueue.invokeLater(new Runnable() {
             @Override
@@ -122,6 +151,7 @@ public class MainFrame extends JFrame {
                 try {
                     MainFrame frame = new MainFrame();
                     frame.inicialitza();
+                    frame.setLocationRelativeTo(null);
                     frame.setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -176,7 +206,7 @@ public class MainFrame extends JFrame {
         gbc_scrollPane.gridx = 0;
         gbc_scrollPane.gridy = 0;
         this.panel_stat.add(this.scrollPane, gbc_scrollPane);
-        this.tAOut = new JtxtAreaOut();
+        this.tAOut = new LogJTextArea();
         this.tAOut.setTabSize(4);
         this.tAOut.setWrapStyleWord(true);
         this.tAOut.setLineWrap(true);
@@ -256,9 +286,9 @@ public class MainFrame extends JFrame {
                 TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         GridBagLayout gbl_panel_opcions = new GridBagLayout();
         gbl_panel_opcions.columnWidths = new int[] { 0, 0 };
-        gbl_panel_opcions.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 };
+        gbl_panel_opcions.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         gbl_panel_opcions.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-        gbl_panel_opcions.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+        gbl_panel_opcions.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
         this.panel_opcions.setLayout(gbl_panel_opcions);
         this.btnResetView = new JButton("Reset view");
         this.btnResetView.addActionListener(new ActionListener() {
@@ -361,11 +391,24 @@ public class MainFrame extends JFrame {
         gbc_chckbxIndex.gridx = 0;
         gbc_chckbxIndex.gridy = 5;
         this.panel_opcions.add(this.chckbxIndex, gbc_chckbxIndex);
+        
+        chckbxWorkSol = new JCheckBox("Work SOL");
+        chckbxWorkSol.addItemListener(new ItemListener() {
+        	public void itemStateChanged(ItemEvent arg0) {
+        		do_chckbxWorkSol_itemStateChanged(arg0);
+        	}
+        });
+        GridBagConstraints gbc_chckbxWorkSol = new GridBagConstraints();
+        gbc_chckbxWorkSol.anchor = GridBagConstraints.WEST;
+        gbc_chckbxWorkSol.insets = new Insets(0, 2, 5, 0);
+        gbc_chckbxWorkSol.gridx = 0;
+        gbc_chckbxWorkSol.gridy = 6;
+        panel_opcions.add(chckbxWorkSol, gbc_chckbxWorkSol);
         this.btnSaveDicvol = new JButton("Points List");
         GridBagConstraints gbc_btnSaveDicvol = new GridBagConstraints();
-        gbc_btnSaveDicvol.insets = new Insets(0, 2, 5, 2);
+        gbc_btnSaveDicvol.insets = new Insets(0, 2, 0, 2);
         gbc_btnSaveDicvol.gridx = 0;
-        gbc_btnSaveDicvol.gridy = 6;
+        gbc_btnSaveDicvol.gridy = 7;
         this.panel_opcions.add(this.btnSaveDicvol, gbc_btnSaveDicvol);
         this.btnSaveDicvol.setMinimumSize(new Dimension(100, 25));
         this.btnSaveDicvol.setPreferredSize(new Dimension(101, 25));
@@ -395,9 +438,9 @@ public class MainFrame extends JFrame {
                 null));
         GridBagLayout gbl_panel_function = new GridBagLayout();
         gbl_panel_function.columnWidths = new int[] { 0, 0 };
-        gbl_panel_function.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        gbl_panel_function.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         gbl_panel_function.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-        gbl_panel_function.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, Double.MIN_VALUE };
+        gbl_panel_function.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
         this.panel_function.setLayout(gbl_panel_function);
         this.btnSetParams = new JButton("Set Parameters");
         this.btnSetParams.setMinimumSize(new Dimension(100, 25));
@@ -455,14 +498,29 @@ public class MainFrame extends JFrame {
         gbc_btnD2Dsub.gridx = 0;
         gbc_btnD2Dsub.gridy = 3;
         this.panel_function.add(this.btnD2Dsub, gbc_btnD2Dsub);
+        
+        btnRadialInteg = new JButton("Radial Integ.");
+        btnRadialInteg.setVisible(false);
+        btnRadialInteg.setEnabled(false);
+        btnRadialInteg.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        		do_btnRadialInteg_actionPerformed(arg0);
+        	}
+        });
+        GridBagConstraints gbc_btnRadialInteg = new GridBagConstraints();
+        gbc_btnRadialInteg.insets = new Insets(0, 0, 5, 0);
+        gbc_btnRadialInteg.gridx = 0;
+        gbc_btnRadialInteg.gridy = 4;
+        panel_function.add(btnRadialInteg, gbc_btnRadialInteg);
         this.btnDdpeaksearch = new JButton("d2Dpksearch");
+        btnDdpeaksearch.setVisible(false);
         this.btnDdpeaksearch.setPreferredSize(new Dimension(101, 25));
         this.btnDdpeaksearch.setEnabled(false);
         this.btnDdpeaksearch.setMargin(new Insets(2, 12, 2, 12));
         GridBagConstraints gbc_btnDdpeaksearch = new GridBagConstraints();
         gbc_btnDdpeaksearch.insets = new Insets(0, 0, 5, 0);
         gbc_btnDdpeaksearch.gridx = 0;
-        gbc_btnDdpeaksearch.gridy = 4;
+        gbc_btnDdpeaksearch.gridy = 5;
         this.panel_function.add(this.btnDdpeaksearch, gbc_btnDdpeaksearch);
         this.btnOpenSol = new JButton("Open .SOL");
         this.btnOpenSol.setMinimumSize(new Dimension(100, 25));
@@ -470,7 +528,7 @@ public class MainFrame extends JFrame {
         GridBagConstraints gbc_btnOpenSol = new GridBagConstraints();
         gbc_btnOpenSol.insets = new Insets(0, 2, 5, 2);
         gbc_btnOpenSol.gridx = 0;
-        gbc_btnOpenSol.gridy = 5;
+        gbc_btnOpenSol.gridy = 6;
         this.panel_function.add(this.btnOpenSol, gbc_btnOpenSol);
         this.btnOpenSol.addActionListener(new ActionListener() {
             @Override
@@ -485,18 +543,61 @@ public class MainFrame extends JFrame {
         gbc_scrollPane_1.insets = new Insets(0, 0, 5, 0);
         gbc_scrollPane_1.fill = GridBagConstraints.BOTH;
         gbc_scrollPane_1.gridx = 0;
-        gbc_scrollPane_1.gridy = 6;
+        gbc_scrollPane_1.gridy = 7;
         this.panel_function.add(this.scrollPane_1, gbc_scrollPane_1);
         this.listSol = new JList();
         this.listSol.setVisibleRowCount(5);
         this.scrollPane_1.setViewportView(this.listSol);
         this.btnD2Dint = new JButton("d2Dint");
+        btnD2Dint.setVisible(false);
         this.btnD2Dint.setPreferredSize(new Dimension(101, 25));
         this.btnD2Dint.setEnabled(false);
         GridBagConstraints gbc_btnD2Dint = new GridBagConstraints();
+        gbc_btnD2Dint.insets = new Insets(0, 0, 5, 0);
         gbc_btnD2Dint.gridx = 0;
-        gbc_btnD2Dint.gridy = 7;
+        gbc_btnD2Dint.gridy = 8;
         this.panel_function.add(this.btnD2Dint, gbc_btnD2Dint);
+        
+        btn_yarc = new JButton("debug Yarc");
+        btn_yarc.setVisible(false);
+        btn_yarc.setEnabled(false);
+        btn_yarc.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		do_btn_yarc_actionPerformed(e);
+        	}
+        });
+        
+        btnSumImages = new JButton("sum images");
+        btnSumImages.setEnabled(false);
+        btnSumImages.setVisible(false);
+        btnSumImages.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        		do_btnSumImages_actionPerformed(arg0);
+        	}
+        });
+        GridBagConstraints gbc_btnSumImages = new GridBagConstraints();
+        gbc_btnSumImages.insets = new Insets(0, 0, 5, 0);
+        gbc_btnSumImages.gridx = 0;
+        gbc_btnSumImages.gridy = 9;
+        panel_function.add(btnSumImages, gbc_btnSumImages);
+        GridBagConstraints gbc_btn_yarc = new GridBagConstraints();
+        gbc_btn_yarc.insets = new Insets(0, 0, 5, 0);
+        gbc_btn_yarc.gridx = 0;
+        gbc_btn_yarc.gridy = 10;
+        panel_function.add(btn_yarc, gbc_btn_yarc);
+        
+        btnProva = new JButton("prova");
+        btnProva.setEnabled(false);
+        btnProva.setVisible(false);
+        btnProva.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        		do_btnProva_actionPerformed(arg0);
+        	}
+        });
+        GridBagConstraints gbc_btnProva = new GridBagConstraints();
+        gbc_btnProva.gridx = 0;
+        gbc_btnProva.gridy = 11;
+        panel_function.add(btnProva, gbc_btnProva);
         this.listSol.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent arg0) {
@@ -553,6 +654,19 @@ public class MainFrame extends JFrame {
                 do_btnOpen_actionPerformed(arg0);
             }
         });
+        
+        //si el workdir apunta a un fitxer, s'obrir� automaticament, altrament
+        //mantenim el workdir que sera el directori inicial als filechooser
+        File f = new File(workdir);
+        if(f.exists()){
+        	if (f.isFile()){//l'obrim
+                this.updatePatt2D(f);
+                workdir=f.getAbsolutePath();
+                VavaLogger.LOG.info("workdir:"+workdir);
+        	}
+        }else{
+        	workdir = System.getProperty("user.dir");
+        }
     }
 
     protected void do_btn05x_actionPerformed(ActionEvent arg0) {
@@ -573,6 +687,12 @@ public class MainFrame extends JFrame {
                 d2DsubWin = new D2Dsub_frame(this);
             }
             d2DsubWin.setVisible(true);
+        }else{
+        	//obrim el batch
+        	if (d2DsubWinBatch == null){
+        		d2DsubWinBatch = new D2Dsub_batch(this);
+        	}
+        	d2DsubWinBatch.setVisible(true);
         }
     }
 
@@ -610,8 +730,8 @@ public class MainFrame extends JFrame {
 
         File d2File;
         JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm)", "bin", "img",
-                "spr", "gfrm");
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm,edf)", "bin", "img",
+                "spr", "gfrm", "edf");
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setCurrentDirectory(new File(workdir));
         int selection = fileChooser.showOpenDialog(null);
@@ -645,6 +765,8 @@ public class MainFrame extends JFrame {
         } else {
             // afegim les solucions a la llista
             DefaultListModel lm = new DefaultListModel();
+            // ordenem arraylist
+            Collections.sort(panelImatge.getSolucions(),Collections.reverseOrder());
             for (int i = 0; i < panelImatge.getSolucions().size(); i++) {
                 lm.addElement((i + 1) + " " + panelImatge.getSolucions().get(i).getNumReflexions() + " "
                         + panelImatge.getSolucions().get(i).getValorFrot());
@@ -669,7 +791,9 @@ public class MainFrame extends JFrame {
 //        }
         
         //FAREM UN REESCALAT abans de salvar per si les zones excloses ho han modificat
-        if(patt2D.getScale()>1)FileUtils.rescale(patt2D,openedFile);
+    	if(openedFile!=null){
+    		if(patt2D.getScale()>1)ImgFileUtils.rescale(patt2D,openedFile);	
+    	}
         
         File d2File = null;
         JFileChooser fileChooser = new JFileChooser();
@@ -678,7 +802,7 @@ public class MainFrame extends JFrame {
         // si s'ha seleccionat un fitxer
         if (selection == JFileChooser.APPROVE_OPTION) {
             d2File = fileChooser.getSelectedFile();
-            d2File = FileUtils.saveBIN(d2File, patt2D);
+            d2File = ImgFileUtils.saveBIN(d2File, patt2D);
             if (d2File == null) {
                 tAOut.stat("Error saving BIN file");
             }
@@ -711,7 +835,7 @@ public class MainFrame extends JFrame {
         int selection = fileChooser.showSaveDialog(null);
         if (selection == JFileChooser.APPROVE_OPTION) {
             imFile = fileChooser.getSelectedFile();
-            imFile = FileUtils.savePNG(imFile, panelImatge.getSubimage());
+            imFile = ImgFileUtils.savePNG(imFile, panelImatge.getSubimage());
             if (imFile == null) {
                 tAOut.stat("Error saving PNG file");
                 return;
@@ -734,8 +858,13 @@ public class MainFrame extends JFrame {
     }
 
     protected void do_chckbxIndex_itemStateChanged(ItemEvent arg0) {
+    	if(chckbxIndex.isSelected()){
+    		chckbxWorkSol.setSelected(false);
+    	}
         panelImatge.setShowIndexing(chckbxIndex.isSelected());
         this.btnSaveDicvol.setEnabled(chckbxIndex.isSelected());
+        VavaLogger.LOG.info("panelImatge.isShowIndexing="+panelImatge.isShowIndexing());
+        VavaLogger.LOG.info("panelImatge.isShowHKLIndexing="+panelImatge.isShowHKLIndexing());
     }
 
     protected void do_chckbxShowHkl_itemStateChanged(ItemEvent arg0) {
@@ -746,6 +875,16 @@ public class MainFrame extends JFrame {
         panelImatge.setShowSolPoints(chckbxShowSol.isSelected());
     }
 
+	protected void do_chckbxWorkSol_itemStateChanged(ItemEvent arg0) {
+        if(chckbxWorkSol.isSelected()){
+        	chckbxIndex.setSelected(false);
+        }
+		panelImatge.setShowHKLIndexing(chckbxWorkSol.isSelected());
+        this.btnSaveDicvol.setEnabled(chckbxWorkSol.isSelected());
+        VavaLogger.LOG.info("panelImatge.isShowIndexing="+panelImatge.isShowIndexing());
+        VavaLogger.LOG.info("panelImatge.isShowHKLIndexing="+panelImatge.isShowHKLIndexing());
+	}
+    
     protected void do_lblhelp_mouseClicked(MouseEvent arg0) {
         if (p2dAbout == null) {
             p2dAbout = new About_dialog();
@@ -772,7 +911,11 @@ public class MainFrame extends JFrame {
     }
 
     private void inicialitza() {
-        this.setBounds(25, 25, 840, 760); // TODO: podriem mirar de centrar-ho millor...
+        this.setSize(1200, 960); //ho centra el metode main
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        if(this.getWidth()>screenSize.width||this.getHeight()>screenSize.height){
+            this.setSize(screenSize.width-100,screenSize.height-100);
+        }
         tAOut.stat(welcomeMSG);
         FileUtils.setLocale();
     }
@@ -809,14 +952,19 @@ public class MainFrame extends JFrame {
                     endSol = false;
                     panelImatge.getSolucions().get(i).setGrainNr(scSolfile.nextInt());
                     line = scSolfile.nextLine();
-                    scSolfile.nextLine();// CENTRE
+                    VavaLogger.LOG.info(scSolfile.nextLine());// CENTRE
+//                    scSolfile.nextLine();// CENTRE
                     panelImatge.getSolucions().get(i).setNumReflexions(scSolfile.nextInt());
                     line = scSolfile.nextLine();
                     panelImatge.getSolucions().get(i).setValorFrot(Float.parseFloat(line)); // valor funcio rotacio
-                    scSolfile.nextLine();
-                    scSolfile.nextLine();// matriu Rot
-                    scSolfile.nextLine();// matriu Rot
-                    scSolfile.nextLine();// matriu Rot
+//                    VavaLogger.LOG.info(scSolfile.nextLine());
+                    VavaLogger.LOG.info(panelImatge.getSolucions().get(i).getNumReflexions()+" "+panelImatge.getSolucions().get(i).getValorFrot());
+                    VavaLogger.LOG.info(scSolfile.nextLine());// matriu Rot
+                    VavaLogger.LOG.info(scSolfile.nextLine());// matriu Rot
+                    VavaLogger.LOG.info(scSolfile.nextLine());// matriu Rot
+//                    scSolfile.nextLine();// matriu Rot
+//                    scSolfile.nextLine();// matriu Rot
+//                    scSolfile.nextLine();// matriu Rot
                     // ara comencen les reflexions
                     while (!endSol) {
                         if (!scSolfile.hasNextLine()) {
@@ -824,6 +972,7 @@ public class MainFrame extends JFrame {
                             continue;
                         }
                         line = scSolfile.nextLine();
+                        VavaLogger.LOG.info("bona "+line);
                         if (line.trim().isEmpty())
                             continue;
                         if (line.trim().startsWith("GRAIN")) {
@@ -916,6 +1065,8 @@ public class MainFrame extends JFrame {
     private void reset() {
         this.fileOpened = false;
         this.panelImatge.setImagePatt2D(null);
+        this.panelImatge.getSlider_contrast().setMinimum(0);
+        this.panelImatge.getSlider_contrast().setValue(0);
         this.patt2D = null;
         if (this.d2DsubWin != null) {
             this.d2DsubWin.dispose();
@@ -937,8 +1088,8 @@ public class MainFrame extends JFrame {
 
     public void updatePatt2D(File d2File) {
         workdir = d2File.getPath().substring(0, d2File.getPath().length() - d2File.getName().length());
-//        System.out.println(workdir);
-        patt2D = FileUtils.openPatternFile(d2File);
+        VavaLogger.LOG.info("workdir="+workdir);
+        patt2D = ImgFileUtils.openPatternFile(d2File);
         
         if (patt2D != null) {
             panelImatge.setImagePatt2D(patt2D);
@@ -956,4 +1107,104 @@ public class MainFrame extends JFrame {
             openedFile = null;
         }
     }
+    
+    public void updatePatt2D(Pattern2D p2D) {
+      this.patt2D = p2D;
+      if (patt2D != null) {
+          panelImatge.setImagePatt2D(patt2D);
+          lblOpened.setText("");
+          tAOut.stat("Opened pattern (not from a file, consider saving)");
+          tAOut.ln(patt2D.getInfo());
+          fileOpened = true;
+          openedFile = null;
+      } else {
+          tAOut.stat("Error reading 2D file");
+          tAOut.stat("No file opened");
+          fileOpened = false;
+          openedFile = null;
+      }
+    }
+    
+	public void updatePatt2D(Pattern2D p2D, boolean verbose) {
+	  this.patt2D = p2D;
+      if (patt2D != null) {
+          panelImatge.setImagePatt2D(patt2D);
+          String fname;
+          if(patt2D.getImgfile()!=null){
+        	  fname = patt2D.getImgfile().getName();
+              tAOut.stat("File opened: " + fname + ", " + patt2D.getPixCount() + " pixels ("
+                      + (int) patt2D.getMillis() + " ms)");
+          }else{
+        	  fname = "Data image not saved to a file";
+              tAOut.stat("File opened: Data image not saved to a file");
+          }
+          lblOpened.setText(fname);
+          if(patt2D.oldBIN)tAOut.ln("*** old BIN format detected and considered ***");
+          if(verbose)tAOut.ln(patt2D.getInfo());
+          fileOpened = true;
+          openedFile = patt2D.getImgfile();
+      } else {
+          tAOut.stat("Error reading 2D file");
+          tAOut.stat("No file opened");
+          fileOpened = false;
+          openedFile = null;
+      }
+    }
+	public LogJTextArea gettAOut() {
+		return tAOut;
+	}
+	protected void do_btn_yarc_actionPerformed(ActionEvent e) {
+		DebugYarc dya = new DebugYarc(this.getPatt2D());
+		dya.setVisible(true);
+	}
+	protected void do_btnRadialInteg_actionPerformed(ActionEvent arg0) {
+		if(patt2D != null){
+			if(this.irWin==null){
+				irWin = new IntegracioRadial(this.getPatt2D());
+			}
+			irWin.setVisible(true);	
+		}
+	}
+	protected void do_btnProva_actionPerformed(ActionEvent arg0) {
+        Iterator<PuntCercle> itrP = panelImatge.getPuntsCercles().iterator();
+        int size = panelImatge.getPuntsCercles().size();
+        double[] x = new double[size];
+        double[] y = new double[size];
+        int i=0;
+        while (itrP.hasNext()) {
+            PuntCercle pa = itrP.next();
+            x[i] = pa.getX();
+            y[i] = pa.getY();
+            i++;
+        }
+		Ellipse e = new Ellipse(x,y);
+		VavaLogger.LOG.info("Angle: "+e.getAngle());
+		VavaLogger.LOG.info("centX: "+e.getCenter().getX());
+		VavaLogger.LOG.info("centY: "+e.getCenter().getY());
+		VavaLogger.LOG.info("Major: "+e.getMajor());
+		VavaLogger.LOG.info("Minor: "+e.getMinor());
+	}
+	
+	protected void do_btnSumImages_actionPerformed(ActionEvent arg0) {
+        // Creem un filechooser per seleccionar el fitxer obert
+        JFileChooser fileChooser = new JFileChooser();
+        File startDir = new File(MainFrame.getWorkdir());
+        fileChooser.setCurrentDirectory(startDir); // directori inicial: el del
+        fileChooser.setMultiSelectionEnabled(true);
+    	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm,edf)", "bin", "img",
+                "spr", "gfrm", "edf")};
+        for (int i = 0; i < filter.length; i++) {
+            fileChooser.addChoosableFileFilter(filter[i]);
+        }
+        // si s'ha seleccionat un fitxer
+        File[] flist;
+        if (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+            flist =  fileChooser.getSelectedFiles();
+        } else {
+            return;
+        }
+        Pattern2D suma = ImgOps.sumImages(flist);
+        this.updatePatt2D(suma);
+	}
+
 }

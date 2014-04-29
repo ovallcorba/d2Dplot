@@ -1,7 +1,21 @@
 package vava33.plot2d.auxi;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Locale;
+
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+import org.apache.commons.math3.util.FastMath;
+
+import vava33.plot2d.MainFrame;
+
+import com.vava33.jutils.FileUtils;
 
 public class Pattern1D {
 	float t2i,t2f;
@@ -12,10 +26,18 @@ public class Pattern1D {
 		int counts;
 		int npix;
 		float desv;
+		float t2;
 		public PointPatt1D(int counts, int npix, float desv){
 			this.counts=counts;
 			this.npix=npix;
 			this.desv=desv;}
+		public PointPatt1D(){
+			this.counts=0;
+			this.npix=0;
+			this.desv=0;}
+		public PointPatt1D(float t2){
+			new PointPatt1D();
+			this.t2=t2;}
 		public int getCounts() {return counts;}
 		public void setCounts(int counts) {this.counts = counts;}
 		public void addCounts(int counts) {this.counts = this.counts + counts;}
@@ -25,14 +47,34 @@ public class Pattern1D {
 		public float getDesv() {return desv;}
 		public void setDesv(float desv) {this.desv = desv;}
 		public void addDesv(float desv) {this.desv = this.desv + desv;}
+		public float getT2() {return t2;}
+		public void setT2(float t2) {this.t2 = t2;}
 	}
 	
 	public Pattern1D(float t2ini, float t2fin, float stepsize){
 		this.t2i=t2ini;
 		this.t2f=t2fin;
 		this.step=stepsize;
-		int npoints = Math.round((t2fin-t2ini)/stepsize)+1; //+1 perque volem incloure t2ini i t2fin
+		int npoints = FastMath.round((t2fin-t2ini)/stepsize)+1; //+1 perque volem incloure t2ini i t2fin
 		this.points = new ArrayList<PointPatt1D>(npoints);
+		//inicialitzem a zero els punts
+		float t2p=t2ini;
+		for (int i=0;i<=npoints;i++){
+			this.points.add(new PointPatt1D(t2p));
+			t2p=t2p+stepsize;
+		}
+		
+		
+//		while(t2p<=t2fin){
+//			this.points.add(new PointPatt1D(t2p));
+//			t2p=t2p+stepsize;
+//		}
+		
+//		Iterator<PointPatt1D> it = this.points.iterator();
+//		while (it.hasNext()){
+//			PointPatt1D pp = it.next();
+//			pp = new PointPatt1D();
+//		}
 	}
 	
 	//afegeix un punt a una posicio concreta del vector (sobreescriu el que hi ha)
@@ -51,11 +93,33 @@ public class Pattern1D {
 	}
 
 	//escriu fitxer xy (si fileout==null pregunta on guardar)
-	public void writeXY(File fileout){
+	public void writeXY(File fileout, String title){
 		if(fileout==null){
-			//filechoser
+			FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("Data file (2T I ESD)","dat","xy")};
+			fileout = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
 		}
-		//TODO: escriure fitxer format xy
+		if(!FileUtils.getExtension(fileout).equalsIgnoreCase("dat")||!FileUtils.getExtension(fileout).equalsIgnoreCase("xy")){
+			fileout = FileUtils.canviExtensio(fileout, "dat");	
+		}
+		//Escriure fitxer format xy
+        try {
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(fileout)));
+            // ESCRIBIM AL FITXER:
+            String linia = String.format(Locale.ENGLISH, "! %s",title);
+            output.println(linia);
+            linia = String.format(Locale.ENGLISH, "  %.5f  %.5f  %.5f",this.t2i,this.step,this.t2f);
+            output.println(linia);
+            Iterator<PointPatt1D> itp = this.getPoints().iterator();
+            while(itp.hasNext()){
+            	PointPatt1D p = itp.next();
+            	linia = String.format(Locale.ENGLISH, "  %.5f  %d  %.5f",p.getT2(),p.getCounts(),p.getDesv());
+            	output.println(linia);
+            }
+            output.close();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 	}
 	
 	public float getT2i() {

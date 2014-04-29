@@ -5,6 +5,8 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.util.Locale;
 
+import org.apache.commons.math3.util.FastMath;
+
 public class PuntCercle {
 
     private static Color colorCercle = Color.red;
@@ -39,7 +41,7 @@ public class PuntCercle {
         x = (float) p.getX();
         y = (float) p.getY();
         setPunt(new Ellipse2D.Float(x - midaPunt / 2, y - midaPunt / 2, midaPunt, midaPunt));
-        float radi = Math.round(Math.sqrt(Math.pow(x - xCentre, 2) + Math.pow(y - yCentre, 2)));
+        float radi = FastMath.round(FastMath.sqrt(FastMath.pow(x - xCentre, 2) + FastMath.pow(y - yCentre, 2)));
         setCercle(new Ellipse2D.Float(xCentre - radi, yCentre - radi, 2 * radi, 2 * radi));
     }
 
@@ -51,7 +53,7 @@ public class PuntCercle {
         this.x = (float) p.getX();
         this.y = (float) p.getY();
         setPunt(new Ellipse2D.Float(x - midaPunt / 2, y - midaPunt / 2, midaPunt, midaPunt));
-        float radi = Math.round(Math.sqrt(Math.pow(x - xCentre, 2) + Math.pow(y - yCentre, 2)));
+        float radi = FastMath.round(FastMath.sqrt(FastMath.pow(x - xCentre, 2) + FastMath.pow(y - yCentre, 2)));
         setCercle(new Ellipse2D.Float(xCentre - radi, yCentre - radi, 2 * radi, 2 * radi));
         this.t2 = angle;
         this.intensity = inten;
@@ -75,7 +77,7 @@ public class PuntCercle {
 
     // recalcula el cercle (en cas que es canvii el centre)
     public void recalcular(float xCentre, float yCentre, double angle) {
-        float radi = Math.round(Math.sqrt(Math.pow(x - xCentre, 2) + Math.pow(y - yCentre, 2)));
+        float radi = FastMath.round(FastMath.sqrt(FastMath.pow(x - xCentre, 2) + FastMath.pow(y - yCentre, 2)));
         setCercle(new Ellipse2D.Float(xCentre - radi, yCentre - radi, 2 * radi, 2 * radi));
         this.t2 = angle;
     }
@@ -99,7 +101,7 @@ public class PuntCercle {
     @Override
     public String toString() {
         String linia = String.format(Locale.ENGLISH, "%8.2f" + " " + "%8.2f" + " " + "%8.3f" + " " + "%6d", x, y,
-                Math.toDegrees(this.t2), this.intensity);
+                FastMath.toDegrees(this.t2), this.intensity);
         return linia;
     }
 }

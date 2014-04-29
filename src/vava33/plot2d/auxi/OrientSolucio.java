@@ -2,6 +2,7 @@ package vava33.plot2d.auxi;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class OrientSolucio implements Comparable{
     // statics aplicables a totes les solucions, es a dir caracteristiques de les solucions
@@ -17,6 +18,7 @@ public class OrientSolucio implements Comparable{
     public static void setNumSolucions(int numSolucions) {OrientSolucio.numSolucions = numSolucions;}
 
     private Color colorSolucio;
+    private Color altColor; //color alternatiu (per marcar, etc...)
     private int grainNr; // numero de gra segons diu el fitxer de solucio (com un identificador)
     private int numReflexions;
     private int numSolucio;
@@ -61,6 +63,14 @@ public class OrientSolucio implements Comparable{
         sol.clear();
     }
 
+    public void repintaSolucio(){
+    	Iterator<PuntSolucio> itrPunts = sol.iterator();
+    	while (itrPunts.hasNext()){
+    		PuntSolucio ps = itrPunts.next();
+    		ps.setColorPunt(this.colorSolucio);
+    	}
+    }
+    
     public int getGrainNr() {
         return grainNr;
     }

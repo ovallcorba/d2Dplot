@@ -224,8 +224,12 @@ public class Param_dialog extends JDialog {
                 buttonPane.add(this.btnDef2, gbc_btnDef2);
             }
             {
-                this.btnDef3 = new JButton("Def3");
-                this.btnDef3.setEnabled(false);
+                this.btnDef3 = new JButton("ALBA1403");
+                btnDef3.addActionListener(new ActionListener() {
+                	public void actionPerformed(ActionEvent arg0) {
+                		do_btnDef3_actionPerformed(arg0);
+                	}
+                });
                 GridBagConstraints gbc_btnDef3 = new GridBagConstraints();
                 gbc_btnDef3.insets = new Insets(5, 0, 0, 5);
                 gbc_btnDef3.gridx = 2;
@@ -340,4 +344,18 @@ public class Param_dialog extends JDialog {
         this.txtCentrY.setText("1031.164");
         this.txtWave.setText("0.4243");
     }
+	protected void do_btnDef3_actionPerformed(ActionEvent arg0) {
+//        this.txtDistOD.setText("190.012");
+//        this.txtPicSizeX.setText("0.079");
+//        this.txtPicSizeY.setText("0.079");
+//        this.txtCentrX.setText("1023.521");
+//        this.txtCentrY.setText("1024.440");
+//        this.txtWave.setText("0.424090");
+        this.txtDistOD.setText("189.520");
+        this.txtPicSizeX.setText("0.079");
+        this.txtPicSizeY.setText("0.079");
+        this.txtCentrX.setText("1023.516");
+        this.txtCentrY.setText("1024.468");
+        this.txtWave.setText("0.42460");
+	}
 }

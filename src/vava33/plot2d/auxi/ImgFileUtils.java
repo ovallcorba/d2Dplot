@@ -8,19 +8,18 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
 import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 
+import org.apache.commons.math3.util.FastMath;
+
 import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.VavaLogger;
 
 import vava33.plot2d.MainFrame;
 
@@ -156,8 +155,8 @@ public final class ImgFileUtils {
                     }
                 }
                 // corregim maxI i minI
-                patt2D.setMaxI(Math.round(patt2D.getMaxI() / patt2D.getScale()));
-                patt2D.setMinI(Math.round(patt2D.getMinI() / patt2D.getScale()));
+                patt2D.setMaxI(FastMath.round(patt2D.getMaxI() / patt2D.getScale()));
+                patt2D.setMinI(FastMath.round(patt2D.getMinI() / patt2D.getScale()));
             }
 
             in.close();
@@ -291,7 +290,7 @@ public final class ImgFileUtils {
             // llegir "LINIA" amb tots els parametres...
             Scanner scD2file = new Scanner(d2File);
             String line = scD2file.nextLine();
-            System.out.println(line);
+            VavaLogger.LOG.info(line);
             // treurem la informació d'aquesta linia.
             // 0 1 2 3 4 5 6 7 8
             String[] llista = { "HDRBLKS:", "NROWS  :", "NCOLS  :", "CENTER :", "DISTANC:", "NOVERFL:", "MINIMUM:",
@@ -347,7 +346,7 @@ public final class ImgFileUtils {
             in.read(header);
 
             // si la intensitat màxima supera el short escalem
-            patt2D.setScale(Math.max(maxI / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(maxI / (float)MainFrame.shortsize, 1.000f));
 
             // llegim els bytes
             for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
@@ -437,7 +436,7 @@ public final class ImgFileUtils {
         float pixSize = 0;
         float distOD = 0;
         float beamCX = 0, beamCY = 0, wl = 0;
-        int dimX = 0, dimY = 0, maxI = 0, minI = 0;
+        int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
 
         try {
             Scanner scD2file = new Scanner(d2File);
@@ -509,7 +508,7 @@ public final class ImgFileUtils {
 
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
-            patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
@@ -551,7 +550,7 @@ public final class ImgFileUtils {
         float pixSize = 0;
         float distOD = 0;
         float beamCX = 0, beamCY = 0, wl = 0;
-        int dimX = 0, dimY = 0, maxI = 0, minI = 0;
+        int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
 
         //primer treiem la info de les linies de text
         try {
@@ -627,7 +626,7 @@ public final class ImgFileUtils {
 
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
-            patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
@@ -665,7 +664,8 @@ public final class ImgFileUtils {
     public static Pattern2D openPatternFile(File d2File) {
         Pattern2D patt2D = null;
         // comprovem extensio
-        String ext = FileUtils.getExtension(d2File);
+        VavaLogger.LOG.info(d2File.toString());
+        String ext = FileUtils.getExtension(d2File).trim();
         if (!ext.equalsIgnoreCase("bin") && !ext.equalsIgnoreCase("img") && !ext.equalsIgnoreCase("spr")
                 && !ext.equalsIgnoreCase("gfrm")  && !ext.equalsIgnoreCase("edf")) {
             Object[] possibilities = { "BIN", "IMG", "SPR", "GFRM", "EDF" };
@@ -704,8 +704,8 @@ public final class ImgFileUtils {
         ImgFileUtils.readEXZfile(patt2D);
 
         //debug:
-        System.out.println("meanI= "+patt2D.getMeanI());
-        System.out.println("sdevI= "+patt2D.getSdevI());
+        VavaLogger.LOG.info("meanI= "+patt2D.getMeanI());
+        VavaLogger.LOG.info("sdevI= "+patt2D.getSdevI());
         
         return patt2D;
     }
@@ -738,7 +738,7 @@ public final class ImgFileUtils {
                                                              // (X)
                     String r = scD2file.next();
                     count = count + 1;
-                    int in = new BigDecimal(r).intValue();
+                    int in = new java.math.BigDecimal(r).intValue();
                     if (in > patt2D.getMaxI()) {
                         patt2D.setMaxI(in);
                     }
@@ -748,7 +748,7 @@ public final class ImgFileUtils {
                 }
             }
             // calculem el factor d'escala
-            patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
             scD2file = new Scanner(d2File);
             scD2file.next();// x
@@ -763,7 +763,7 @@ public final class ImgFileUtils {
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
                                                              // (X)
                     String r = scD2file.next();
-                    int in = new BigDecimal(r).intValue();
+                    int in = new java.math.BigDecimal(r).intValue();
                     patt2D.setIntenB2(j, i, (short) (in / patt2D.getScale()));
                 }
             }
@@ -879,7 +879,7 @@ public final class ImgFileUtils {
             output.close();
         } catch (Exception ex) {
             ex.printStackTrace();
-            System.out.println("(FileUtils)Error saving BIN file");
+            VavaLogger.LOG.info("(FileUtils)Error saving BIN file");
             return null;
         }
         return d2File;
@@ -938,10 +938,10 @@ public final class ImgFileUtils {
             e.printStackTrace();
         }
         if(bytes>limit){
-            System.out.println(bytes+" bytes --> format NOU");
+            VavaLogger.LOG.info(bytes+" bytes --> format NOU");
             return true; 
         }else{
-            System.out.println(bytes+" bytes --> format ANTIC");
+            VavaLogger.LOG.info(bytes+" bytes --> format ANTIC");
             return false;
         }
         
@@ -995,7 +995,7 @@ public final class ImgFileUtils {
 
                   // calculem el factor d'escala (valor maxim entre quocient i 1, mai
                   // escalem per sobre)
-                  patt2D.setScale(Math.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+                  patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
 
                   in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                              // buffer

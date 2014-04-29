@@ -29,6 +29,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
 
+import org.apache.commons.math3.util.FastMath;
+
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 
@@ -361,19 +363,19 @@ public class Calib_dialog extends JDialog {
         int d2 = Integer.parseInt(this.txt_r2.getText());
 
         //calculem excentricitat elipses
-        float majRr1=Math.max(anells[0].height, anells[0].width);
-        float menRr1=Math.min(anells[0].height, anells[0].width);
-        float majRr2=Math.max(anells[1].height, anells[1].width);
-        float menRr2=Math.min(anells[1].height, anells[1].width);
-        float ex1=(float)Math.sqrt(1-(menRr1/majRr1)*(menRr1/majRr1));
-        float ex2=(float)Math.sqrt(1-(menRr2/majRr2)*(menRr2/majRr2));
+        float majRr1=FastMath.max(anells[0].height, anells[0].width);
+        float menRr1=FastMath.min(anells[0].height, anells[0].width);
+        float majRr2=FastMath.max(anells[1].height, anells[1].width);
+        float menRr2=FastMath.min(anells[1].height, anells[1].width);
+        float ex1=(float)FastMath.sqrt(1-(menRr1/majRr1)*(menRr1/majRr1));
+        float ex2=(float)FastMath.sqrt(1-(menRr2/majRr2)*(menRr2/majRr2));
 
         tAOut.ln("Eccentricity");
         tAOut.ln(" (ring"+d1+")= "+ex1);
         tAOut.ln(" (ring"+d2+")= "+ex2);        
 //        tAOut.ln("Angular Eccentricity (º)");
-//        tAOut.ln(" (ring"+d1+")= "+Math.toDegrees(Math.asin(ex1)));
-//        tAOut.ln(" (ring"+d2+")= "+Math.toDegrees(Math.asin(ex2)));        
+//        tAOut.ln(" (ring"+d1+")= "+FastMath.toDegrees(FastMath.asin(ex1)));
+//        tAOut.ln(" (ring"+d2+")= "+FastMath.toDegrees(FastMath.asin(ex2)));        
 
         // primer mirem els radis verticals
         float r1 = (anells[0].height / 2.f) * pixSize; 
@@ -402,8 +404,8 @@ public class Calib_dialog extends JDialog {
         tAOut.ln("  (mean)= [" + FileUtils.dfX_3.format(Xmean) + ";" + FileUtils.dfX_3.format(Ymean) + "]");
 
         // estimacio de la lambda
-        float lambdaR2 = (float) (2 * LaB6_d[d1] * (Math.sin(0.5 * Math.atan(r1 / MDmean))));
-        float lambdaR8 = (float) (2 * LaB6_d[d2] * (Math.sin(0.5 * Math.atan(r2 / MDmean))));
+        float lambdaR2 = (float) (2 * LaB6_d[d1] * (FastMath.sin(0.5 * FastMath.atan(r1 / MDmean))));
+        float lambdaR8 = (float) (2 * LaB6_d[d2] * (FastMath.sin(0.5 * FastMath.atan(r2 / MDmean))));
         WLmean = (lambdaR2 + lambdaR8) / 2;
         tAOut.ln("Wavelength (A)");
         tAOut.ln(" (ring"+d1+")= " + FileUtils.dfX_5.format(lambdaR2));
@@ -493,23 +495,23 @@ public class Calib_dialog extends JDialog {
 
         while (val < inMD + range) {
             // debug: calcul per separat
-            float v1 = (float) (2 * LaB6_d[d1] * (Math.sin(0.5 * Math.atan(r1 / val))));
-            float v2 = (float) (2 * LaB6_d[d2] * (Math.sin(0.5 * Math.atan(r2 / val))));
-            float dif = Math.abs(v1 - v2);
+            float v1 = (float) (2 * LaB6_d[d1] * (FastMath.sin(0.5 * FastMath.atan(r1 / val))));
+            float v2 = (float) (2 * LaB6_d[d2] * (FastMath.sin(0.5 * FastMath.atan(r2 / val))));
+            float dif = FastMath.abs(v1 - v2);
             // if(val>149.5&&val<150.5){
-            // System.out.println("val="+val+" atan="+atanV1+" sin="+sinAtan+" v1="+v1+" v2="+v2+"  dif="+dif);
+            // VavaLogger.LOG.info("val="+val+" atan="+atanV1+" sin="+sinAtan+" v1="+v1+" v2="+v2+"  dif="+dif);
             // }
-            // System.out.println(dif);
+            // VavaLogger.LOG.info(dif);
             if (dif < minDif) {
                 minDif = dif;
                 minVal = val;
-                // System.out.println(minDif);
-                // System.out.println(minVal);
+                // VavaLogger.LOG.info(minDif);
+                // VavaLogger.LOG.info(minVal);
             }
             // incrementem
             val = val + inc;
         }
-        // System.out.println("r2="+r2+" r8="+r8);
+        // VavaLogger.LOG.info("r2="+r2+" r8="+r8);
 
         return minVal;
     }

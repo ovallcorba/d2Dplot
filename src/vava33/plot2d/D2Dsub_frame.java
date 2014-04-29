@@ -797,6 +797,7 @@ public class D2Dsub_frame extends JFrame {
 		this.pattAft = pattAft;
 		//s'ha de mostrar al mainframe i activar reload previous:
         principal.updatePatt2D(this.pattAft,false);
+        this.btnReload.setText("Reload Source");
 	}
 
     public Pattern2D getPattBkg() {
@@ -1066,7 +1067,7 @@ public class D2Dsub_frame extends JFrame {
 		}
 		
 		if(!doGlass&&!doBkg&&!doLP){
-			tAOut.ln("No option selected");
+			tAOut.ln("No operation selected");
 			return;
 		}
 		
@@ -1128,7 +1129,7 @@ public class D2Dsub_frame extends JFrame {
 				        throw new Exception();
 				    }
 				    
-				    tAOut.ln("Glass subtraction... ");
+				    tAOut.afegirText(true, true,"Glass subtraction... ");
 				    
 				    //preparacio dades
 				    Pattern2D glass = ImgFileUtils.openPatternFile(glassD2File);
@@ -1145,11 +1146,11 @@ public class D2Dsub_frame extends JFrame {
 				    //les dades amb vidre sostret seran les d'entrada a posteriors operacions
 				    dataWork = ImgOps.subtractBKG_v2(dataWork, glass, this.glassFactor, tAOut)[0];
 				    
-				    tAOut.ln("Glass subtraction... DONE!");
+				    tAOut.afegirText(true, true,"Glass subtraction... DONE!");
 				}
 				
 				if (doBkg){
-				    tAOut.ln("Background subtraction... ");
+					tAOut.afegirText(true, true,"Background subtraction... ");
 					//metode
 					if(this.bkgOpt.equalsIgnoreCase("avsq")){
 						//necessitem 2 imatges (la iteracio anterior i la nova)
@@ -1210,21 +1211,21 @@ public class D2Dsub_frame extends JFrame {
 				        dataWork = ImgOps.subtractBKG(dataWork, fons);
 				    }
 				    bkgfile=true;
-				    tAOut.ln("DONE!");
+				    tAOut.afegirText(true, true,"Background subtraction... DONE!");
 				}
 				
 				if(doLP){
-				    tAOut.ln("LP correction... ");
+					tAOut.afegirText(true, true,"LP correction... ");
 				    dataWork = ImgOps.corrLP(dataWork, this.ipol, this.ilor, false);
-				    tAOut.ln("LP correction... DONE!");
+				    tAOut.afegirText(true, true,"LP correction... DONE!");
 				}
 				
 			} catch (Exception e) {
 				e.printStackTrace();
                 if (runBkg == null) {
-                    tAOut.ln("*** Run STOPPED ***");
+                	tAOut.afegirText(true, true,"*** Run STOPPED ***");
                 } else {
-                    tAOut.ln("*** Run ERROR ***");
+                	tAOut.afegirText(true, true,"*** Run ERROR ***");
                 }
                 progressBar.setIndeterminate(false);
                 progressBar.setStringPainted(false);
@@ -1301,9 +1302,4 @@ public class D2Dsub_frame extends JFrame {
 		}
 	}
 }
-
-
-
-
-
 
