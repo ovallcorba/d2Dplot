@@ -52,11 +52,12 @@ public class MainFrame extends JFrame {
     private static String separator = System.getProperty("file.separator");
     private static String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     private static String d2dsubExec = "d2Dsub";
-    private static String welcomeMSG = "d2Dplot v1404 (140429) by OV";
-//    private static String workdir = System.getProperty("user.dir");
-    private static String workdir = "C:\\Ori_TMP\\";
+    private static String welcomeMSG = "d2Dplot v1410 (141021) by OV";
+    private static String workdir = System.getProperty("user.dir");
+//    private static String workdir = "C:\\Ori_TMP\\";
+//    private static String workdir = "lau1_data.bin";
 //    private static String workdir = "C:\\ovallcorba\\Dades_difraccio\\2D-INCO\\Mesures-Juliol-ALBA\\";
-    private static boolean debug = false;
+    private static boolean debug = true;
     
     private JButton btn05x;
     private JButton btn2x;
@@ -114,7 +115,11 @@ public class MainFrame extends JFrame {
     private JButton btnRadialInteg;
     private JButton btnProva;
     private JButton btnSumImages;
+    private JButton btnWorkSol;
     private JCheckBox chckbxWorkSol;
+    private JButton btnNext;
+    private JButton btnPrev;
+    private JPanel panel_2;
 
     /**
      * Launch the application. ES POT PASSAR COM A ARGUMENT EL DIRECTORI DE TREBALL ON S'OBRIRAN PER DEFECTE ELS DIALEGS
@@ -125,7 +130,11 @@ public class MainFrame extends JFrame {
     	VavaLogger.initLogger();
     	if(debug){
     		VavaLogger.enableLogger();
+//    		VavaLogger.setINFO();
     		VavaLogger.LOG.info("LOGGING OF D2Dplot ENABLED");
+//    		VavaLogger.LOG.fine("LOGGING OF D2Dplot ENABLED");
+//    		VavaLogger.LOG.config("LOGGING OF D2Dplot ENABLED");
+//    		VavaLogger.LOG.warning("LOGGING OF D2Dplot ENABLED");
     	}else{
     		VavaLogger.LOG.info("LOGGING OF D2Dplot DISABLED");
     		VavaLogger.disableLogger();
@@ -133,7 +142,11 @@ public class MainFrame extends JFrame {
     	
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            if(UIManager.getLookAndFeel().toString().contains("metal")){
+                UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");    
+            }
             // UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName()); //java metal
+            
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -167,7 +180,7 @@ public class MainFrame extends JFrame {
         setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource("/img/Icona.png")));
         setTitle("d2Dplot");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 877, 614);
+        setBounds(100, 100, 1180, 853);
         this.contentPane = new JPanel();
         this.contentPane.setBorder(null);
         setContentPane(this.contentPane);
@@ -218,32 +231,91 @@ public class MainFrame extends JFrame {
         this.panel_all = new JPanel();
         this.splitPane.setLeftComponent(this.panel_all);
         GridBagLayout gbl_panel_all = new GridBagLayout();
-        gbl_panel_all.columnWidths = new int[] { 0, 0, 0, 0 };
-        gbl_panel_all.rowHeights = new int[] { 0, 0, 0, 0 };
-        gbl_panel_all.columnWeights = new double[] { 0.0, 1.0, 0.0, Double.MIN_VALUE };
-        gbl_panel_all.rowWeights = new double[] { 0.0, 1.0, 0.0, Double.MIN_VALUE };
+        gbl_panel_all.columnWidths = new int[] { 0, 0 };
+        gbl_panel_all.rowHeights = new int[] { 0, 0, 0 };
+        gbl_panel_all.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+        gbl_panel_all.rowWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
         this.panel_all.setLayout(gbl_panel_all);
-
-        this.btnOpen = new JButton("Open Image");
-        GridBagConstraints gbc_btnOpen = new GridBagConstraints();
-        gbc_btnOpen.insets = new Insets(5, 5, 5, 5);
-        gbc_btnOpen.gridx = 0;
-        gbc_btnOpen.gridy = 0;
-        this.panel_all.add(this.btnOpen, gbc_btnOpen);
-        this.btnOpen.setMargin(new Insets(2, 7, 2, 7));
+        
+        panel_2 = new JPanel();
+        GridBagConstraints gbc_panel_2 = new GridBagConstraints();
+        gbc_panel_2.fill = GridBagConstraints.BOTH;
+        gbc_panel_2.insets = new Insets(5, 5, 5, 5);
+        gbc_panel_2.gridx = 0;
+        gbc_panel_2.gridy = 0;
+        panel_all.add(panel_2, gbc_panel_2);
+        GridBagLayout gbl_panel_2 = new GridBagLayout();
+        gbl_panel_2.columnWidths = new int[]{0, 0, 0, 0, 0, 0, 0};
+        gbl_panel_2.rowHeights = new int[]{32, 0};
+        gbl_panel_2.columnWeights = new double[]{0.0, 1.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+        gbl_panel_2.rowWeights = new double[]{0.0, Double.MIN_VALUE};
+        panel_2.setLayout(gbl_panel_2);
+        
+                this.btnOpen = new JButton("Open Image");
+                GridBagConstraints gbc_btnOpen = new GridBagConstraints();
+                gbc_btnOpen.insets = new Insets(0, 0, 0, 5);
+                gbc_btnOpen.gridx = 0;
+                gbc_btnOpen.gridy = 0;
+                panel_2.add(btnOpen, gbc_btnOpen);
+                this.btnOpen.setMargin(new Insets(2, 7, 2, 7));
+                this.btnOpen.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent arg0) {
+                        do_btnOpen_actionPerformed(arg0);
+                    }
+                });
         this.lblOpened = new JLabel("(no image opened)");
         GridBagConstraints gbc_lblOpened = new GridBagConstraints();
         gbc_lblOpened.anchor = GridBagConstraints.WEST;
-        gbc_lblOpened.insets = new Insets(5, 5, 5, 5);
+        gbc_lblOpened.insets = new Insets(0, 0, 0, 5);
         gbc_lblOpened.gridx = 1;
         gbc_lblOpened.gridy = 0;
-        this.panel_all.add(this.lblOpened, gbc_lblOpened);
+        panel_2.add(lblOpened, gbc_lblOpened);
+        
+        btnPrev = new JButton("<");
+        btnPrev.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnPrev_actionPerformed(e);
+            }
+        });
+        GridBagConstraints gbc_btnPrev = new GridBagConstraints();
+        gbc_btnPrev.insets = new Insets(0, 0, 0, 5);
+        gbc_btnPrev.gridx = 2;
+        gbc_btnPrev.gridy = 0;
+        panel_2.add(btnPrev, gbc_btnPrev);
+        btnPrev.setToolTipText("Previous image (by index)");
+        
+        btnNext = new JButton(">");
+        btnNext.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnNext_actionPerformed(arg0);
+            }
+        });
+        GridBagConstraints gbc_btnNext = new GridBagConstraints();
+        gbc_btnNext.insets = new Insets(0, 0, 0, 5);
+        gbc_btnNext.gridx = 3;
+        gbc_btnNext.gridy = 0;
+        panel_2.add(btnNext, gbc_btnNext);
+        btnNext.setToolTipText("Next image (by index)");
+        
+        btnSumImages = new JButton("Sum Images");
+        GridBagConstraints gbc_btnSumImages = new GridBagConstraints();
+        gbc_btnSumImages.fill = GridBagConstraints.HORIZONTAL;
+        gbc_btnSumImages.insets = new Insets(0, 0, 0, 5);
+        gbc_btnSumImages.gridx = 4;
+        gbc_btnSumImages.gridy = 0;
+        panel_2.add(btnSumImages, gbc_btnSumImages);
+        btnSumImages.setMargin(new Insets(2, 2, 2, 2));
+        btnSumImages.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        		do_btnSumImages_actionPerformed(arg0);
+        	}
+        });
         this.lblhelp = new JLabel(" ? ");
         GridBagConstraints gbc_lblhelp = new GridBagConstraints();
-        gbc_lblhelp.insets = new Insets(0, 0, 5, 0);
-        gbc_lblhelp.gridx = 2;
+        gbc_lblhelp.gridx = 5;
         gbc_lblhelp.gridy = 0;
-        this.panel_all.add(this.lblhelp, gbc_lblhelp);
+        panel_2.add(lblhelp, gbc_lblhelp);
         this.lblhelp.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent arg0) {
@@ -257,9 +329,7 @@ public class MainFrame extends JFrame {
         this.splitPane_1.setContinuousLayout(true);
         this.splitPane_1.setResizeWeight(1.0);
         GridBagConstraints gbc_splitPane_1 = new GridBagConstraints();
-        gbc_splitPane_1.gridwidth = 3;
         gbc_splitPane_1.fill = GridBagConstraints.BOTH;
-        gbc_splitPane_1.gridheight = 2;
         gbc_splitPane_1.gridx = 0;
         gbc_splitPane_1.gridy = 1;
         this.panel_all.add(this.splitPane_1, gbc_splitPane_1);
@@ -291,13 +361,14 @@ public class MainFrame extends JFrame {
         gbl_panel_opcions.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
         this.panel_opcions.setLayout(gbl_panel_opcions);
         this.btnResetView = new JButton("Reset view");
+        btnResetView.setPreferredSize(new Dimension(90, 32));
         this.btnResetView.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 do_btnResetView_actionPerformed(arg0);
             }
         });
-        this.btnResetView.setMargin(new Insets(2, 7, 2, 7));
+        this.btnResetView.setMargin(new Insets(2, 2, 2, 2));
         GridBagConstraints gbc_btnResetView = new GridBagConstraints();
         gbc_btnResetView.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnResetView.insets = new Insets(0, 2, 5, 2);
@@ -305,6 +376,7 @@ public class MainFrame extends JFrame {
         gbc_btnResetView.gridy = 0;
         this.panel_opcions.add(this.btnResetView, gbc_btnResetView);
         this.chckbxShowSol = new JCheckBox("Show sol");
+        chckbxShowSol.setSelected(true);
         this.chckbxShowSol.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent arg0) {
@@ -312,13 +384,14 @@ public class MainFrame extends JFrame {
             }
         });
         this.btnMidaReal = new JButton("True size");
+        btnMidaReal.setPreferredSize(new Dimension(90, 32));
         this.btnMidaReal.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 do_btnMidaReal_actionPerformed(e);
             }
         });
-        this.btnMidaReal.setMargin(new Insets(2, 7, 2, 7));
+        this.btnMidaReal.setMargin(new Insets(2, 2, 2, 2));
         GridBagConstraints gbc_btnMidaReal = new GridBagConstraints();
         gbc_btnMidaReal.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnMidaReal.insets = new Insets(0, 2, 5, 2);
@@ -339,6 +412,7 @@ public class MainFrame extends JFrame {
         gbl_panel.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
         this.panel.setLayout(gbl_panel);
         this.btn2x = new JButton("2x");
+        btn2x.setPreferredSize(new Dimension(50, 32));
         this.btn2x.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -346,6 +420,7 @@ public class MainFrame extends JFrame {
             }
         });
         this.btn05x = new JButton("0.5x");
+        btn05x.setPreferredSize(new Dimension(50, 32));
         this.btn05x.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
@@ -354,17 +429,18 @@ public class MainFrame extends JFrame {
         });
         this.btn05x.setMargin(new Insets(1, 2, 1, 2));
         GridBagConstraints gbc_btn05x = new GridBagConstraints();
+        gbc_btn05x.fill = GridBagConstraints.HORIZONTAL;
         gbc_btn05x.insets = new Insets(0, 2, 0, 5);
         gbc_btn05x.gridx = 0;
         gbc_btn05x.gridy = 0;
         this.panel.add(this.btn05x, gbc_btn05x);
         this.btn2x.setMargin(new Insets(1, 7, 1, 7));
         GridBagConstraints gbc_btn2x = new GridBagConstraints();
+        gbc_btn2x.fill = GridBagConstraints.HORIZONTAL;
         gbc_btn2x.insets = new Insets(0, 2, 0, 2);
         gbc_btn2x.gridx = 1;
         gbc_btn2x.gridy = 0;
         this.panel.add(this.btn2x, gbc_btn2x);
-        this.chckbxShowSol.setSelected(true);
         GridBagConstraints gbc_chckbxShowSol = new GridBagConstraints();
         gbc_chckbxShowSol.insets = new Insets(5, 2, 5, 0);
         gbc_chckbxShowSol.anchor = GridBagConstraints.WEST;
@@ -406,12 +482,13 @@ public class MainFrame extends JFrame {
         panel_opcions.add(chckbxWorkSol, gbc_chckbxWorkSol);
         this.btnSaveDicvol = new JButton("Points List");
         GridBagConstraints gbc_btnSaveDicvol = new GridBagConstraints();
-        gbc_btnSaveDicvol.insets = new Insets(0, 2, 0, 2);
+        gbc_btnSaveDicvol.fill = GridBagConstraints.HORIZONTAL;
+        gbc_btnSaveDicvol.insets = new Insets(0, 2, 5, 2);
         gbc_btnSaveDicvol.gridx = 0;
         gbc_btnSaveDicvol.gridy = 7;
         this.panel_opcions.add(this.btnSaveDicvol, gbc_btnSaveDicvol);
-        this.btnSaveDicvol.setMinimumSize(new Dimension(100, 25));
-        this.btnSaveDicvol.setPreferredSize(new Dimension(101, 25));
+        this.btnSaveDicvol.setMinimumSize(new Dimension(100, 28));
+        this.btnSaveDicvol.setPreferredSize(new Dimension(100, 32));
         this.btnSaveDicvol.setEnabled(false);
         this.btnSaveDicvol.addActionListener(new ActionListener() {
             @Override
@@ -419,7 +496,7 @@ public class MainFrame extends JFrame {
                 do_btnSaveDicvol_actionPerformed(arg0);
             }
         });
-        this.btnSaveDicvol.setMargin(new Insets(2, 7, 2, 7));
+        this.btnSaveDicvol.setMargin(new Insets(2, 2, 2, 2));
         this.chckbxIndex.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent arg0) {
@@ -430,7 +507,6 @@ public class MainFrame extends JFrame {
         GridBagConstraints gbc_panel_function = new GridBagConstraints();
         gbc_panel_function.gridheight = 3;
         gbc_panel_function.fill = GridBagConstraints.BOTH;
-        gbc_panel_function.insets = new Insets(0, 0, 5, 0);
         gbc_panel_function.gridx = 1;
         gbc_panel_function.gridy = 0;
         this.panel_controls.add(this.panel_function, gbc_panel_function);
@@ -440,11 +516,11 @@ public class MainFrame extends JFrame {
         gbl_panel_function.columnWidths = new int[] { 0, 0 };
         gbl_panel_function.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         gbl_panel_function.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-        gbl_panel_function.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+        gbl_panel_function.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
         this.panel_function.setLayout(gbl_panel_function);
         this.btnSetParams = new JButton("Set Parameters");
-        this.btnSetParams.setMinimumSize(new Dimension(100, 25));
-        this.btnSetParams.setPreferredSize(new Dimension(101, 25));
+        this.btnSetParams.setMinimumSize(new Dimension(100, 28));
+        this.btnSetParams.setPreferredSize(new Dimension(101, 32));
         this.btnSetParams.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
@@ -453,12 +529,15 @@ public class MainFrame extends JFrame {
         });
         this.btnSetParams.setMargin(new Insets(2, 2, 2, 2));
         GridBagConstraints gbc_btnSetParams = new GridBagConstraints();
-        gbc_btnSetParams.insets = new Insets(0, 2, 5, 2);
+        gbc_btnSetParams.fill = GridBagConstraints.BOTH;
+        gbc_btnSetParams.insets = new Insets(0, 0, 5, 0);
         gbc_btnSetParams.gridx = 0;
         gbc_btnSetParams.gridy = 0;
         this.panel_function.add(this.btnSetParams, gbc_btnSetParams);
         this.btnLab6 = new JButton("Calibr. LaB6");
-        this.btnLab6.setMinimumSize(new Dimension(100, 25));
+        btnLab6.setPreferredSize(new Dimension(101, 32));
+        btnLab6.setMargin(new Insets(2, 2, 2, 2));
+        this.btnLab6.setMinimumSize(new Dimension(100, 28));
         this.btnLab6.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
@@ -466,11 +545,13 @@ public class MainFrame extends JFrame {
             }
         });
         GridBagConstraints gbc_btnLab6 = new GridBagConstraints();
+        gbc_btnLab6.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnLab6.insets = new Insets(0, 0, 5, 0);
         gbc_btnLab6.gridx = 0;
         gbc_btnLab6.gridy = 1;
         this.panel_function.add(this.btnLab6, gbc_btnLab6);
         this.btnD2Dsub = new JButton("d2Dsub");
+        btnD2Dsub.setMargin(new Insets(2, 2, 2, 2));
         this.btnD2Dsub.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -478,54 +559,60 @@ public class MainFrame extends JFrame {
             }
         });
         this.btnExZones = new JButton("Ex. Zones");
-        this.btnExZones.setMinimumSize(new Dimension(100, 25));
+        btnExZones.setMargin(new Insets(2, 2, 2, 2));
+        this.btnExZones.setMinimumSize(new Dimension(100, 28));
         this.btnExZones.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 do_btnExZones_actionPerformed(arg0);
             }
         });
-        this.btnExZones.setPreferredSize(new Dimension(101, 25));
+        this.btnExZones.setPreferredSize(new Dimension(101, 32));
         GridBagConstraints gbc_btnExZones = new GridBagConstraints();
+        gbc_btnExZones.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnExZones.insets = new Insets(0, 0, 5, 0);
         gbc_btnExZones.gridx = 0;
         gbc_btnExZones.gridy = 2;
         this.panel_function.add(this.btnExZones, gbc_btnExZones);
-        this.btnD2Dsub.setMinimumSize(new Dimension(100, 25));
-        this.btnD2Dsub.setPreferredSize(new Dimension(101, 25));
+        this.btnD2Dsub.setMinimumSize(new Dimension(100, 28));
+        this.btnD2Dsub.setPreferredSize(new Dimension(101, 32));
         GridBagConstraints gbc_btnD2Dsub = new GridBagConstraints();
+        gbc_btnD2Dsub.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnD2Dsub.insets = new Insets(0, 0, 5, 0);
         gbc_btnD2Dsub.gridx = 0;
         gbc_btnD2Dsub.gridy = 3;
         this.panel_function.add(this.btnD2Dsub, gbc_btnD2Dsub);
         
         btnRadialInteg = new JButton("Radial Integ.");
-        btnRadialInteg.setVisible(false);
-        btnRadialInteg.setEnabled(false);
+        btnRadialInteg.setPreferredSize(new Dimension(101, 32));
+        btnRadialInteg.setMargin(new Insets(2, 2, 2, 2));
         btnRadialInteg.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent arg0) {
         		do_btnRadialInteg_actionPerformed(arg0);
         	}
         });
         GridBagConstraints gbc_btnRadialInteg = new GridBagConstraints();
+        gbc_btnRadialInteg.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnRadialInteg.insets = new Insets(0, 0, 5, 0);
         gbc_btnRadialInteg.gridx = 0;
         gbc_btnRadialInteg.gridy = 4;
         panel_function.add(btnRadialInteg, gbc_btnRadialInteg);
         this.btnDdpeaksearch = new JButton("d2Dpksearch");
         btnDdpeaksearch.setVisible(false);
-        this.btnDdpeaksearch.setPreferredSize(new Dimension(101, 25));
+        this.btnDdpeaksearch.setPreferredSize(new Dimension(101, 32));
         this.btnDdpeaksearch.setEnabled(false);
-        this.btnDdpeaksearch.setMargin(new Insets(2, 12, 2, 12));
+        this.btnDdpeaksearch.setMargin(new Insets(2, 2, 2, 2));
         GridBagConstraints gbc_btnDdpeaksearch = new GridBagConstraints();
+        gbc_btnDdpeaksearch.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnDdpeaksearch.insets = new Insets(0, 0, 5, 0);
         gbc_btnDdpeaksearch.gridx = 0;
         gbc_btnDdpeaksearch.gridy = 5;
         this.panel_function.add(this.btnDdpeaksearch, gbc_btnDdpeaksearch);
         this.btnOpenSol = new JButton("Open .SOL");
-        this.btnOpenSol.setMinimumSize(new Dimension(100, 25));
-        this.btnOpenSol.setPreferredSize(new Dimension(101, 25));
+        this.btnOpenSol.setMinimumSize(new Dimension(100, 28));
+        this.btnOpenSol.setPreferredSize(new Dimension(101, 32));
         GridBagConstraints gbc_btnOpenSol = new GridBagConstraints();
+        gbc_btnOpenSol.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnOpenSol.insets = new Insets(0, 2, 5, 2);
         gbc_btnOpenSol.gridx = 0;
         gbc_btnOpenSol.gridy = 6;
@@ -536,57 +623,64 @@ public class MainFrame extends JFrame {
                 do_btnOpenSol_actionPerformed(arg0);
             }
         });
-        this.btnOpenSol.setMargin(new Insets(2, 7, 2, 7));
+        this.btnOpenSol.setMargin(new Insets(2, 2, 2, 2));
+        
+        btnWorkSol = new JButton("Work SOL");
+        btnWorkSol.setPreferredSize(new Dimension(101, 32));
+        btnWorkSol.setMargin(new Insets(2, 2, 2, 2));
+        btnWorkSol.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent arg0) {
+        		do_btnWorkSol_actionPerformed(arg0);
+        	}
+        });
+        GridBagConstraints gbc_btnWorkSol = new GridBagConstraints();
+        gbc_btnWorkSol.fill = GridBagConstraints.HORIZONTAL;
+        gbc_btnWorkSol.insets = new Insets(0, 0, 5, 0);
+        gbc_btnWorkSol.gridx = 0;
+        gbc_btnWorkSol.gridy = 7;
+        panel_function.add(btnWorkSol, gbc_btnWorkSol);
         this.scrollPane_1 = new JScrollPane();
         this.scrollPane_1.setPreferredSize(new Dimension(112, 80));
         GridBagConstraints gbc_scrollPane_1 = new GridBagConstraints();
         gbc_scrollPane_1.insets = new Insets(0, 0, 5, 0);
         gbc_scrollPane_1.fill = GridBagConstraints.BOTH;
         gbc_scrollPane_1.gridx = 0;
-        gbc_scrollPane_1.gridy = 7;
+        gbc_scrollPane_1.gridy = 8;
         this.panel_function.add(this.scrollPane_1, gbc_scrollPane_1);
         this.listSol = new JList();
         this.listSol.setVisibleRowCount(5);
         this.scrollPane_1.setViewportView(this.listSol);
         this.btnD2Dint = new JButton("d2Dint");
+        btnD2Dint.setMargin(new Insets(2, 2, 2, 2));
         btnD2Dint.setVisible(false);
-        this.btnD2Dint.setPreferredSize(new Dimension(101, 25));
+        this.btnD2Dint.setPreferredSize(new Dimension(101, 32));
         this.btnD2Dint.setEnabled(false);
         GridBagConstraints gbc_btnD2Dint = new GridBagConstraints();
+        gbc_btnD2Dint.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnD2Dint.insets = new Insets(0, 0, 5, 0);
         gbc_btnD2Dint.gridx = 0;
-        gbc_btnD2Dint.gridy = 8;
+        gbc_btnD2Dint.gridy = 9;
         this.panel_function.add(this.btnD2Dint, gbc_btnD2Dint);
         
         btn_yarc = new JButton("debug Yarc");
         btn_yarc.setVisible(false);
-        btn_yarc.setEnabled(false);
+        btn_yarc.setPreferredSize(new Dimension(101, 32));
+        btn_yarc.setMargin(new Insets(2, 2, 2, 2));
         btn_yarc.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent e) {
         		do_btn_yarc_actionPerformed(e);
         	}
         });
-        
-        btnSumImages = new JButton("sum images");
-        btnSumImages.setEnabled(false);
-        btnSumImages.setVisible(false);
-        btnSumImages.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent arg0) {
-        		do_btnSumImages_actionPerformed(arg0);
-        	}
-        });
-        GridBagConstraints gbc_btnSumImages = new GridBagConstraints();
-        gbc_btnSumImages.insets = new Insets(0, 0, 5, 0);
-        gbc_btnSumImages.gridx = 0;
-        gbc_btnSumImages.gridy = 9;
-        panel_function.add(btnSumImages, gbc_btnSumImages);
         GridBagConstraints gbc_btn_yarc = new GridBagConstraints();
+        gbc_btn_yarc.fill = GridBagConstraints.HORIZONTAL;
         gbc_btn_yarc.insets = new Insets(0, 0, 5, 0);
         gbc_btn_yarc.gridx = 0;
         gbc_btn_yarc.gridy = 10;
         panel_function.add(btn_yarc, gbc_btn_yarc);
         
         btnProva = new JButton("prova");
+        btnProva.setPreferredSize(new Dimension(101, 32));
+        btnProva.setMargin(new Insets(2, 2, 2, 2));
         btnProva.setEnabled(false);
         btnProva.setVisible(false);
         btnProva.addActionListener(new ActionListener() {
@@ -595,6 +689,7 @@ public class MainFrame extends JFrame {
         	}
         });
         GridBagConstraints gbc_btnProva = new GridBagConstraints();
+        gbc_btnProva.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnProva.gridx = 0;
         gbc_btnProva.gridy = 11;
         panel_function.add(btnProva, gbc_btnProva);
@@ -615,45 +710,41 @@ public class MainFrame extends JFrame {
         GridBagLayout gbl_panel_1 = new GridBagLayout();
         gbl_panel_1.columnWidths = new int[] { 0, 0 };
         gbl_panel_1.rowHeights = new int[] { 0, 0, 0 };
-        gbl_panel_1.columnWeights = new double[] { 0.0, Double.MIN_VALUE };
-        gbl_panel_1.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
+        gbl_panel_1.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+        gbl_panel_1.rowWeights = new double[] { 1.0, 1.0, Double.MIN_VALUE };
         this.panel_1.setLayout(gbl_panel_1);
         this.btnSaveBin = new JButton("Save .BIN");
         GridBagConstraints gbc_btnSaveBin = new GridBagConstraints();
+        gbc_btnSaveBin.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnSaveBin.insets = new Insets(0, 2, 5, 2);
         gbc_btnSaveBin.gridx = 0;
         gbc_btnSaveBin.gridy = 0;
         this.panel_1.add(this.btnSaveBin, gbc_btnSaveBin);
-        this.btnSaveBin.setMinimumSize(new Dimension(100, 25));
-        this.btnSaveBin.setPreferredSize(new Dimension(101, 25));
+        this.btnSaveBin.setMinimumSize(new Dimension(100, 28));
+        this.btnSaveBin.setPreferredSize(new Dimension(100, 32));
         this.btnSaveBin.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 do_btnSaveBin_actionPerformed(arg0);
             }
         });
-        this.btnSaveBin.setMargin(new Insets(2, 7, 2, 7));
+        this.btnSaveBin.setMargin(new Insets(2, 2, 2, 2));
         this.btnSavePng = new JButton("Save .PNG");
         GridBagConstraints gbc_btnSavePng = new GridBagConstraints();
+        gbc_btnSavePng.fill = GridBagConstraints.HORIZONTAL;
         gbc_btnSavePng.insets = new Insets(0, 2, 5, 2);
         gbc_btnSavePng.gridx = 0;
         gbc_btnSavePng.gridy = 1;
         this.panel_1.add(this.btnSavePng, gbc_btnSavePng);
-        this.btnSavePng.setMinimumSize(new Dimension(100, 25));
-        this.btnSavePng.setPreferredSize(new Dimension(101, 25));
+        this.btnSavePng.setMinimumSize(new Dimension(100, 28));
+        this.btnSavePng.setPreferredSize(new Dimension(100, 32));
         this.btnSavePng.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 do_btnSavePng_actionPerformed(arg0);
             }
         });
-        this.btnSavePng.setMargin(new Insets(2, 7, 2, 7));
-        this.btnOpen.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                do_btnOpen_actionPerformed(arg0);
-            }
-        });
+        this.btnSavePng.setMargin(new Insets(2, 2, 2, 2));
         
         //si el workdir apunta a un fitxer, s'obrir� automaticament, altrament
         //mantenim el workdir que sera el directori inicial als filechooser
@@ -1206,5 +1297,51 @@ public class MainFrame extends JFrame {
         Pattern2D suma = ImgOps.sumImages(flist);
         this.updatePatt2D(suma);
 	}
-
+	
+	protected void do_btnWorkSol_actionPerformed(ActionEvent arg0) {
+		if(listSol.getModel().getSize()<=0){
+			return;
+		}
+		OrientSolucio os = panelImatge.getSolucions().get(listSol.getSelectedIndex());
+		WorkSOL_dialog wsol = new WorkSOL_dialog(this.getPatt2D(),os,(String)listSol.getSelectedValue());
+		wsol.setVisible(true);
+	}
+    protected void do_btnNext_actionPerformed(ActionEvent arg0) {
+        
+        String fnameCurrent = FileUtils.getFNameNoExt(patt2D.getImgfile());
+        String fextCurrent = FileUtils.getExtension(patt2D.getImgfile());
+        VavaLogger.LOG.info("fnameCurrent (no Ext): "+fnameCurrent);
+        VavaLogger.LOG.info("fextCurrent: "+fextCurrent);
+        //agafem ultims 4 digits (index), sumem 1 i el tornem a posar com a fitxer a veure què
+        VavaLogger.LOG.info("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+        int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+        imgNum = imgNum+1;
+        String fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        File d2File = new File(fnameExtNew);
+        if (d2File.exists()){
+            this.reset();
+            this.updatePatt2D(d2File);
+        }else{
+            tAOut.stat("No file found with fname "+fnameExtNew);
+        }
+        
+    }
+    protected void do_btnPrev_actionPerformed(ActionEvent e) {
+        String fnameCurrent = FileUtils.getFNameNoExt(patt2D.getImgfile());
+        String fextCurrent = FileUtils.getExtension(patt2D.getImgfile());
+        VavaLogger.LOG.info("fnameCurrent (no Ext): "+fnameCurrent);
+        VavaLogger.LOG.info("fextCurrent: "+fextCurrent);
+        //agafem ultims 4 digits (index), sumem 1 i el tornem a posar com a fitxer a veure què
+        VavaLogger.LOG.info("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+        int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+        imgNum = imgNum-1;
+        String fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        File d2File = new File(fnameExtNew);
+        if (d2File.exists()){
+            this.reset();
+            this.updatePatt2D(d2File);
+        }else{
+            tAOut.stat("No file found with fname "+fnameExtNew);
+        }
+    }
 }

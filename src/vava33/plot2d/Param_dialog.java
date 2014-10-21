@@ -77,6 +77,7 @@ public class Param_dialog extends JDialog {
         }
         {
             this.txtDistOD = new JTextField();
+            txtDistOD.setBackground(Color.WHITE);
             this.txtDistOD.setText("150.000");
             GridBagConstraints gbc_txtDistOD = new GridBagConstraints();
             gbc_txtDistOD.insets = new Insets(0, 0, 5, 0);
@@ -97,6 +98,7 @@ public class Param_dialog extends JDialog {
         }
         {
             this.txtPicSizeX = new JTextField();
+            txtPicSizeX.setBackground(Color.WHITE);
             this.txtPicSizeX.setText("0.1024");
             GridBagConstraints gbc_textPicSizeX = new GridBagConstraints();
             gbc_textPicSizeX.insets = new Insets(0, 0, 5, 0);
@@ -117,6 +119,7 @@ public class Param_dialog extends JDialog {
         }
         {
             this.txtPicSizeY = new JTextField();
+            txtPicSizeY.setBackground(Color.WHITE);
             this.txtPicSizeY.setText("0.1024");
             GridBagConstraints gbc_textPicSizeY = new GridBagConstraints();
             gbc_textPicSizeY.insets = new Insets(0, 0, 5, 0);
@@ -137,6 +140,7 @@ public class Param_dialog extends JDialog {
         }
         {
             this.txtCentrX = new JTextField();
+            txtCentrX.setBackground(Color.WHITE);
             this.txtCentrX.setText("1024");
             GridBagConstraints gbc_txtCentrX = new GridBagConstraints();
             gbc_txtCentrX.insets = new Insets(0, 0, 5, 0);
@@ -157,6 +161,7 @@ public class Param_dialog extends JDialog {
         }
         {
             this.txtCentrY = new JTextField();
+            txtCentrY.setBackground(Color.WHITE);
             this.txtCentrY.setText("1024");
             GridBagConstraints gbc_txtCentrY = new GridBagConstraints();
             gbc_txtCentrY.insets = new Insets(0, 0, 5, 0);
@@ -177,6 +182,7 @@ public class Param_dialog extends JDialog {
         }
         {
             this.txtWave = new JTextField();
+            txtWave.setBackground(Color.WHITE);
             this.txtWave.setText("0.0");
             GridBagConstraints gbc_txtWave = new GridBagConstraints();
             gbc_txtWave.fill = GridBagConstraints.HORIZONTAL;

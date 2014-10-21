@@ -17,6 +17,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
+import java.awt.Color;
 
 public class Contrast_dialog extends JDialog {
 
@@ -85,6 +86,7 @@ public class Contrast_dialog extends JDialog {
         }
         {
             this.txtMinval = new JTextField();
+            txtMinval.setBackground(Color.WHITE);
             this.txtMinval.setText("0");
             GridBagConstraints gbc_txtMinval = new GridBagConstraints();
             gbc_txtMinval.insets = new Insets(0, 0, 5, 5);
@@ -105,6 +107,7 @@ public class Contrast_dialog extends JDialog {
         }
         {
             this.txtMaxval = new JTextField();
+            txtMaxval.setBackground(Color.WHITE);
             this.txtMaxval.setText("30");
             GridBagConstraints gbc_txtMaxval = new GridBagConstraints();
             gbc_txtMaxval.insets = new Insets(0, 0, 5, 5);

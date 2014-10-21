@@ -282,6 +282,7 @@ public class D2Dsub_batch extends JFrame {
         }
         {
             this.txtFactor = new JTextField();
+            txtFactor.setBackground(Color.WHITE);
             this.txtFactor.setEnabled(false);
             this.txtFactor.setText("1.000");
             this.txtFactor.setColumns(4);
@@ -359,6 +360,7 @@ public class D2Dsub_batch extends JFrame {
         }
         {
             this.txtN = new JTextField();
+            txtN.setBackground(Color.WHITE);
             this.txtN.setText("20");
             GridBagConstraints gbc_txtN = new GridBagConstraints();
             gbc_txtN.fill = GridBagConstraints.HORIZONTAL;
@@ -379,6 +381,7 @@ public class D2Dsub_batch extends JFrame {
         }
         {
             this.txtIter = new JTextField();
+            txtIter.setBackground(Color.WHITE);
             this.txtIter.setText("10");
             GridBagConstraints gbc_txtIter = new GridBagConstraints();
             gbc_txtIter.fill = GridBagConstraints.HORIZONTAL;
@@ -409,6 +412,7 @@ public class D2Dsub_batch extends JFrame {
         }
         {
             this.txtAmplada = new JTextField();
+            txtAmplada.setBackground(Color.WHITE);
             this.txtAmplada.setText("5.0");
             GridBagConstraints gbc_txtAmplada = new GridBagConstraints();
             gbc_txtAmplada.insets = new Insets(2, 0, 0, 5);
@@ -429,6 +433,7 @@ public class D2Dsub_batch extends JFrame {
         }
         {
             this.txtAngle = new JTextField();
+            txtAngle.setBackground(Color.WHITE);
             this.txtAngle.setText("4.0");
             GridBagConstraints gbc_txtAngle = new GridBagConstraints();
             gbc_txtAngle.insets = new Insets(2, 0, 0, 5);
@@ -449,6 +454,7 @@ public class D2Dsub_batch extends JFrame {
         }
         {
             this.txtStep = new JTextField();
+            txtStep.setBackground(Color.WHITE);
             this.txtStep.setText("0.05");
             GridBagConstraints gbc_txtStep = new GridBagConstraints();
             gbc_txtStep.insets = new Insets(2, 0, 0, 5);
@@ -754,7 +760,7 @@ public class D2Dsub_batch extends JFrame {
 
     private void userInit(){
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        this.setBounds(0, 0, 900, 540);
+        this.setBounds(0, 0, 1100, 600);
         int width = this.getWidth();
         int height = this.getHeight();
         int x = (screen.width - width) / 2;

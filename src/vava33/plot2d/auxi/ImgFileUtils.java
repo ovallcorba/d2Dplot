@@ -38,7 +38,7 @@ public final class ImgFileUtils {
             int dataHeaderBytes = 36; // bytes de dades en el header
 
             // !FITXER BIN (23/05/2013):
-            // !- Capçalera fixa de 60 bytes. De moment hi ha 9 valors (la resta és "buida"):
+            // !- Capï¿½alera fixa de 60 bytes. De moment hi ha 9 valors (la resta ï¿½s "buida"):
             // ! Int*4 NXMX(cols)
             // ! Int*4 NYMX(rows)
             // ! Real*4 SCALE
@@ -144,7 +144,7 @@ public final class ImgFileUtils {
                                                                            // lectura
                 in.read(new byte[60]);
 
-                // ara aplico factor escala i guardo on i com toca (inclòs els
+                // ara aplico factor escala i guardo on i com toca (inclï¿½s els
                 // valors -1 de mascara)
                 for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila
                                                              // (Y)
@@ -250,7 +250,7 @@ public final class ImgFileUtils {
                 in.read(buff); //cenx
                 in.read(buff); //ceny
                 
-                //ara aplico factor escala i guardo on i com toca (inclòs els valors -1 de mascara)
+                //ara aplico factor escala i guardo on i com toca (inclï¿½s els valors -1 de mascara)
                 for (int i=0;i<patt2D.getDimY();i++){ //per cada fila (Y)
                     for (int j=0;j<patt2D.getDimX();j++){  //per cada columna (X)
                         in.read(buff);
@@ -291,7 +291,7 @@ public final class ImgFileUtils {
             Scanner scD2file = new Scanner(d2File);
             String line = scD2file.nextLine();
             VavaLogger.LOG.info(line);
-            // treurem la informació d'aquesta linia.
+            // treurem la informaciï¿½ d'aquesta linia.
             // 0 1 2 3 4 5 6 7 8
             String[] llista = { "HDRBLKS:", "NROWS  :", "NCOLS  :", "CENTER :", "DISTANC:", "NOVERFL:", "MINIMUM:",
                     "MAXIMUM:", "NPIXELB:" };
@@ -301,7 +301,7 @@ public final class ImgFileUtils {
                 if (scLine.hasNext()) {
                     // String temp = scLine.findInLine(llista[i]);
                     scLine.findInLine(llista[i]);
-                    // ara hem de llegir els 71 caracters següents:
+                    // ara hem de llegir els 71 caracters segï¿½ents:
                     StringBuffer item = new StringBuffer(72);
                     for (int j = 0; j < 71; j++) {
                         item.append(scLine.findInLine(".").charAt(0));
@@ -345,7 +345,7 @@ public final class ImgFileUtils {
             int count = 0;
             in.read(header);
 
-            // si la intensitat màxima supera el short escalem
+            // si la intensitat mï¿½xima supera el short escalem
             patt2D.setScale(FastMath.max(maxI / (float)MainFrame.shortsize, 1.000f));
 
             // llegim els bytes
@@ -574,14 +574,14 @@ public final class ImgFileUtils {
                     if (line.contains("beam_center_y")) {
                         beamCY = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("pixel_size_x")) {
+                    if (line.contains("pixel_size_x") || line.contains("pixelsize_x")) {
                         pixSize = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                         pixSize = pixSize/1000.f;
                     }
                     if (line.contains("exp_distance")) {
                         distOD = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("exp_wavelength")) {
+                    if (line.contains("exp_wave")) {
                         wl = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
                 }
@@ -623,11 +623,12 @@ public final class ImgFileUtils {
                     }
                 }
             }
-
+            in.close();
+            
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
             patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
-
+            
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
                                                                        // lectura
@@ -755,7 +756,7 @@ public final class ImgFileUtils {
             scD2file.next();// y
             scD2file.nextLine(); // salta linia
 
-            // ara aplico factor escala i guardo on i com toca (inclòs els
+            // ara aplico factor escala i guardo on i com toca (inclï¿½s els
             // valors -1 de mascara)
             // EDIT130417: pinto amb la Y invertida directament
             for (int i = patt2D.getDimY() - 1; i >= 0; i--) { // per cada fila
@@ -784,13 +785,13 @@ public final class ImgFileUtils {
 
     /*
      * QUE HAURIEM DE FER.
-     * - Com que a l'obrir un fitxer probablement s'haurà escalat, hauríem de tornar
+     * - Com que a l'obrir un fitxer probablement s'haurï¿½ escalat, haurï¿½em de tornar
      *   a llegir les intensitats del fitxer original considerant les zones excloses
      *   per tenir els maxI i minI correctes. Aleshores escalar i guardar el BIN.
-     *   Potser millor que fem un mètode nou.
+     *   Potser millor que fem un mï¿½tode nou.
      *   -- hem fet que al llegir img es tinguin en compte zones excloses, rellegint-lo
      *      abans de guardar el bin ja n'hi ha prou.
-     *      No estaria de mes però fer un mètode que recalculés l'escala. (a Pattern2D)
+     *      No estaria de mes perï¿½ fer un mï¿½tode que recalculï¿½s l'escala. (a Pattern2D)
      */
     public static File saveBIN(File d2File, Pattern2D patt2D) {
         // Forcem extensio bin
@@ -902,7 +903,7 @@ public final class ImgFileUtils {
     }
     
     private static boolean isNewBIN(File d2File){
-        //primer mirem la capçalera
+        //primer mirem la capï¿½alera
         int dimX=0, dimY=0;
         byte[] buff4 = new byte[4]; // real
 
@@ -1024,7 +1025,7 @@ public final class ImgFileUtils {
                   return false;
               }
           }else{
-              //no es img, reescalem igualment (mai més intensitat que la original)
+              //no es img, reescalem igualment (mai mï¿½s intensitat que la original)
               patt2D.recalcScale();
           }
           

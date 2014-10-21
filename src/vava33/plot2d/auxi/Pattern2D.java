@@ -22,7 +22,7 @@ public class Pattern2D {
     
     // PARAMETRES IMATGE:
     short[][] intensityB2; // guardem [columna][fila] atencio: columnes=coordX,files=cordY
-    int[][] intensityB4; // per si es volguï¿½s ampliar a utilitzar enters de moment no es pot
+    int[][] intensityB4; // per si es volgués ampliar a utilitzar enters de moment no es pot
     boolean B4intensities;
     int dimX, dimY;
     int maxI, minI, meanI, nSatur;
@@ -38,7 +38,7 @@ public class Pattern2D {
     // Variables relacionades amb el fitxer
     private File imgfile; //file from which the data has been read (if any)
     float millis; // temps que s'ha tardat a llegir la imatge
-    public boolean oldBIN=false; //variable temporal que indica si ï¿½s old o new BIN
+    public boolean oldBIN=false; //variable temporal que indica si és old o new BIN
 
     
     // Crea un pattern amb unes mides concretes X Y (pixels)
@@ -82,7 +82,7 @@ public class Pattern2D {
         this.scale = escala;
     }
 
-    // Genera un pattern 2D amb els mateixos parï¿½metres que un altre (amb zones excloses pero sense intensitats)
+    // Genera un pattern 2D amb els mateixos paràmetres que un altre (amb zones excloses pero sense intensitats)
     public Pattern2D(Pattern2D dataIn){
 		this(dataIn.getDimX(), dataIn.getDimY(), dataIn.getCentrX(),dataIn.getCentrY(),dataIn.getMaxI(),dataIn.getMinI(),dataIn.getScale(),false);
 		this.setExpParam(dataIn.getPixSx(), dataIn.getPixSy(), dataIn.getDistMD(), dataIn.getWavel());
@@ -91,7 +91,7 @@ public class Pattern2D {
     }
     
     // Aquest metode comprova que s'hagin entrat els parametres
-    // instrumentals/experimentals necessaris per certs cï¿½lculs
+    // instrumentals/experimentals necessaris per certs càlculs
     public boolean checkExpParam() {
         if (this.distMD <= 0 || this.pixSx <= 0 || this.pixSy <= 0) {
             return false;
@@ -171,7 +171,7 @@ public class Pattern2D {
     }
 
     //calcula i estableix els valors de meanI i sdevI de tota la imatge excepte mascares
-    //tambï¿½ calcula els nombre de pixels saturats
+    //també calcula els nombre de pixels saturats
     public void calcMeanI(){
     	long yacum=0;
     	int npix=0;
@@ -230,19 +230,19 @@ public class Pattern2D {
         this.setScale(fscale);
     }
     
-//    !Aquesta subrutina sumarï¿½ les intensitats dels pï¿½xels en una zona en forma d'arc al voltant
+//    !Aquesta subrutina sumarà les intensitats dels píxels en una zona en forma d'arc al voltant
 //    !d'un pixel determinat.
-//    ! 1)calculem (utilitzant amplada i angle) la 2Tmin i 2Tmax de l'arc, aixï¿½ com els 4 vertexs 
+//    ! 1)calculem (utilitzant amplada i angle) la 2Tmin i 2Tmax de l'arc, així com els 4 vertexs 
 //    !   de l'arc
-//    ! 2)trobarem el quadrat minim que contï¿½ l'arc
+//    ! 2)trobarem el quadrat minim que conté l'arc
 //    ! 3)per cada pixel del cuadrat:
-//    !   -mirarem si estï¿½ entre 2Tmin i 2Tmax
+//    !   -mirarem si està entre 2Tmin i 2Tmax
 //    !   -mirarem si l'angle entre el vector reflexio-centre i el vector pixel-centre es menor a 
 //    !    "angle"
 //    !   -si es compleixen les dues condicions anteriors en sumarem la intensitat
 //    !parametres d'entrada:
 //    !  - patt2d: la imatge de treball (CONSIDEREM QUE S'HAN ASSIGNAT EL CENTRE, DISTOD i PIXSIZE)
-//    !  - px, py: Coordenades x,y del pï¿½xel
+//    !  - px, py: Coordenades x,y del píxel
 //    !  - amplada: amplada de l'arc (gruix)
 //    !  - angle: obertura de l'arc
 //    !  - self: si es considera o no el propi pixel
@@ -271,6 +271,9 @@ public class Pattern2D {
         float xmean,sumdesv;
         ArrayList<Short> minint = new ArrayList<Short>(bkgpt); //vector amb les bkgpt intensitats menors
     	
+        //debug time
+//        long startTime = System.currentTimeMillis();
+        
         int npix=0;
         int ysum=0;
         int ymax=0;
@@ -281,47 +284,108 @@ public class Pattern2D {
         for(int i=0;i<bkgpt;i++){
         	minint.add(Short.MAX_VALUE);
         }
-        
+        float angleRad = (float) FastMath.toRadians(angle);
+        VavaLogger.LOG.info("Angle (deg | rad) = "+angle+" | "+angleRad);
         
         //calcul vector centre-pixelReflexio (Rc) amb l'origen al centre de la imatge (per fer rotacions)
         RcX=px-this.getCentrX();
         RcY=this.getCentrY()-py;
+        VavaLogger.LOG.info("Rc = "+RcX+" "+RcY);
         //Amplada de l'arc (es podria fer RcX-Amplada*nxmx i RcY-Amp*nymx si la imatge no fos quadrada)
         //l'amplada es en "pixels"
-        RcXmax=RcX*(1+amplada);
-        RcYmax=RcY*(1+amplada);
-        RcXmin=RcX*(1-amplada);
-        RcYmin=RcY*(1-amplada);
+        float modR = (float) FastMath.sqrt(RcX*RcX+RcY*RcY); //modul, per calcular l'unitari i els vectors d'amplada de l'arc
+        VavaLogger.LOG.info("modR = "+modR);
+        float RcUx = RcX/modR;
+        float RcUy = RcY/modR;
+        RcXmax=RcUx*(modR+amplada/2);
+        RcYmax=RcUy*(modR+amplada/2);
+        RcXmin=RcUx*(modR-amplada/2);
+        RcYmin=RcUy*(modR-amplada/2);
+        VavaLogger.LOG.info("RcMax;RcMin = "+RcXmax+" "+RcYmax+"; "+RcXmin+" "+RcYmin);
         
         //ara fem rotar el vector Rc +angle/2 i -angle/2 per trobar els limits de l'arc, trobem els vectors
         //RcCWMax i Min (clockwise) i RcACWMax i min (anticlockwise) i tindrem els vertexs de l'arc
-        RcXcw=(float) (RcX*FastMath.cos(angle)+RcY*FastMath.sin(angle));
-        RcYcw=(float) (-RcX*FastMath.sin(angle)+RcY*FastMath.cos(angle));
-        RcXcwMax=RcXcw*(1+amplada);
-        RcYcwMax=RcYcw*(1+amplada);
-        RcXcwMin=RcXcw*(1-amplada);
-        RcYcwMin=RcYcw*(1-amplada);
+        float cosAng=(float) FastMath.cos(angleRad/2);
+        float sinAng=(float) FastMath.sin(angleRad/2);
+        RcXcw=(float) (RcX*cosAng+RcY*sinAng);
+        RcYcw=(float) (-RcX*sinAng+RcY*cosAng);
+        VavaLogger.LOG.info("RcCW = "+RcXcw+" "+RcYcw);
+        //amplada
+        float RcUXcw = RcXcw/modR;
+        float RcUYcw = RcYcw/modR;
+        RcXcwMax=RcUXcw*(modR+amplada/2);
+        RcYcwMax=RcUYcw*(modR+amplada/2);
+        RcXcwMin=RcUXcw*(modR-amplada/2);
+        RcYcwMin=RcUYcw*(modR-amplada/2);
         
-        RcXacw=(float) (RcX*FastMath.cos(angle)-RcY*FastMath.sin(angle));
-        RcYacw=(float) (RcX*FastMath.sin(angle)+RcY*FastMath.cos(angle));
-        RcXacwMax=RcXacw*(1+amplada);
-        RcYacwMax=RcYacw*(1+amplada);
-        RcXacwMin=RcXacw*(1-amplada);
-        RcYacwMin=RcYacw*(1-amplada);
+        RcXacw=(float) (RcX*cosAng-RcY*sinAng);
+        RcYacw=(float) (RcX*sinAng+RcY*cosAng);
+        VavaLogger.LOG.info("RcACW = "+RcXacw+" "+RcYacw);
+        //amplada
+        float RcUXacw = RcXacw/modR;
+        float RcUYacw = RcYacw/modR;
+        RcXacwMax=RcUXacw*(modR+amplada/2);
+        RcYacwMax=RcUYacw*(modR+amplada/2);
+        RcXacwMin=RcUXacw*(modR-amplada/2);
+        RcYacwMin=RcUYacw*(modR-amplada/2);
+
+        VavaLogger.LOG.info("RcCWmax = "+RcXcwMax+" "+RcYcwMax);
+        VavaLogger.LOG.info("RcCWmin = "+RcXcwMin+" "+RcYcwMin);
+        VavaLogger.LOG.info("RcACWmax = "+RcXacwMax+" "+RcYacwMax);
+        VavaLogger.LOG.info("RcACWmin = "+RcXacwMin+" "+RcYacwMin);
+        
         
         //ara ja tenim els vertexs, per definir el quadrat mirem el superior esquerra i l'inferior dret,
-        //i li sumem el centre per tenir els pixels en la imatge real
-        
         vSupX=ImgOps.findMin(RcXcwMax,RcXcwMin,RcXacwMax,RcXacwMin);
         vSupY=ImgOps.findMax(RcYcwMax,RcYcwMin,RcYacwMax,RcYacwMin);
         vInfX=ImgOps.findMax(RcXcwMax,RcXcwMin,RcXacwMax,RcXacwMin);
         vInfY=ImgOps.findMin(RcYcwMax,RcYcwMin,RcYacwMax,RcYacwMin);
-
-        //tornem a referenciar l'origen (0,0) al vertex superior? esquerra
+        VavaLogger.LOG.info("Vsup;Vinf(centre00) = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
+        
+        //Aquests valors definiran el quadrat mínim sempre i quant s'hagi creuat algun eix.
+        //MIREM si hem creuat algun eix (vertical o horitzontal) per tal d'evitar definir un
+        //quadrat insuficient (i en conseqüència actualitzem el vertex)
+        if(RcXacw<0&&RcXcw>0){
+            //estem creuant la vertical per l'hemisferi superior
+            //caldrà considerar com a vSupY el vector sobre aquesta vertical (0,y)
+            //amb y=(modR+amplada/2)
+            vSupY=(modR+amplada/2);
+        }
+        if(RcXacw>0&&RcXcw<0){
+            //estem creuant la vertical per l'hemisferi inferior
+            //caldrà considerar com a vInfY el vector sobre aquesta vertical (0,-y)
+            //amb y=(modR+amplada/2)
+            vInfY=-(modR+amplada/2);
+        }
+        if(RcYacw<0&&RcYcw>0){
+            //estem creuant la horitzontal per l'hemisferi esquerra
+            //caldrà considerar com a vSupX el vector sobre aquesta horitzontal (-x,0)
+            //amb x=(modR+amplada/2)
+            vSupX=-(modR+amplada/2);
+        }
+        if(RcYacw>0&&RcYcw<0){
+            //estem creuant la horitzontal per l'hemisferi dret
+            //caldrà considerar com a vInfX el vector sobre aquesta horitzontal (x,0)
+            //amb x=(modR+amplada/2)
+            vInfX=(modR+amplada/2);
+        }
+        //si l'angle es mes gran de 180 pot ser que toqui 3 hemisferis, agafem tot el quadrat
+        if(angle>180){
+            vSupY=(modR+amplada/2);
+            vInfY=-(modR+amplada/2);
+            vSupX=-(modR+amplada/2);
+            vInfX=(modR+amplada/2);
+        }
+        
+        VavaLogger.LOG.info("Vsup;Vinf(centre00corr) = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
+        
+        //i li sumem el centre per tenir els pixels en la imatge real
+        //(tornem a referenciar l'origen (0,0) al vertex superior? esquerra)
         vSupX=vSupX+this.getCentrX();
         vSupY=this.getCentrY()-vSupY;
         vInfX=vInfX+this.getCentrX();
         vInfY=this.getCentrY()-vInfY;
+        VavaLogger.LOG.info("Vsup;Vinf = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
         
         //calculem els angles t2min i t2max de l'arc (sepMD pixL en micres=> radi micres)
         x2 = (RcXmax*this.getPixSx())*(RcXmax*this.getPixSx());
@@ -334,9 +398,13 @@ public class Pattern2D {
         radi = (float) FastMath.sqrt(x2+y2);
         t2min= (float) FastMath.atan(radi/(this.getDistMD()));
 
+        //debug time
+//        long checkpoint1  = System.currentTimeMillis();
+//        float check1time = (checkpoint1 - startTime);
+        
 //        !Ara ja toca la part:
 //        !3)per cada pixel del cuadrat:
-//        !   -mirarem si estï¿½ entre 2Tmin i 2Tmax
+//        !   -mirarem si està entre 2Tmin i 2Tmax
 //        !   -mirarem si l'angle entre el vector reflexio-centre i el vector pixel-centre es menor a "angle"
 //        !   -si es compleixen les dues condicions anteriors en sumarem la intensitat
         int ivSupY = FastMath.round(vSupY);
@@ -372,9 +440,10 @@ public class Pattern2D {
                   angleB=(float) FastMath.acos(pesc/(modvRc*modvPC));
                 }
                 //si angleB es major a angle -> saltem
-                if(angleB>angle)continue;
+//                if(angleB>angle)continue;  OLD
+                if(FastMath.toDegrees(angleB)>(angle/2))continue;
                 
-                //si hem arribat aquï¿½ es que hem se sumar la intensitat del pixel
+                //si hem arribat aquí es que hem se sumar la intensitat del pixel
                 ysum=ysum+this.getIntenB2(i, j);
                 if(ymax<this.getIntenB2(i, j))ymax=this.getIntenB2(i, j);
                 for(int k=0;k<bkgpt;k++){
@@ -419,8 +488,13 @@ public class Pattern2D {
             ybkgdesv=(float) FastMath.sqrt(sumdesv/(float)(nbkgpt-1));
             //systemout? per debug
         }
-
-		return new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
+        
+//        long endTime  = System.currentTimeMillis();
+//        float totalTime = (endTime - startTime);
+//        
+//        VavaLogger.LOG.info("Yarc took "+totalTime+"ms "+"(checkpoint at "+check1time+"ms, npix= "+npix+", zona="+ivSupX+","+ivSupY+";"+ivInfX+","+ivInfY+")");
+//        
+        return new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
         	
     }
 
@@ -440,20 +514,20 @@ public class Pattern2D {
 //    //quadrat insuficient
 //    if(RcXacw<0&&RcXcw>0){
 //    	//estem creuant la vertical per l'hemisferi superior
-//    	//caldrï¿½ considerar com a vSupY el vector sobre aquesta vertical (0,y)
+//    	//caldrà considerar com a vSupY el vector sobre aquesta vertical (0,y)
 //    	
 //    	
 //    }
 //    if(RcXacw>0&&RcXcw<0){
 //    	//estem creuant la vertical per l'hemisferi inferior
-//    	//caldrï¿½ considerar com a vInfY el vector sobre aquesta vertical (0,-y)
+//    	//caldrà considerar com a vInfY el vector sobre aquesta vertical (0,-y)
 //    }
 //    
     //ho provare de fer amb ellipse2D de java
     public Patt2Dzone Yarc2(int px, int py, float amplada, float angle, boolean self, int bkgpt, boolean debug){
     	
     	//debug time
-  		//long startTime = System.currentTimeMillis();
+//  	  long startTime = System.currentTimeMillis();
     	
 //      vars calculs extraccio (quadrat,etc..)
     	float RcX,RcY,RcXmax,RcYmax,RcXmin,RcYmin;
@@ -482,7 +556,7 @@ public class Pattern2D {
         //calcul vector centre-pixelReflexio (Rc) amb l'origen al centre de la imatge (per fer rotacions)
         RcX=px-this.getCentrX();
         RcY=this.getCentrY()-py;
-        //VavaLogger.LOG.info("Rc = "+RcX+" "+RcY);
+//        VavaLogger.LOG.info("Rc = "+RcX+" "+RcY);
         float modR = (float) FastMath.sqrt(RcX*RcX+RcY*RcY); //modul, per calcular l'unitari i els vectors d'amplada de l'arc
         float RcUx = RcX/modR;
         float RcUy = RcY/modR;
@@ -497,11 +571,11 @@ public class Pattern2D {
 //        RcYmax=RcY*(1+amplada);
 //        RcXmin=RcX*(1-amplada);
 //        RcYmin=RcY*(1-amplada);
-        //VavaLogger.LOG.info("RcMax;RcMin = "+RcXmax+" "+RcYmax+"; "+RcXmin+" "+RcYmin);
+//        VavaLogger.LOG.info("RcMax;RcMin = "+RcXmax+" "+RcYmax+"; "+RcXmin+" "+RcYmin);
 
         float radiExt = (float) FastMath.sqrt(RcXmax*RcXmax+RcYmax*RcYmax);
         float radiInt = (float) FastMath.sqrt(RcXmin*RcXmin+RcYmin*RcYmin);
-        //VavaLogger.LOG.info("radiExt;radiInt = "+radiExt+" "+radiInt);
+//        VavaLogger.LOG.info("radiExt;radiInt = "+radiExt+" "+radiInt);
 
         //ara podem calcular les ellipses exterior i interior (considerem CERCLES)
         Ellipse2D.Float elext = this.getEllipseFromCenter(this.getCentrX(), this.getCentrY(), radiExt*2, radiExt*2);
@@ -509,7 +583,7 @@ public class Pattern2D {
 //        Ellipse2D.Float elext = this.getEllipseFromCenter(0, 0, radiExt*2, radiExt*2);
 //        Ellipse2D.Float elint = this.getEllipseFromCenter(0, 0, radiInt*2, radiInt*2);
         
-//        //ara fem rotar el vector Rc - angle/2 per trobar el vector per calcular l'angle on ha de comenï¿½ar l'arc
+//        //ara fem rotar el vector Rc - angle/2 per trobar el vector per calcular l'angle on ha de començar l'arc
 //        RcXacw=(float) (RcX*FastMath.cos(angle)-RcY*FastMath.sin(angle));
 //        RcYacw=(float) (RcX*FastMath.sin(angle)+RcY*FastMath.cos(angle));
 //        //VavaLogger.LOG.info("RcACW = "+RcXacw+" "+RcYacw);
@@ -522,9 +596,9 @@ public class Pattern2D {
         if(RcY<0){
         	arcAngle = 360 - arcAngle;	
         }
-        //VavaLogger.LOG.info("pesc;modR;arcAngle = "+pesc+"; "+modR+"; "+arcAngle);
+//        VavaLogger.LOG.info("pesc;modR;arcAngle = "+pesc+"; "+modR+"; "+arcAngle);
         
-        //VavaLogger.LOG.info("elext bounds = "+elext.getBounds2D().toString());
+//        VavaLogger.LOG.info("elext bounds = "+elext.getBounds2D().toString());
         
         //ara construirem l'arc desitjat i en mirarem els limits del quadrat delimitador
 //        Arc2D.Float arcExt = new Arc2D.Float(elext.getBounds2D(), arcAngle, (float) FastMath.toDegrees(angle), Arc2D.OPEN);
@@ -533,8 +607,8 @@ public class Pattern2D {
         Rectangle2D.Float rextern = (Float) arcExt.getBounds2D();
         Rectangle2D.Float rintern = (Float) arcInt.getBounds2D();
         
-        //VavaLogger.LOG.info("arcext bounds = "+arcExt.getBounds2D().toString());
-        //VavaLogger.LOG.info("angle = "+angle);
+//        VavaLogger.LOG.info("arcext bounds = "+arcExt.getBounds2D().toString());
+//        VavaLogger.LOG.info("angle = "+angle);
         
 //        vSupX = (float) FastMath.min(rextern.getMinX(), rintern.getMinX());
 //        vSupY = (float) FastMath.max(rextern.getMaxY(), rintern.getMaxY());
@@ -545,7 +619,7 @@ public class Pattern2D {
         vSupY = (float) FastMath.min(rextern.getMinY(), rintern.getMinY());
         vInfX = (float) FastMath.max(rextern.getMaxX(), rintern.getMaxX());
         vInfY = (float) FastMath.max(rextern.getMaxY(), rintern.getMaxY());
-        //VavaLogger.LOG.info("Vsup;Vinf = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
+//        VavaLogger.LOG.info("Vsup;Vinf = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
 
 //       
 //        vSupX=ImgOps.findMin(RcXcwMax,RcXcwMin,RcXacwMax,RcXacwMin);
@@ -573,7 +647,7 @@ public class Pattern2D {
 
 //        !Ara ja toca la part:
 //        !3)per cada pixel del cuadrat:
-//        !   -mirarem si estï¿½ entre 2Tmin i 2Tmax
+//        !   -mirarem si està entre 2Tmin i 2Tmax
 //        !   -mirarem si l'angle entre el vector reflexio-centre i el vector pixel-centre es menor a "angle"
 //        !   -si es compleixen les dues condicions anteriors en sumarem la intensitat
         int ivSupY = FastMath.round(vSupY);
@@ -582,8 +656,8 @@ public class Pattern2D {
         int ivInfX = FastMath.round(vInfX);
         
         //debug
-		//long checkpoint1  = System.currentTimeMillis();
-		//float check1time = (checkpoint1 - startTime);
+//		long checkpoint1  = System.currentTimeMillis();
+//		float check1time = (checkpoint1 - startTime);
         
         for (int j=ivSupY;j<=ivInfY;j++){
         	for (int i=ivSupX;i<=ivInfX;i++){
@@ -616,7 +690,7 @@ public class Pattern2D {
                 //si angleB es major a angle -> saltem
                 if(FastMath.toDegrees(angleB)>(angle/2))continue;
                 
-                //si hem arribat aquï¿½ es que hem se sumar la intensitat del pixel
+                //si hem arribat aquí es que hem se sumar la intensitat del pixel
                 ysum=ysum+this.getIntenB2(i, j);
                 if(ymax<this.getIntenB2(i, j))ymax=this.getIntenB2(i, j);
                 for(int k=0;k<bkgpt;k++){
@@ -662,17 +736,17 @@ public class Pattern2D {
             //systemout? per debug
         }
 
-		//long endTime   = System.currentTimeMillis();
-		//float totalTime = (endTime - startTime);
-		
-		//VavaLogger.LOG.info("Yarc took "+totalTime+"ms "+"(checkpoint at "+check1time+"ms, npix= "+npix+", zona="+ivSupX+","+ivSupY+";"+ivInfX+","+ivInfY+")");
+//		long endTime   = System.currentTimeMillis();
+//		float totalTime = (endTime - startTime);
+//		
+//		VavaLogger.LOG.info("Yarc took "+totalTime+"ms "+"(checkpoint at "+check1time+"ms, npix= "+npix+", zona="+ivSupX+","+ivSupY+";"+ivInfX+","+ivInfY+")");
 
 		return new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
         	
     }
     
     
-//    !Aquesta subrutina fa la integraciï¿½ radial de la imatge
+//    !Aquesta subrutina fa la integració radial de la imatge
 //    !parametres d'entrada:
 //    !  - patt2d: la imatge de treball (CONSIDEREM QUE S'HAN ASSIGNAT EL CENTRE, DISTOD i PIXSIZE)
 //    !  - t2ini, t2fin
@@ -755,14 +829,14 @@ public class Pattern2D {
         return out;
     }
     
-    //TODO: Aquest el farem anar ampliant un cercle i mirant el pixel mï¿½s proper
+    //TODO: Aquest el farem anar ampliant un cercle i mirant el pixel més proper
 //    public Pattern1D intRad2(float t2ini, float t2fin, float stepsize, boolean factorN){
 //    	
 //    }
 
     
-//    !passa els pixels mascara d'una imatge a una altra. ï¿½s una forma de
-//    !copiar les zones excloses. Tambï¿½ recalcularem maxI i minI ja que es
+//    !passa els pixels mascara d'una imatge a una altra. És una forma de
+//    !copiar les zones excloses. També recalcularem maxI i minI ja que es
 //    !poden veure afectades.
     public void copyMaskPixelsFromImage(Pattern2D im){
         this.setMaxI(0);
@@ -791,8 +865,8 @@ public class Pattern2D {
         return (float) FastMath.toDegrees(FastMath.atan(radi/(this.getDistMD())));
     }
     
-//    //torna un factor per multiplicar a l'angle d'obertura entrat a Yarc, per fer-lo mï¿½s petit
-//    //a angles baixos i mï¿½s gran a angles alts. A la 2T "central" serï¿½ 1.
+//    //torna un factor per multiplicar a l'angle d'obertura entrat a Yarc, per fer-lo més petit
+//    //a angles baixos i més gran a angles alts. A la 2T "central" serà 1.
 //    public float getFactAngle(int x_col, int y_row){
 //    	float maxAngle = this.calc2T(0,0,true);
 //    	//aplicarem un factor lineal de 0.5 a 1.5 per 2T=0 2T=max
@@ -806,8 +880,8 @@ public class Pattern2D {
 //        return ((y2 - y1) / (x2 - x1)) * angle + y1 - ((y2 - y1) / (x2 - x1)) * x1;
 //    }
 //    
-//    //torna un factor per multiplicar a l'amplada de l'arc per entrar a Yarc, per fer-lo mï¿½s ample
-//    //a angles baixos i mï¿½s estret a angles alts. A la 2T "central" serï¿½ 1.
+//    //torna un factor per multiplicar a l'amplada de l'arc per entrar a Yarc, per fer-lo més ample
+//    //a angles baixos i més estret a angles alts. A la 2T "central" serà 1.
 //    public float getFactAmplada(int x_col, int y_row){
 //    	float maxAngle = this.calc2T(0,0,true);
 //    	//aplicarem un factor lineal de 0.5 a 1.5 per 2T=0 2T=max
@@ -821,8 +895,8 @@ public class Pattern2D {
 //        return ((y2 - y1) / (x2 - x1)) * angle + y1 - ((y2 - y1) / (x2 - x1)) * x1;
 //    }
 //AJUNTEM ELS DOS METODES
-    //primer havia posat rectes de 0.5 a 1.5 perï¿½ ï¿½s exigerat, canvio a +-0.2
-    //EII, canvio la direcciï¿½ d'angle! igual que amplada per alleugar efecte angle
+    //primer havia posat rectes de 0.5 a 1.5 però és exigerat, canvio a +-0.2
+    //EII, canvio la direcció d'angle! igual que amplada per alleugar efecte angle
     //NO FER CAS ALS COMENTARIS, HE CANVIAT COSES
 	  public float[] getFactAngleAmplada(int x_col, int y_row){
 		float[] factors = new float[2];

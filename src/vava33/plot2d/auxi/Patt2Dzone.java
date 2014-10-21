@@ -1,5 +1,7 @@
 package vava33.plot2d.auxi;
 
+import java.util.Locale;
+
 /*
  * Encapsula una zona de la imatge
  */
@@ -86,5 +88,16 @@ public class Patt2Dzone {
 	public void setYbkgdesv(float ybkgdesv) {
 		this.ybkgdesv = ybkgdesv;
 	}
-	
+
+	public String toString(){
+	    String s = String.format(Locale.ENGLISH, "%d %d %d %.2f %.2f %.2f %.2f",
+	        this.npix,
+            this.ysum,
+            this.ymax,
+            this.ymean,
+            this.ymeandesv,
+            this.ybkg,
+            this.ybkgdesv);
+        return s;
+	}
 }

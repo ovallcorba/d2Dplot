@@ -138,6 +138,7 @@ public class Calib_dialog extends JDialog {
                 }
                 {
                     this.txtDistOD = new JTextField();
+                    txtDistOD.setBackground(Color.WHITE);
                     GridBagConstraints gbc_txtDistOD = new GridBagConstraints();
                     gbc_txtDistOD.gridwidth = 2;
                     gbc_txtDistOD.fill = GridBagConstraints.HORIZONTAL;
@@ -159,6 +160,7 @@ public class Calib_dialog extends JDialog {
                 }
                 {
                     this.txt_pixSize = new JTextField();
+                    txt_pixSize.setBackground(Color.WHITE);
                     this.txt_pixSize.setText("0.1024");
                     this.txt_pixSize.setColumns(10);
                     GridBagConstraints gbc_txt_pixSize = new GridBagConstraints();
@@ -181,9 +183,10 @@ public class Calib_dialog extends JDialog {
                 }
                 {
                     this.txt_r1 = new JTextField();
+                    txt_r1.setBackground(Color.WHITE);
                     this.txt_r1.setText("2");
                     GridBagConstraints gbc_txt_r1 = new GridBagConstraints();
-                    gbc_txt_r1.anchor = GridBagConstraints.WEST;
+                    gbc_txt_r1.fill = GridBagConstraints.HORIZONTAL;
                     gbc_txt_r1.insets = new Insets(0, 0, 5, 5);
                     gbc_txt_r1.gridx = 1;
                     gbc_txt_r1.gridy = 3;
@@ -220,9 +223,10 @@ public class Calib_dialog extends JDialog {
                 }
                 {
                     this.txt_r2 = new JTextField();
+                    txt_r2.setBackground(Color.WHITE);
                     this.txt_r2.setText("8");
                     GridBagConstraints gbc_txt_r2 = new GridBagConstraints();
-                    gbc_txt_r2.anchor = GridBagConstraints.WEST;
+                    gbc_txt_r2.fill = GridBagConstraints.HORIZONTAL;
                     gbc_txt_r2.insets = new Insets(0, 0, 5, 5);
                     gbc_txt_r2.gridx = 1;
                     gbc_txt_r2.gridy = 4;
@@ -373,7 +377,7 @@ public class Calib_dialog extends JDialog {
         tAOut.ln("Eccentricity");
         tAOut.ln(" (ring"+d1+")= "+ex1);
         tAOut.ln(" (ring"+d2+")= "+ex2);        
-//        tAOut.ln("Angular Eccentricity (º)");
+//        tAOut.ln("Angular Eccentricity (ï¿½)");
 //        tAOut.ln(" (ring"+d1+")= "+FastMath.toDegrees(FastMath.asin(ex1)));
 //        tAOut.ln(" (ring"+d2+")= "+FastMath.toDegrees(FastMath.asin(ex2)));        
 
@@ -485,7 +489,7 @@ public class Calib_dialog extends JDialog {
         int range = 50; // increment +- al valor MD inicial
         float inc = 0.0005f; // increment a cada cicle
 
-        // farem de la distancia entrada (mm)+-inc el valor que més apropi la
+        // farem de la distancia entrada (mm)+-inc el valor que mï¿½s apropi la
         // igualtat
         // amb increments de inc
         float val = inMD - range;

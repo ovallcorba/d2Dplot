@@ -22,7 +22,7 @@ public final class ImgOps {
 		
 		Pattern2D dataOut = new Pattern2D(dataIn);
 		bkgIter=0; //inicialitzem iter
-		int Imin=0;
+		int Imin=Integer.MAX_VALUE;
 		int Imean=0;
 		long Iacum=0;
 		int countPoints=0;
@@ -555,6 +555,9 @@ public final class ImgOps {
 		int maxVal=0;
 		int minVal=99999999;
 		
+		float fact = dataIn.pixSx / (1 + dataIn.wavel * dataIn.distMD);
+		int iosc = 2;
+		
 //	    per cada pixel s'ha de calcular l'angle azimutal (entre la normal
 //	    (al pla de polaritzacio *i* el vector del centre de la imatge (xc,yc)
 //	    al pixel (x,y) en questi�). Tamb� s'ha de calcular l'angle 2T del pixel
@@ -575,40 +578,43 @@ public final class ImgOps {
 				float vecCPy = (float)(dataIn.getCentrY()-i)*dataIn.pixSy;
 				float vecCPmod = (float) FastMath.sqrt(vecCPx*vecCPx+vecCPy*vecCPy);
 				float t2 = (float) FastMath.atan(vecCPmod/dataIn.getDistMD());
+
 				
-				//vector perpendicular al pla de polaritzaci� (el modul no importa)
-				float vecPerX=0;
-				float vecPerY=100;
-				//calculem l'angle amb prod. escalar
-				float num = vecCPy*vecPerY;
-				float den = vecCPmod*vecPerY;
-				float azim;
-				if((den<0.000001)&&(den>-0.000001)){
-					azim=0.f; //cas punt central
-				}else{
-					azim=(float) FastMath.acos(num/den);
+				//lorentz
+				float rloren = 1.0f;
+				if (iLor==1){
+				    float xkug = (float) (fact * (j-dataIn.centrX) * FastMath.cos(t2));
+				    float ykug = (float) (fact * (i-dataIn.centrY) * FastMath.cos(t2));
+				    float zkug = (float) (2.0 / dataIn.wavel * FastMath.pow(FastMath.sin(t2/2.0),2));
+				    float dkug = (float) FastMath.sqrt(xkug*xkug+ykug*ykug+zkug*zkug);
+				    
+				    float phi = 1;
+				    if (iosc == 1) phi = (float) FastMath.acos(xkug/dkug);
+				    if (iosc == 2) phi = (float) FastMath.acos(ykug/dkug);
+				    float arg = (float) (FastMath.pow(FastMath.sin(phi),2) - FastMath.pow(FastMath.sin(t2/2.0),2));
+				    rloren = (float) (2 * FastMath.sin(t2/2.0) * FastMath.sqrt(arg));
+				}
+				if (iLor == 2) {
+				    rloren=(float) (1.0/(FastMath.cos(t2/2)*FastMath.pow(FastMath.sin(t2/2),2))); //igual que el DAJUST
 				}
 				
-				//calcul de la polaritzaci�
+				//polaritzacio
 				float pol = 1.0f;
-				if(iPol==1){
-					pol=(float) ((FastMath.cos(azim)*FastMath.cos(azim))+(FastMath.sin(azim)*FastMath.sin(azim))*(FastMath.cos(t2)*FastMath.cos(t2)));
-				}
-				if(iPol==2){
-					pol=(float) (0.5f+0.5f*(FastMath.cos(t2)*FastMath.cos(t2)));
+				if (iPol==1){
+		            float xdist2 = vecCPx*vecCPx;
+		            float ydist2 = vecCPy*vecCPy;
+		            float sepOD2 = dataIn.distMD*dataIn.distMD;
+		            if (iosc==1) pol = (sepOD2 + xdist2) / (sepOD2 + xdist2 + ydist2);
+		            if (iosc==2) pol = (sepOD2 + ydist2) / (sepOD2 + xdist2 + ydist2);
 				}
 				
-				//calcul de lorentz
-				float lor = 1.0f;
-				if(iLor==1){
-					lor = (float) (FastMath.cos(t2)*FastMath.abs(vecCPy));
-				}
-				if(iLor==2){
-					lor = (float) (1/(FastMath.cos(t2/2)*FastMath.sin(t2/2)*FastMath.sin(t2/2))); //igual que el dajust
-				}
-				dataI4temp.setIntenB4(j, i, FastMath.round((dataIn.getIntenB2(j, i)*lor)/pol));
-				//mirem si superem els limits (per escalar despres)
-				if (dataI4temp.getIntenB4(j, i)>maxVal) maxVal=dataI4temp.getIntenB4(j, i);
+		        if (iPol==2){
+		            pol=(float) (0.5 + 0.5 * (FastMath.cos(t2)*FastMath.cos(t2)));
+		        }
+
+                dataI4temp.setIntenB4(j, i, FastMath.round((dataIn.getIntenB2(j, i)*rloren)/pol));
+                //mirem si superem els limits (per escalar despres)
+                if (dataI4temp.getIntenB4(j, i)>maxVal) maxVal=dataI4temp.getIntenB4(j, i);
 			}
 		}
 		

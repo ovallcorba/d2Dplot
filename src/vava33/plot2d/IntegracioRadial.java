@@ -67,6 +67,7 @@ public class IntegracioRadial extends JFrame {
 		contentPane.add(lbltini, "cell 0 0,alignx right");
 		
 		txt_2ti = new JTextField();
+		txt_2ti.setBackground(Color.WHITE);
 		txt_2ti.setText("1.0");
 		contentPane.add(txt_2ti, "cell 1 0,alignx left");
 		txt_2ti.setColumns(10);
@@ -75,6 +76,7 @@ public class IntegracioRadial extends JFrame {
 		contentPane.add(lbltfin, "cell 2 0,alignx right");
 		
 		txt_2tf = new JTextField();
+		txt_2tf.setBackground(Color.WHITE);
 		txt_2tf.setText("40.0");
 		contentPane.add(txt_2tf, "cell 3 0,alignx left");
 		txt_2tf.setColumns(10);
@@ -83,6 +85,7 @@ public class IntegracioRadial extends JFrame {
 		contentPane.add(lblStep, "cell 4 0,alignx right");
 		
 		txt_step = new JTextField();
+		txt_step.setBackground(Color.WHITE);
 		txt_step.setText("0.01");
 		contentPane.add(txt_step, "cell 5 0,alignx left");
 		txt_step.setColumns(10);

@@ -218,6 +218,7 @@ public class ExZones_dialog extends JDialog {
                     }
                     {
                         this.txtMargin = new JTextField();
+                        txtMargin.setBackground(Color.WHITE);
                         this.txtMargin.setText("0");
                         GridBagConstraints gbc_txtMargin = new GridBagConstraints();
                         gbc_txtMargin.insets = new Insets(0, 0, 5, 5);
@@ -402,7 +403,7 @@ public class ExZones_dialog extends JDialog {
     protected void do_btnWriteExzFile_actionPerformed(ActionEvent arg0) {
         File exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
         if(exfile.exists()){
-            //avisem que es sobreescriurà
+            //avisem que es sobreescriurï¿½
             Object[] options = {"Yes","No"};
             int n = JOptionPane.showOptionDialog(this,
                     "EXZ file will be overwritten. Continue?",
@@ -436,7 +437,7 @@ public class ExZones_dialog extends JDialog {
 //                int ULy = Math.round(r.y);
 //                int URx = Math.round(r.x + r.width - 1);
 //                int URy = Math.round(r.y);
-//                int BRx = Math.round(r.x + r.width - 1); // -1 perquè al representar fem +1
+//                int BRx = Math.round(r.x + r.width - 1); // -1 perquï¿½ al representar fem +1
 //                int BRy = Math.round(r.y + r.height - 1);
 //                int BLx = Math.round(r.x);
 //                int BLy = Math.round(r.y + r.height - 1);
