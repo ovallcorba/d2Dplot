@@ -33,7 +33,7 @@ public class PuntCercle {
         this.intensity = inten;
     }
 
-    // es crea un punt i el cercle que el conté (donat el radi)
+    // es crea un punt i el cercle que el contï¿½ (donat el radi)
     public PuntCercle(Point2D.Float p, float xCentre, float yCentre) {
         // p es el punt clicat ja passat a pixels, afegirem un "punt" (centrant
         // una esfera petita d'aresta Xpx)
@@ -98,6 +98,15 @@ public class PuntCercle {
         this.y = y;
     }
 
+    public double getT2() {
+        return t2;
+    }
+    public int getIntensity() {
+        return intensity;
+    }
+    public void setIntensity(int intensity) {
+        this.intensity = intensity;
+    }
     @Override
     public String toString() {
         String linia = String.format(Locale.ENGLISH, "%8.2f" + " " + "%8.2f" + " " + "%8.3f" + " " + "%6d", x, y,

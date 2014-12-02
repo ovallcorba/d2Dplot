@@ -114,7 +114,7 @@ public class D2Dsub_batch extends JFrame {
     private JPanel panel_runcontrols;
     private JPanel panel_1;
     private JButton btnSelectFiles;
-    private JList<File> listfiles;
+    private JList listfiles;
     private JButton btnClear;
     private JScrollPane scrollPane;
     
@@ -203,7 +203,7 @@ public class D2Dsub_batch extends JFrame {
         		gbc_scrollPane.gridy = 1;
         		panel_1.add(scrollPane, gbc_scrollPane);
         		{
-        			listfiles = new JList<File>();
+        			listfiles = new JList();
         			scrollPane.setViewportView(listfiles);
         		}
         	}
@@ -989,7 +989,7 @@ public class D2Dsub_batch extends JFrame {
 		//fem una cua de bkgsubtraction (operacions) que s'executara en un altre thread apart aix� no bloqueja el GUI
 		this.cua=new ArrayBlockingQueue<bkgsubtraction>(50);
 		for(int i=0; i<listfiles.getModel().getSize();i++){
-			File f = listfiles.getModel().getElementAt(i);
+			File f = (File)listfiles.getModel().getElementAt(i);
 			Pattern2D data = ImgFileUtils.openPatternFile(f);
 			
 			bkgsubtraction opts = new bkgsubtraction(data,doGlass,doBkg,doLP,opt);
@@ -1262,7 +1262,7 @@ public class D2Dsub_batch extends JFrame {
         }
         
         //poblem la llista
-        DefaultListModel<File> lm = new DefaultListModel<File>();
+        DefaultListModel lm = new DefaultListModel();
         for(int i=0; i<flist.length; i++){
         	lm.addElement(flist[i]);	
         }
@@ -1271,7 +1271,7 @@ public class D2Dsub_batch extends JFrame {
 	}
 	protected void do_btnClear_actionPerformed(ActionEvent arg0) {
 		try{
-			((DefaultListModel<File>)listfiles.getModel()).clear();
+			((DefaultListModel)listfiles.getModel()).clear();
 		}catch(Exception e){
 			e.printStackTrace();
 		}

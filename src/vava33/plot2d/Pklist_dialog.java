@@ -52,7 +52,7 @@ public class Pklist_dialog extends JDialog {
     private JLabel lblCheckValues;
     private ImagePanel panelImatge;
     private JLabel lblPeakList;
-    private JList<String> list_pk;
+    private JList list_pk;
     private JButton btnRemovePoint;
     private JButton btnRemoveAll;
     private JScrollPane scrollPane;
@@ -119,7 +119,7 @@ public class Pklist_dialog extends JDialog {
         	gbc_scrollPane.gridy = 1;
         	contentPanel.add(scrollPane, gbc_scrollPane);
         	{
-        		list_pk = new JList<String>();
+        		list_pk = new JList();
         		scrollPane.setViewportView(list_pk);
         	}
         }
@@ -227,7 +227,7 @@ public class Pklist_dialog extends JDialog {
             getRootPane().setDefaultButton(okButton);
         }
         
-        list_pk.setModel(new DefaultListModel<String>());
+        list_pk.setModel(new DefaultListModel());
         this.loadPeakList();
     }
 
@@ -257,7 +257,7 @@ public class Pklist_dialog extends JDialog {
     public void loadPeakList() {
 //        DefaultListModel<String> lm = new DefaultListModel<String>();
 //        lm.clear();
-        DefaultListModel<String> lm = (DefaultListModel<String>)list_pk.getModel();
+        DefaultListModel lm = (DefaultListModel)list_pk.getModel();
         if (panelImatge.isShowIndexing()){
         	lm.clear();
         	//mostrem la llista puntsCercles
@@ -328,7 +328,7 @@ public class Pklist_dialog extends JDialog {
                 s.setIntenClic(-1);
             }
             nextToWrite=0; //corregim laswritten
-            ((DefaultListModel<String>)list_pk.getModel()).clear();
+            ((DefaultListModel)list_pk.getModel()).clear();
 		}
 		this.loadPeakList();
 	}
@@ -337,7 +337,7 @@ public class Pklist_dialog extends JDialog {
 		if (panelImatge.isShowIndexing()){
 			//busquem quin element est� seleccionat i el borrem
 //			String[] sel = list_pk.getSelectedValue().split("\\s+");
-			String[] sel = list_pk.getModel().getElementAt(list_pk.getSelectedIndex()).trim().split("\\s+");
+			String[] sel = ((String) list_pk.getModel().getElementAt(list_pk.getSelectedIndex())).trim().split("\\s+");
 			float selx = Float.parseFloat(sel[1]);
 			float sely = Float.parseFloat(sel[2]);
 			float tol = 0.1f;
@@ -363,7 +363,7 @@ public class Pklist_dialog extends JDialog {
     	    }
     	    if(os==null)return;
 //			String[] sel = list_pk.getSelectedValue().split("\\s+");
-			String[] sel = list_pk.getModel().getElementAt(list_pk.getSelectedIndex()).trim().split("\\s+");
+			String[] sel = ((String) list_pk.getModel().getElementAt(list_pk.getSelectedIndex())).trim().split("\\s+");
 			float selx = Float.parseFloat(sel[3]);
 			float sely = Float.parseFloat(sel[4]);
 			float tol = 0.1f;
@@ -381,7 +381,7 @@ public class Pklist_dialog extends JDialog {
             if(list_pk.getSelectedIndex()<nextToWrite)nextToWrite=nextToWrite-1;
             VavaLogger.LOG.info("selIndex="+list_pk.getSelectedIndex());
             VavaLogger.LOG.info("nextToWrite="+nextToWrite);
-            ((DefaultListModel<String>)list_pk.getModel()).remove(list_pk.getSelectedIndex());
+            ((DefaultListModel)list_pk.getModel()).remove(list_pk.getSelectedIndex());
 		}
 		this.loadPeakList(); //recarreguem la llista
 	}

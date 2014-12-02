@@ -122,6 +122,37 @@ public class Pattern1D {
         }
 	}
 	
+    //escriu fitxer xy (si fileout==null pregunta on guardar)
+    public void writeXYnorm(File fileout, String title){
+        if(fileout==null){
+            FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("Data file (2T I ESD)","dat","xy")};
+            fileout = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
+        }
+        if(!FileUtils.getExtension(fileout).equalsIgnoreCase("dat")||!FileUtils.getExtension(fileout).equalsIgnoreCase("xy")){
+            fileout = FileUtils.canviExtensio(fileout, "dat");  
+        }
+        //Escriure fitxer format xy
+        try {
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(fileout)));
+            // ESCRIBIM AL FITXER:
+            String linia = String.format(Locale.ENGLISH, "! %s",title);
+            output.println(linia);
+            linia = String.format(Locale.ENGLISH, "  %.5f  %.5f  %.5f",this.t2i,this.step,this.t2f);
+            output.println(linia);
+            Iterator<PointPatt1D> itp = this.getPoints().iterator();
+            while(itp.hasNext()){
+                PointPatt1D p = itp.next();
+                if (p.getNpix()==0) {p.setNpix(1);}
+                linia = String.format(Locale.ENGLISH, "  %.5f  %.5f  %.5f",p.getT2(),(float)p.getCounts()/(float)p.getNpix(),p.getDesv()/p.getNpix());
+                output.println(linia);
+            }
+            output.close();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+	
 	public float getT2i() {
 		return t2i;
 	}

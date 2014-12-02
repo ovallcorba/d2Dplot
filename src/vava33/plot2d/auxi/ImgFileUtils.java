@@ -578,10 +578,10 @@ public final class ImgFileUtils {
                         pixSize = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                         pixSize = pixSize/1000.f;
                     }
-                    if (line.contains("exp_distance")) {
+                    if (line.contains("ref_distance")) {
                         distOD = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("exp_wave")) {
+                    if (line.contains("ref_wave")) {
                         wl = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
                 }

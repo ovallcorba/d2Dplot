@@ -37,6 +37,7 @@ public class Help_dialog extends JDialog {
     private static final long serialVersionUID = 5573831371448966498L;
     private final JPanel contentPanel = new JPanel();
     private JLabel lblTalplogo;
+    private JLabel lbloriolVallcorbaJordi;
 
     /**
      * Launch the application.
@@ -140,7 +141,7 @@ public class Help_dialog extends JDialog {
         lblTalplogo.setText("");
         lblTalplogo.setIcon(logo);
         {
-            JLabel lbloriolVallcorbaJordi = new JLabel("<html>\r\n<div style=\"text-align:left\"> \r\n<b>Oriol Vallcorba</b><br>\r\nALBA Synchrotron Light Source - CELLS (www.cells.es)<br>\r\nFor comments/errors/suggestions, please contact to: <strong>ovallcorba@cells.es</strong><br>\r\n</div>\r\n</html>");
+            lbloriolVallcorbaJordi = new JLabel("<html>\r\n<div style=\"text-align:left\"> \r\n<b>Oriol Vallcorba</b><br>\r\nALBA Synchrotron Light Source - CELLS (www.cells.es)<br>\r\nFor comments/errors/suggestions, please contact to: <strong>ovallcorba@cells.es</strong><br>\r\n</div>\r\n</html>");
             GridBagConstraints gbc_lbloriolVallcorbaJordi = new GridBagConstraints();
             gbc_lbloriolVallcorbaJordi.fill = GridBagConstraints.HORIZONTAL;
             gbc_lbloriolVallcorbaJordi.insets = new Insets(0, 0, 5, 0);
@@ -160,6 +161,14 @@ public class Help_dialog extends JDialog {
 
     }
 
+    public Help_dialog(String title,String text,boolean noSignature) {
+        this(title,text);
+        if (noSignature){
+            lbloriolVallcorbaJordi.setVisible(false);
+            lblTalplogo.setVisible(false);
+        }
+    }
+    
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
         this.dispose();
     }

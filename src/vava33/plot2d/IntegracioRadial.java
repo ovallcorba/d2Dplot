@@ -24,6 +24,9 @@ import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
+import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.VavaLogger;
+
 import vava33.plot2d.auxi.Pattern1D;
 import vava33.plot2d.auxi.Pattern1D.PointPatt1D;
 import vava33.plot2d.auxi.Pattern2D;
@@ -119,13 +122,19 @@ public class IntegracioRadial extends JFrame {
 		gbl_chartPanel.columnWeights = new double[]{Double.MIN_VALUE};
 		gbl_chartPanel.rowWeights = new double[]{Double.MIN_VALUE};
 		chartPanel.setLayout(gbl_chartPanel);
+		
+		double optstep = FastMath.atan(patt.getPixSx()/patt.getDistMD());
+		VavaLogger.LOG.info("DistMD= "+patt.getDistMD()+" pixsx= "+patt.getPixSx());
+		txt_step.setText(FileUtils.dfX_3.format(FastMath.toDegrees(optstep)));
+		txt_2tf.setText(FileUtils.dfX_2.format(patt2D.getMax2TdegCircle()));
+
 	}
 
 	protected void do_btnIntegrate_actionPerformed(ActionEvent arg0) {
 		if(patt2D==null)return;
 		float t2ini=1.0f;
 		float t2fin=40.0f;
-		float stepsize=0.01f;
+		float stepsize=-0.01f;
 		try{
 			t2ini=Float.parseFloat(txt_2ti.getText());
 			t2fin=Float.parseFloat(txt_2tf.getText());
@@ -139,11 +148,13 @@ public class IntegracioRadial extends JFrame {
 	    	return;
 		}
 		t2fin = FastMath.min(t2fin, patt2D.getMax2Tdeg());
-		this.patt1D = patt2D.intRad(t2ini, t2fin, stepsize,false);
-		this.plotPattern(patt1D);
+		//this.patt1D = patt2D.intRad(t2ini, t2fin, stepsize,false);
+		//this.patt1D = patt2D.intRadPond(t2ini, t2fin, stepsize,false);
+		this.patt1D = patt2D.intRadCircles(t2ini, t2fin,stepsize);
+		this.plotPattern(patt1D,true);
 	}
 	
-    private void plotPattern(Pattern1D p){
+    private void plotPattern(Pattern1D p, boolean norm){
         
         chartPanel.setMouseWheelEnabled(true);
         chartPanel.setHorizontalAxisTrace(true);
@@ -157,7 +168,11 @@ public class IntegracioRadial extends JFrame {
         while(itp.hasNext()){
         	PointPatt1D point = itp.next();
 //        	VavaLogger.LOG.info(point.getT2()+","+point.getCounts());
-        	pattplot.add(point.getT2(),point.getCounts());
+        	if(norm){
+        	    pattplot.add(point.getT2(),(float)point.getCounts()/(float)point.getNpix());
+        	}else{
+        	    pattplot.add(point.getT2(),point.getCounts());    
+        	}
         }
         
 //        pattplot.add(0,0);
@@ -186,9 +201,10 @@ public class IntegracioRadial extends JFrame {
         chart.getXYPlot().setDomainGridlinePaint(Color.DARK_GRAY);
         chartPanel.setChart(chart);  //el pintem (es fa reset de zoom)
     }
+    
 	protected void do_btn_save_actionPerformed(ActionEvent arg0) {
 		if(patt1D!=null){
-			patt1D.writeXY(null,patt2D.getImgfile().toString());
+			patt1D.writeXYnorm(null,patt2D.getImgfile().toString());
 		}
 	}
 }
