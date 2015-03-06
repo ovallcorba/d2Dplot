@@ -37,13 +37,19 @@ import javax.swing.event.ChangeListener;
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.VavaLogger;
 
 import vava33.plot2d.auxi.ExZone;
+import vava33.plot2d.auxi.LAT_data;
+import vava33.plot2d.auxi.LAT_data.HKL_reflection;
 import vava33.plot2d.auxi.OrientSolucio;
+import vava33.plot2d.auxi.PDCompound;
 import vava33.plot2d.auxi.Pattern2D;
 import vava33.plot2d.auxi.PuntCercle;
 import vava33.plot2d.auxi.PuntSolucio;
+
 import javax.swing.JButton;
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
@@ -69,6 +75,7 @@ public class ImagePanel extends JPanel {
     private Rectangle2D.Float currentRect;
     private ExZone currentPol4;
     private ExZones_dialog exZones;
+    private database_dialog dbDialog;
     boolean fit = true;
     private BufferedImage image;
     private boolean mouseBox = false;
@@ -78,11 +85,15 @@ public class ImagePanel extends JPanel {
     private dades2d panelImatge;
     private Pattern2D patt2D;
     private ArrayList<PuntCercle> puntsCercles;
+    private ArrayList<HKL_reflection> compoundRings;
     private float scalefit;
     private boolean showHKLsol = false;
     private boolean showIndexing = false; // indica si s'est� en mode de seleccio de punts i si es visualitzen
     private boolean showHKLIndexing = false; // indica si s'est� en mode de seleccio de punts HKL per proximitat
     private boolean showSolPoints = true;
+    private boolean showRings = false;
+    private boolean showDSPRings = false;
+    private PDCompound dspCompound = null;
     private ArrayList<OrientSolucio> solucions; // contindra les solucions
 //    private ArrayList<OrientSolucio> hklClics; // contindra els clicks (provem de utilitzar el solucions igualment) 
     private BufferedImage subimage;
@@ -91,7 +102,7 @@ public class ImagePanel extends JPanel {
     private static int contrast_fun=0;
 
     private static float swinglim=4.5f;
-    private static int hklfontSize=14;
+    private static int hklfontSize=13;
     private static float factSliderMax=3.f;
     
     /**
@@ -242,7 +253,7 @@ public class ImagePanel extends JPanel {
     // afegim un punt i cercle a la llista de pics donat el punt en coordeandes
     // del panell (cal convertir-les abans)
     public void addPuntCercle(Point2D.Float p, int inten) {
-        if (!patt2D.checkExpParam()) {
+        if (!patt2D.checkIfDistMD()) {
             this.getParentFrame().do_btnSetParams_actionPerformed(null);
             if (this.patt2D.getDistMD() <= 0 || this.patt2D.getPixSx() <= 0 || this.patt2D.getPixSy() <= 0)
                 return;
@@ -271,6 +282,7 @@ public class ImagePanel extends JPanel {
         return new Rectangle(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
     }
 
+    //retorna t2 en radiants
     public double calcT2(Point2D.Float pixel) {
         // calculem l'angle, dist MD esta en mm, el radi tambe ha d'estar en mm (utilitzem mida pixel)
         float psy = this.patt2D.getPixSy();
@@ -283,7 +295,27 @@ public class ImagePanel extends JPanel {
         double t2 = FastMath.atan(radi / patt2D.getDistMD());
         return t2;
     }
+    
+    //t2 en radiants
+    public double calcDsp(double t2rad){
+        float wl = this.patt2D.getWavel();
+        if (wl > 0){
+            double d = wl/(2*FastMath.sin(t2rad/2.));
+            return d;
+        }
+        return -1.d;
+    }
 
+    //t2 en radiants!
+    public double dspToT2(double dsp){
+        float wl = this.patt2D.getWavel();
+        if (wl > 0){
+            double t2 = 2 * FastMath.asin(wl/(2*dsp));
+            return t2;
+        }
+        return -1.d;
+    }
+    
     public void clearSolutions() {
         solucions.clear();
     }
@@ -342,8 +374,18 @@ public class ImagePanel extends JPanel {
 //            inten = (int) (patt2D.getIntenB2((int) (pix.x), (int) (pix.y)) * patt2D.getScale());
             inten = (int) (patt2D.getIntenB2((int) (pix.x), (int) (pix.y)));
             lblIntensity.setText("I= " + inten);
-            if (patt2D.checkExpParam()) {
-                lbl2t.setText("(2" + theta + "=" + FileUtils.dfX_3.format(FastMath.toDegrees(this.calcT2(pix))) + ")");
+//            if (patt2D.checkIfDistMD()) {
+//                lbl2t.setText("(2" + theta + "=" + FileUtils.dfX_3.format(FastMath.toDegrees(this.calcT2(pix))) + ")");
+//            }
+            String t2 = "";
+            String dsp = "";
+            if (patt2D.checkIfDistMD()){
+                double twothetaRad =  this.calcT2(pix);
+                t2 = "2" + theta + "=" + FileUtils.dfX_3.format(FastMath.toDegrees(twothetaRad));
+                if (patt2D.checkIfWavel()){
+                    dsp = "; dsp=" + FileUtils.dfX_3.format(this.calcDsp(twothetaRad));
+                }  
+                lbl2t.setText("(" + t2 + dsp + ")");
             }
         }
     }
@@ -680,6 +722,23 @@ public class ImagePanel extends JPanel {
             }
         }
         return false;
+    }
+    
+//    private boolean estaPDdatabase() {
+//        if (dbDialog != null){
+//            if (dbDialog.isShowPDDataRings()){
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
+    
+    private boolean isShowDSPRings(){
+        return showDSPRings;
+    }
+    
+    private boolean isShowRings(){
+        return showRings;
     }
 
     // ajusta la imatge al panell, mostrant-la tota sencera (calcula l'scalefit inicial)
@@ -1046,12 +1105,53 @@ public class ImagePanel extends JPanel {
         this.repaint();
     }
 
+    public void setShowRings(boolean show, LAT_data ld) {
+        if (ld == null){return;}
+        if (getPatt2D() == null){return;}
+        VavaLogger.LOG.info("setShowRings CALLED");
+
+        this.showRings = show;
+        
+        if (show){
+            if (getPatt2D().getWavel() > 0){
+                ld.calc2T(getPatt2D().getWavel());
+            }else{
+                VavaLogger.LOG.info("wavelength missing");
+                this.showRings = false;
+                this.compoundRings = null;
+                VavaLogger.LOG.info("setShowRings RETURNED NO WAVELENGTH");
+                return;
+            }
+            this.compoundRings = ld.getHKLlist();
+        }
+    }
+    
+    public void setShowDSPRings(boolean show,PDCompound c) {
+        this.showDSPRings = show;
+        if (c == null){
+            this.showDSPRings = false;
+            this.dspCompound = null;
+            return;
+        }
+        if (getPatt2D().getWavel() <= 0){
+            VavaLogger.LOG.info("wavelength missing");
+            this.showDSPRings = false;
+            this.dspCompound = null;
+            return;
+        }
+        this.dspCompound = c;
+    }
+    
     public void setCalibration(Calib_dialog calibration) {
         this.calibration = calibration;
     }
 
     public void setExZones(ExZones_dialog exZones) {
         this.exZones = exZones;
+    }
+
+    public void setDBdialog(database_dialog dbDialog) {
+        this.dbDialog = dbDialog;
     }
 
     public void setImage(BufferedImage image) {
@@ -1236,7 +1336,8 @@ public class ImagePanel extends JPanel {
                 Ellipse2D.Float e = pc.getCercle();
                 Ellipse2D.Float p = pc.getPunt();
                 g1.setPaint(PuntCercle.getColorCercle());
-                BasicStroke stroke = new BasicStroke(1.5f);
+                BasicStroke stroke = new BasicStroke(1.f);
+//                BasicStroke stroke = new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[] {15,15}, 0);
                 g1.setStroke(stroke);
                 // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
                 g1.draw(ellipseToFrameCoords(e));
@@ -1247,6 +1348,52 @@ public class ImagePanel extends JPanel {
                 g1.fill(ellipseToFrameCoords(p));
             }
         }
+        
+        private void drawHKLRings(Graphics2D g1) {
+            Iterator<HKL_reflection> it = compoundRings.iterator();
+            while (it.hasNext()) {
+                HKL_reflection r = it.next();
+                //2theta to pixels
+                float radi = (float) FastMath.tan(FastMath.toRadians(r.getT2())) * patt2D.getDistMD();
+                float cX = patt2D.getCentrX();
+                float cY = patt2D.getCentrY();
+                float px = radi/patt2D.getPixSx();
+                float py = radi/patt2D.getPixSy();
+                float vx = cX -px;
+                float vy = cY -py;
+                Ellipse2D.Float e = new Ellipse2D.Float(vx, vy, px*2, py*2);
+                g1.setPaint(Color.green);
+                BasicStroke stroke = new BasicStroke(1.f);
+//                BasicStroke stroke = new BasicStroke(1.f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[] {20,15}, 0);
+                g1.setStroke(stroke);
+                // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
+                g1.draw(ellipseToFrameCoords(e));
+            }
+        }
+        
+        private void drawDSPRings(Graphics2D g1) {
+            Iterator<Float> it = dspCompound.getDspacings().iterator();
+            while (it.hasNext()) {
+                float dsp = it.next();
+                float t2 = (float) dspToT2(dsp);
+                //2theta to pixels
+                float radi = (float) FastMath.tan(t2) * patt2D.getDistMD();
+                float cX = patt2D.getCentrX();
+                float cY = patt2D.getCentrY();
+                float px = radi/patt2D.getPixSx();
+                float py = radi/patt2D.getPixSy();
+                float vx = cX -px;
+                float vy = cY -py;
+                Ellipse2D.Float e = new Ellipse2D.Float(vx, vy, px*2, py*2);
+                g1.setPaint(Color.cyan);
+                BasicStroke stroke = new BasicStroke(1.f);
+//                BasicStroke stroke = new BasicStroke(1.f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[] {20,15}, 0);
+                g1.setStroke(stroke);
+                // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
+                g1.draw(ellipseToFrameCoords(e));
+            }
+        }
+        
 
 //        private void drawHKLIndexing(Graphics2D g1) {
 //            Iterator<OrientSolucio> itrOS = solucions.iterator();
@@ -1311,9 +1458,9 @@ public class ImagePanel extends JPanel {
                         g1.fill(e);
                         if (showHKLsol){
                             Font font = new Font("Dialog", Font.PLAIN,hklfontSize+1);
-                            if(s.getOscil()>swinglim){
-                                font = new Font("Dialog", Font.ITALIC,hklfontSize-1);
-                            }
+//                            if(s.getOscil()>swinglim){
+//                                font = new Font("Dialog", Font.ITALIC,hklfontSize-1);
+//                            }
                             g1.setFont(font);
                             g1.setRenderingHint(
                                     RenderingHints.KEY_TEXT_ANTIALIASING,
@@ -1325,12 +1472,22 @@ public class ImagePanel extends JPanel {
             }
         }
 
+//        private BufferedImage paintImage;
+//        
+//        public BufferedImage getIm(){
+//            return paintImage;
+//        }
+        
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
 
+//            paintImage = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+//            g = paintImage.createGraphics();
+//            g.drawImage(paintImage, 0, 0, null);
+            
             Graphics2D g2 = (Graphics2D) g;
-
+            
             if (getImage() != null) {
 
                 if (scalefit <= 0) {
@@ -1367,6 +1524,21 @@ public class ImagePanel extends JPanel {
                 // nomes hauria d'haver-hi la possibilitat d'1 opcio, calibracio o zones excloses
                 if (estaCalibrant()) {drawCalibration(g1);}
                 if (estaDefinintEXZ()) {drawExZones(g1);}
+                
+                if (isShowRings() ){
+                    //VavaLogger.LOG.info("hello from isShowRings()");
+                    if ((compoundRings != null) && (!compoundRings.isEmpty())){
+                        //TODO:pinta anells
+                        drawHKLRings(g1);
+                    }
+                }
+                
+                if (isShowDSPRings()){
+                    if (dspCompound != null){
+                        drawDSPRings(g1);    
+                    }
+                    
+                }
 
                 g1.dispose();
                 g2.dispose();
@@ -1429,7 +1601,18 @@ public class ImagePanel extends JPanel {
         	this.slider_contrast.setValue(old_val);	
         }else{
         	//posem al mig
-        	this.slider_contrast.setValue((slider_contrast.getMaximum()-slider_contrast.getMinimum())/2);
+//        	this.slider_contrast.setValue((slider_contrast.getMaximum()-slider_contrast.getMinimum())/2);
+            //provem de posar-lo al valor d'intensitat mitjana
+            if (this.patt2D.getMeanI()>0){
+                int meanI_sdev = this.patt2D.getMeanI() + (int)(factSliderMax*this.patt2D.getSdevI());
+                if ((meanI_sdev>this.slider_contrast.getMinimum())&&(meanI_sdev<this.slider_contrast.getMaximum())){
+                    this.slider_contrast.setValue(meanI_sdev);
+                }else{//al mig
+                    this.slider_contrast.setValue((slider_contrast.getMaximum()-slider_contrast.getMinimum())/2);    
+                }
+            }else{//al mig
+                this.slider_contrast.setValue((slider_contrast.getMaximum()-slider_contrast.getMinimum())/2);
+            }
         }
         
 //        if(old_val>=this.slider_contrast.getMinimum()&&old_val<=this.slider_contrast.getMaximum()){

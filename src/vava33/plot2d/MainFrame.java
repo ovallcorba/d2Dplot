@@ -16,6 +16,8 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Scanner;
@@ -43,21 +45,26 @@ import com.vava33.jutils.VavaLogger;
 import vava33.plot2d.auxi.Ellipse;
 import vava33.plot2d.auxi.ImgFileUtils;
 import vava33.plot2d.auxi.ImgOps;
+import vava33.plot2d.auxi.LAT_data;
 import vava33.plot2d.auxi.OrientSolucio;
 import vava33.plot2d.auxi.Pattern2D;
 import vava33.plot2d.auxi.PuntCercle;
+
+import javax.swing.JComboBox;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JSeparator;
 
 public class MainFrame extends JFrame {
     private static final long serialVersionUID = 4368250280987133953L;
     private static String separator = System.getProperty("file.separator");
     private static String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     private static String d2dsubExec = "d2Dsub";
-    private static String welcomeMSG = "d2Dplot v1410 (141021) by OV";
+    private static String welcomeMSG = "d2Dplot v1503 (150306) by OV";
     private static String workdir = System.getProperty("user.dir");
 //    private static String workdir = "C:\\Ori_TMP\\";
 //    private static String workdir = "lau1_data.bin";
 //    private static String workdir = "C:\\ovallcorba\\Dades_difraccio\\2D-INCO\\Mesures-Juliol-ALBA\\";
-    private static boolean debug = true;
+    private static boolean debug = false;
     
     private JButton btn05x;
     private JButton btn2x;
@@ -105,12 +112,15 @@ public class MainFrame extends JFrame {
     private Pklist_dialog pkListWin;
     private LogJTextArea tAOut;
     private IntegracioRadial irWin;
+    private database_dialog dbDialog;
+    private ArrayList<LAT_data> customLATs;
 
     public static String getBinDir() {return binDir;}
     public static String getD2dsubExec() {return d2dsubExec;}
     public static String getSeparator() {return separator;}
     public static String getWorkdir() {return workdir;}
     public static final int shortsize = Short.MAX_VALUE;
+    public static final float minDspacingToSearch = 1.15f;
     private JButton btn_yarc;
     private JButton btnRadialInteg;
     private JButton btnProva;
@@ -120,6 +130,12 @@ public class MainFrame extends JFrame {
     private JButton btnNext;
     private JButton btnPrev;
     private JPanel panel_2;
+    private JCheckBox chckbxShowRings;
+    private JComboBox combo_LATdata;
+    private JButton btnDbdialog;
+    private JPanel panel_3;
+    private JButton btnAddLat;
+    private JSeparator separator_1;
 
     /**
      * Launch the application. ES POT PASSAR COM A ARGUMENT EL DIRECTORI DE TREBALL ON S'OBRIRAN PER DEFECTE ELS DIALEGS
@@ -162,6 +178,7 @@ public class MainFrame extends JFrame {
             @Override
             public void run() {
                 try {
+//                    workdir = "/home/ovallcorba/ovallcorba/Dades_difraccio/2D_INCO/WORK_140925/ov/proves_integ";
                     MainFrame frame = new MainFrame();
                     frame.inicialitza();
                     frame.setLocationRelativeTo(null);
@@ -212,6 +229,7 @@ public class MainFrame extends JFrame {
         gbl_panel_stat.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
         this.panel_stat.setLayout(gbl_panel_stat);
         this.scrollPane = new JScrollPane();
+        scrollPane.setViewportBorder(null);
         this.scrollPane.setBorder(null);
         GridBagConstraints gbc_scrollPane = new GridBagConstraints();
         gbc_scrollPane.insets = new Insets(5, 5, 5, 5);
@@ -226,8 +244,9 @@ public class MainFrame extends JFrame {
         this.tAOut.setMaximumSize(new Dimension(32767, 32767));
         this.tAOut.setRows(1);
         this.tAOut.setBackground(Color.BLACK);
-        this.tAOut.setBorder(null);
+//        this.tAOut.setBorder(null);
         this.scrollPane.setViewportView(this.tAOut);
+//        this.scrollPane.setBorder(BorderFactory.createEmptyBorder());
         this.panel_all = new JPanel();
         this.splitPane.setLeftComponent(this.panel_all);
         GridBagLayout gbl_panel_all = new GridBagLayout();
@@ -376,7 +395,6 @@ public class MainFrame extends JFrame {
         gbc_btnResetView.gridy = 0;
         this.panel_opcions.add(this.btnResetView, gbc_btnResetView);
         this.chckbxShowSol = new JCheckBox("Show sol");
-        chckbxShowSol.setSelected(true);
         this.chckbxShowSol.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent arg0) {
@@ -461,6 +479,7 @@ public class MainFrame extends JFrame {
         gbc_chckbxShowHkl.gridy = 4;
         this.panel_opcions.add(this.chckbxShowHkl, gbc_chckbxShowHkl);
         this.chckbxIndex = new JCheckBox("Sel. Points");
+        chckbxIndex.setSelected(true);
         GridBagConstraints gbc_chckbxIndex = new GridBagConstraints();
         gbc_chckbxIndex.anchor = GridBagConstraints.WEST;
         gbc_chckbxIndex.insets = new Insets(0, 2, 5, 0);
@@ -483,7 +502,7 @@ public class MainFrame extends JFrame {
         this.btnSaveDicvol = new JButton("Points List");
         GridBagConstraints gbc_btnSaveDicvol = new GridBagConstraints();
         gbc_btnSaveDicvol.fill = GridBagConstraints.HORIZONTAL;
-        gbc_btnSaveDicvol.insets = new Insets(0, 2, 5, 2);
+        gbc_btnSaveDicvol.insets = new Insets(0, 2, 0, 2);
         gbc_btnSaveDicvol.gridx = 0;
         gbc_btnSaveDicvol.gridy = 7;
         this.panel_opcions.add(this.btnSaveDicvol, gbc_btnSaveDicvol);
@@ -746,6 +765,85 @@ public class MainFrame extends JFrame {
         });
         this.btnSavePng.setMargin(new Insets(2, 2, 2, 2));
         
+        panel_3 = new JPanel();
+        panel_3.setBorder(new TitledBorder(null, "Identification", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        GridBagConstraints gbc_panel_3 = new GridBagConstraints();
+        gbc_panel_3.insets = new Insets(0, 5, 5, 5);
+        gbc_panel_3.fill = GridBagConstraints.BOTH;
+        gbc_panel_3.gridx = 0;
+        gbc_panel_3.gridy = 2;
+        panel_controls.add(panel_3, gbc_panel_3);
+        GridBagLayout gbl_panel_3 = new GridBagLayout();
+        gbl_panel_3.columnWidths = new int[]{0, 0};
+        gbl_panel_3.rowHeights = new int[]{0, 0, 0, 0, 0, 0};
+        gbl_panel_3.columnWeights = new double[]{1.0, Double.MIN_VALUE};
+        gbl_panel_3.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+        panel_3.setLayout(gbl_panel_3);
+        
+        btnDbdialog = new JButton("Search DB");
+        btnDbdialog.setPreferredSize(new Dimension(100, 32));
+        btnDbdialog.setMargin(new Insets(2, 2, 2, 2));
+        GridBagConstraints gbc_btnDbdialog = new GridBagConstraints();
+        gbc_btnDbdialog.insets = new Insets(0, 2, 5, 2);
+        gbc_btnDbdialog.fill = GridBagConstraints.HORIZONTAL;
+        gbc_btnDbdialog.gridx = 0;
+        gbc_btnDbdialog.gridy = 0;
+        panel_3.add(btnDbdialog, gbc_btnDbdialog);
+        
+        separator_1 = new JSeparator();
+        GridBagConstraints gbc_separator_1 = new GridBagConstraints();
+        gbc_separator_1.fill = GridBagConstraints.HORIZONTAL;
+        gbc_separator_1.insets = new Insets(0, 0, 5, 0);
+        gbc_separator_1.gridx = 0;
+        gbc_separator_1.gridy = 1;
+        panel_3.add(separator_1, gbc_separator_1);
+        
+        chckbxShowRings = new JCheckBox("Custom LAT");
+        GridBagConstraints gbc_chckbxShowRings = new GridBagConstraints();
+        gbc_chckbxShowRings.anchor = GridBagConstraints.WEST;
+        gbc_chckbxShowRings.insets = new Insets(0, 0, 5, 0);
+        gbc_chckbxShowRings.gridx = 0;
+        gbc_chckbxShowRings.gridy = 2;
+        panel_3.add(chckbxShowRings, gbc_chckbxShowRings);
+        
+        combo_LATdata = new JComboBox();
+        combo_LATdata.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent arg0) {
+                do_combo_showRings_itemStateChanged(arg0);
+            }
+        });
+        GridBagConstraints gbc_combo_showRings = new GridBagConstraints();
+        gbc_combo_showRings.fill = GridBagConstraints.HORIZONTAL;
+        gbc_combo_showRings.insets = new Insets(0, 2, 5, 2);
+        gbc_combo_showRings.gridx = 0;
+        gbc_combo_showRings.gridy = 3;
+        panel_3.add(combo_LATdata, gbc_combo_showRings);
+        combo_LATdata.setModel(new DefaultComboBoxModel(new String[] {}));
+        
+        btnAddLat = new JButton("Add LAT");
+        btnAddLat.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnAddLat_actionPerformed(arg0);
+            }
+        });
+        btnAddLat.setPreferredSize(new Dimension(100, 32));
+        GridBagConstraints gbc_btnAddLat = new GridBagConstraints();
+        gbc_btnAddLat.fill = GridBagConstraints.HORIZONTAL;
+        gbc_btnAddLat.insets = new Insets(0, 2, 0, 2);
+        gbc_btnAddLat.gridx = 0;
+        gbc_btnAddLat.gridy = 4;
+        panel_3.add(btnAddLat, gbc_btnAddLat);
+        chckbxShowRings.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent arg0) {
+                do_chckbxShowRings_itemStateChanged(arg0);
+            }
+        });
+        btnDbdialog.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnDbdialog_actionPerformed(arg0);
+            }
+        });
+        
         //si el workdir apunta a un fitxer, s'obrir� automaticament, altrament
         //mantenim el workdir que sera el directori inicial als filechooser
         File f = new File(workdir);
@@ -937,7 +1035,7 @@ public class MainFrame extends JFrame {
         }
         tAOut.stat("File PNG saved: " + imFile.toString());
     }
-
+    
     protected void do_btnSetParams_actionPerformed(ActionEvent arg0) {
         if (patt2D != null) {
             Param_dialog param = new Param_dialog(patt2D);
@@ -1009,6 +1107,38 @@ public class MainFrame extends JFrame {
         }
         tAOut.stat(welcomeMSG);
         FileUtils.setLocale();
+//        chckbxIndex.setSelected(true);
+//        panelImatge.setShowIndexing(true);
+        do_chckbxIndex_itemStateChanged(null);
+        
+        //inicialitzem array i provem de llegir els fitxers LAT que tenim dins
+        customLATs = new ArrayList<LAT_data>();
+        int nread = 0;
+        for (int i=0; i<LAT_data.getDefaultdatafiles().length; i++){
+            String latfile = LAT_data.getDefaultdatafiles()[i];
+            String name = FileUtils.getFNameNoExt(latfile);
+            LAT_data ld = new LAT_data(name);
+            
+//            File lfile;
+//            try {
+//                VavaLogger.LOG.info(LAT_data.getDefaultdatafilespath()+latfile);
+//                lfile = new File(ClassLoader.getSystemResource(LAT_data.getDefaultdatafilespath()+latfile).toURI());
+                boolean ok = ld.readinternalResourceLATfile(latfile);
+                if (ok){
+                    combo_LATdata.addItem(name);
+                    this.getCustomLATs().add(ld);
+                    nread = nread +1;                    
+                }else{
+                    VavaLogger.LOG.info("error reading HKL for compound "+ld.getName().trim());
+                }
+//            } catch (URISyntaxException e) {
+//                // TODO Auto-generated catch block
+//                e.printStackTrace();
+//            }
+        }
+        if (nread > 0){
+            LAT_data.setDefaultDataRead(true);
+        }
     }
 
     private File openSol(File solFile) {
@@ -1343,5 +1473,78 @@ public class MainFrame extends JFrame {
         }else{
             tAOut.stat("No file found with fname "+fnameExtNew);
         }
+    }
+
+    protected void do_btnDbdialog_actionPerformed(ActionEvent arg0) {
+//        if (patt2D != null) {
+            // tanquem calibracio en cas que estigui obert
+            if (calibration != null) calibration.dispose();
+            if (exZones != null) exZones.dispose();
+
+            if (dbDialog == null) {
+                dbDialog = new database_dialog(this);
+            }
+            dbDialog.setVisible(true);
+            panelImatge.setDBdialog(dbDialog);
+//        }
+    }
+
+    protected void do_chckbxShowRings_itemStateChanged(ItemEvent arg0) {
+        if (combo_LATdata.getItemCount()>0){
+            VavaLogger.LOG.info("do_chckbxShowRings_itemStateChanged CALLED");
+            panelImatge.setShowRings(chckbxShowRings.isSelected(), this.getShowRingCompound());
+        }
+
+    }
+    public LAT_data getShowRingCompound(){
+        VavaLogger.LOG.info("getShowRingCompound CALLED");
+        String name = this.combo_LATdata.getSelectedItem().toString();
+        Iterator<LAT_data> it = this.getCustomLATs().iterator();
+        while (it.hasNext()){
+            LAT_data ld = it.next();
+            VavaLogger.LOG.info("ldgetname= "+ld.getName()+" comboname="+name);
+            if (ld.getName().equalsIgnoreCase(name)){
+                VavaLogger.LOG.info("getShowRingCompound RETURNED A COMPOUND");
+                return ld;
+            }
+        }
+        VavaLogger.LOG.info("getShowRingCompound RETURNED NULL");
+        return null;
+//        if (combo_LATdata.getItemCount()>0){
+//            return this.combo_LATdata.getSelectedItem();
+//        }
+        
+    }
+
+    public ArrayList<LAT_data> getCustomLATs() {
+        return customLATs;
+    }   
+    
+    protected void do_btnAddLat_actionPerformed(ActionEvent arg0) {
+        //TODO:lectura fitxer lat i addició al combobox
+//        File d2File;
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("LAT file", "lat", "LAT");
+        fileChooser.addChoosableFileFilter(filter);
+        fileChooser.setCurrentDirectory(new File(workdir));
+        int selection = fileChooser.showOpenDialog(null);
+        if (selection != JFileChooser.APPROVE_OPTION) {
+            if (!fileOpened) {
+                tAOut.stat("No LAT file selected");
+            }
+            return;
+        }
+        // llegim el LAT
+        File latf = fileChooser.getSelectedFile();
+        LAT_data ld = new LAT_data(FileUtils.getFNameNoExt(latf));
+        boolean ok = ld.readLATfile(latf);
+        if (ok){
+            combo_LATdata.addItem(FileUtils.getFNameNoExt(latf));
+        }
+        
+    }
+
+    protected void do_combo_showRings_itemStateChanged(ItemEvent arg0) {
+        panelImatge.setShowRings(chckbxShowRings.isSelected(), this.getShowRingCompound());
     }
 }
