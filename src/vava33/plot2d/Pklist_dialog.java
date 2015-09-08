@@ -9,6 +9,8 @@ import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Locale;
 
@@ -404,9 +406,25 @@ public class Pklist_dialog extends JDialog {
 				PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(outfileIndex, false)));
 				out.println("# "+this.panelImatge.getPatt2D().getImgfile().toString());
 			    //escribim els elements de la llista
-			    for(int i=0; i<list_pk.getModel().getSize(); i++){
-			    	out.println(list_pk.getModel().getElementAt(i));
-			    }
+				//primer ordenem la llista !220415
+				ArrayList<PuntCercle> ord = new ArrayList<PuntCercle>();
+				Iterator<PuntCercle> itrP = panelImatge.getPuntsCercles().iterator();
+     		    while (itrP.hasNext()) {
+     		        ord.add(itrP.next());
+     		    }
+				Collections.sort(ord);
+				
+				itrP = ord.iterator();
+				int i = 1;
+	            while (itrP.hasNext()) {
+	                PuntCercle pa = itrP.next();
+	                String entry = String.format(Locale.ENGLISH, "%4d  %s", i,pa.toString());
+                    out.println(entry);
+	                i++;
+	            }
+//			    for(int i=0; i<list_pk.getModel().getSize(); i++){
+//			    	out.println(list_pk.getModel().getElementAt(i));
+//			    }
 			    out.close();
 			}catch(Exception ex){
 				ex.printStackTrace();

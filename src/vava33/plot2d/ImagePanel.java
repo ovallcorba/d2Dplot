@@ -44,6 +44,7 @@ import vava33.plot2d.auxi.LAT_data;
 import vava33.plot2d.auxi.LAT_data.HKL_reflection;
 import vava33.plot2d.auxi.OrientSolucio;
 import vava33.plot2d.auxi.PDCompound;
+import vava33.plot2d.auxi.PDReflection;
 import vava33.plot2d.auxi.Pattern2D;
 import vava33.plot2d.auxi.PuntCercle;
 import vava33.plot2d.auxi.PuntSolucio;
@@ -75,7 +76,7 @@ public class ImagePanel extends JPanel {
     private Rectangle2D.Float currentRect;
     private ExZone currentPol4;
     private ExZones_dialog exZones;
-    private database_dialog dbDialog;
+    private DB_dialog dbDialog;
     boolean fit = true;
     private BufferedImage image;
     private boolean mouseBox = false;
@@ -1150,7 +1151,7 @@ public class ImagePanel extends JPanel {
         this.exZones = exZones;
     }
 
-    public void setDBdialog(database_dialog dbDialog) {
+    public void setDBdialog(DB_dialog dbDialog) {
         this.dbDialog = dbDialog;
     }
 
@@ -1372,9 +1373,11 @@ public class ImagePanel extends JPanel {
         }
         
         private void drawDSPRings(Graphics2D g1) {
-            Iterator<Float> it = dspCompound.getDspacings().iterator();
-            while (it.hasNext()) {
-                float dsp = it.next();
+            
+            Iterator<PDReflection> itpks = dspCompound.getPeaks().iterator();
+            while (itpks.hasNext()) {
+                PDReflection ref = itpks.next();
+                float dsp = ref.getDsp();
                 float t2 = (float) dspToT2(dsp);
                 //2theta to pixels
                 float radi = (float) FastMath.tan(t2) * patt2D.getDistMD();

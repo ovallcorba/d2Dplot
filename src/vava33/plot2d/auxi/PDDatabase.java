@@ -1,23 +1,32 @@
 package vava33.plot2d.auxi;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Scanner;
 import java.util.zip.ZipFile;
 
 import javax.swing.SwingWorker;
 
+//import vava33.plot2d.auxi.PDCompound.DBreflection;
+
 import com.vava33.jutils.VavaLogger;
 
 public final class PDDatabase {
 
     private static int nCompounds = 0;
+//    private static final String localDB = "/latFiles/codDB.db";
+    private static final String localDB = "sample.db";
     private static ArrayList<PDCompound> compList = new ArrayList<PDCompound>();
     private static ArrayList<SearchResult> searchresults = new ArrayList<SearchResult>();
     
@@ -74,14 +83,12 @@ public final class PDDatabase {
         compList.add(c);
         nCompounds = nCompounds + 1;
     }
-    
-
 
     public static PDCompound get_compound_from_ovNum(int num){
         Iterator<PDCompound> it = compList.iterator();
         while (it.hasNext()){
             PDCompound c = it.next();
-            if (c.getOv_number() == num){
+            if (c.getCnumber() == num){
                 return c;
             }
         }
@@ -146,115 +153,165 @@ public final class PDDatabase {
         }
     }
     
-    public static float takeClosest(ArrayList<Float> pklist, float peak){
-        int index = Collections.binarySearch(pklist,peak,Collections.reverseOrder());
-//        VavaLogger.LOG.info(pklist.toString());
-//        VavaLogger.LOG.info("peak="+peak+" indexFound="+index);
-        index = Math.abs(index) - 1; //ara apunta al seguent valor, mes petit
-        if (index == 0){
-            return pklist.get(0);
-        }
-        if ((index == pklist.size())||(index == (pklist.size()-1))){
-            return pklist.get(pklist.size()-1);
-        }
-        //sempre estara entre index i index-1 (havent corregit ja un cop el -1)
-//        VavaLogger.LOG.info("peak="+peak+" index="+pklist.get(index)+" index-1="+pklist.get(index-1));
-        
-        //index -1 sempre > que valor, mentre que index sempre < que valor
-        float afterdiff = pklist.get(index-1) - peak;
-        float beforediff = peak - pklist.get(index);
-        if (afterdiff < beforediff){
-            return pklist.get(index-1);
-        }else{
-            return pklist.get(index);
+    //it closes the inputstream
+    public static int countLines(InputStream is) throws IOException {
+        try {
+            byte[] c = new byte[1024];
+            int count = 0;
+            int readChars = 0;
+            boolean empty = true;
+            while ((readChars = is.read(c)) != -1) {
+                empty = false;
+                for (int i = 0; i < readChars; ++i) {
+                    if (c[i] == '\n') {
+                        ++count;
+                    }
+                }
+            }
+            return (count == 0 && !empty) ? 1 : count;
+        } finally {
+            is.close();
         }
     }
-    
-    //igual anterior pero en comptes de valor torna index
-    public static int takeClosestIndex(ArrayList<Float> pklist, float peak){
-        int index = Collections.binarySearch(pklist,peak,Collections.reverseOrder());
-//        VavaLogger.LOG.info(pklist.toString());
-//        VavaLogger.LOG.info("peak="+peak+" indexFound="+index);
-        index = Math.abs(index) - 1; //ara apunta al seguent valor, mes petit
-        if (index == 0){
-            return 0;
-        }
-        if ((index == pklist.size())||(index == (pklist.size()-1))){
-            return pklist.size()-1;
-        }
-        //sempre estara entre index i index-1 (havent corregit ja un cop el -1)
-//        VavaLogger.LOG.info("peak="+peak+" index="+pklist.get(index)+" index-1="+pklist.get(index-1));
-        
-        //index -1 sempre > que valor, mentre que index sempre < que valor
-        float afterdiff = pklist.get(index-1) - peak;
-        float beforediff = peak - pklist.get(index);
-        if (afterdiff < beforediff){
-            return index-1;
-        }else{
-            return index;
-        }
-    }
+  
     
     public static ArrayList<SearchResult> getSearchresults() {
         return searchresults;
     }
+    
+    public static int getFirstEmptyNum(){
+        //TODO:IMPLEMENTAR-HO, momentaneament fa aixo:
+        return PDDatabase.getCompList().size()+1;
+    }
 
+    
+    public static boolean saveDB(File f){
+        // creem un printwriter amb el fitxer file (el que estem escribint)
+        SimpleDateFormat fHora = new SimpleDateFormat("[yyyy-MM-dd 'at' HH:mm]");
+        String dt = fHora.format(new Date());
+                
+        try {
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(f)));
+            output.println("# ====================================================================");
+            output.println("#         D2Dplot compound database "+dt);
+            output.println("# ====================================================================");
+            output.println();
+            
+            Iterator<PDCompound> itC = compList.iterator();
+            
+            int n = 1;
+            while (itC.hasNext()){
+                PDCompound c = itC.next();
+//                output.println(String.format("#COMP: %d %s",c.getCnumber(),c.getCompName().get(0)));
+                output.println(String.format("#COMP: %d %s",n,c.getCompName().get(0)));
+                
+                String altnames = c.getAltNames();
+                if (!altnames.isEmpty())output.println(String.format("#NAMEALT: %s",altnames));
+
+//                if (c.getCompName().size()>1){
+//                    StringBuilder sb = new StringBuilder();
+//                    for (int i=1;i<c.getCompName().size();i++){
+//                        sb.append(c.getCompName().get(i));
+//                        sb.append(" ");
+//                    }
+//                    output.println(String.format("#NAMEALT: %s",sb.toString().trim()));
+//                }
+                
+                if (!c.getFormula().isEmpty()){
+                    output.println(String.format("#FORMULA: %s",c.getFormula()));
+                }
+                if (!c.getCellParameters().isEmpty()){
+                    output.println(String.format("#CELL_PARAMETERS: %s",c.getCellParameters()));
+                }
+                if (!c.getSpaceGroup().isEmpty()){
+                    output.println(String.format("#SPACE_GROUP: %s",c.getSpaceGroup()));
+                }
+                if (!c.getReference().isEmpty()){
+                    output.println(String.format("#REF: %s",c.getReference()));    
+                }
+                if (!c.getComment().isEmpty()){
+                    output.println(String.format("#COMMENT: %s",c.getComment()));    
+                }
+                output.println("#LIST: H  K  L  dsp  Int");
+                
+                int refs = c.getPeaks().size();
+                for (int i=0;i<refs;i++){
+                    int h = c.getPeaks().get(i).getH();
+                    int k = c.getPeaks().get(i).getK();
+                    int l = c.getPeaks().get(i).getL();
+                    float dsp = c.getPeaks().get(i).getDsp();
+                    float inten = c.getPeaks().get(i).getInten();
+                    output.println(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));                    
+                }
+                output.println(); //linia en blanc entre compostos
+                n = n +1;
+            }
+            output.close();
+        }catch(Exception e){
+            e.printStackTrace();
+            return false;
+        }
+        
+        return true;
+    }
+    
+    
     public static class openDBfileWorker extends SwingWorker<Integer,Integer> {
 
         private File dbfile;
-        private ZipFile zfile;
         private boolean stop;
-        boolean isZipFile;
+        private boolean readLocal;
         
-        public openDBfileWorker(File datafile) {
+        public openDBfileWorker(File datafile, boolean readlocal) {
             this.dbfile = datafile;
-            this.zfile = null;
             this.stop = false;
-            this.isZipFile=false;
+            this.readLocal=readlocal;
         }
-        
-        public openDBfileWorker(ZipFile zipdatafile){
-            this.dbfile=null;
-            this.zfile=zipdatafile;
-            this.isZipFile=true;
-            this.stop = false;
-        }
-        
-        public openDBfileWorker(){
-            this.stop = false;
-            this.dbfile = null;
-            this.zfile = null;
-            this.isZipFile = false;
-        }
-        
+        //        
+//        public openDBfileWorker(ZipFile zipdatafile){
+//            this.dbfile=null;
+//            this.zfile=zipdatafile;
+//            this.isZipFile=true;
+//            this.stop = false;
+//        }
+//        
+//        public openDBfileWorker(){
+//            this.stop = false;
+//            this.dbfile = null;
+//            this.zfile = null;
+//            this.isZipFile = false;
+//        }
+//        
         public void setFileToRead(File datafile){
             this.dbfile = datafile;
-            this.isZipFile=false;
+            this.readLocal=false;
         }
-        
-        public void setFileToRead(ZipFile zipdatafile){
-            this.zfile=zipdatafile;
-            this.isZipFile=true;
+        public boolean isReadLocal() {
+            return readLocal;
         }
+        public void setReadLocal(boolean readLocal) {
+            this.readLocal = readLocal;
+        }
+//        
+//        public void setFileToRead(ZipFile zipdatafile){
+//            this.zfile=zipdatafile;
+//            this.isZipFile=true;
+//        }
         
         @Override
         protected Integer doInBackground() throws Exception {
             //number of lines
             int totalLines = 0;
-            if (this.isZipFile){
-                totalLines = countLines(zfile,"codDB.db");
-            }else{
-                totalLines = countLines(dbfile.toString());                
+            if (this.readLocal){ 
+                dbfile = new File(localDB);
+                System.out.println(localDB);
             }
+            totalLines = countLines(dbfile.toString());                
+
             int lines = 0;
             try {
                 Scanner scDBfile;
-                if (this.isZipFile){
-                    InputStream is = zfile.getInputStream(zfile.getEntry("codDB.db"));
-                    scDBfile = new Scanner(is);    
-                }else{
-                    scDBfile = new Scanner(dbfile);
-                }
+                scDBfile = new Scanner(dbfile);
                 
                 while (scDBfile.hasNextLine()){
                     
@@ -270,7 +327,7 @@ public final class PDDatabase {
                     
                     lines = lines + 1;
                     
-                    if (line.startsWith("#COMP")) {
+                    if ((line.startsWith("#COMP")) || (line.startsWith("#S "))) {  //#S per compatibilitat amb altres DBs
                         //new compound
                         String[] cname = line.split("\\s+");
                         StringBuilder sb = new StringBuilder();
@@ -280,7 +337,7 @@ public final class PDDatabase {
                         }
                         
                         PDCompound comp = new PDCompound(sb.toString().trim());
-                        comp.setOv_number(Integer.parseInt(cname[1]));
+                        comp.setCnumber(Integer.parseInt(cname[1]));
                         
                         boolean cfinished = false;
                         while (!cfinished){
@@ -298,11 +355,12 @@ public final class PDDatabase {
                                     comp.setBeta(Float.parseFloat(cellPars[5]));
                                     comp.setGamma(Float.parseFloat(cellPars[6]));
                                 }
-                                
-                                if (line2.startsWith("#COD_CODE:")){
-                                    comp.setCodCODE(Integer.parseInt((line2.split(":"))[1].trim()));
+                                if (line2.startsWith("#NAME")){
+                                    if (line2.contains(":")){
+                                        comp.addCompoundName((line2.split(":"))[1].trim());
+                                    }
                                 }
-                                
+                               
                                 if (line2.startsWith("#SPACE_GROUP:")){
                                     comp.setSpaceGroup((line2.split(":"))[1].trim());
                                 }
@@ -311,10 +369,19 @@ public final class PDDatabase {
                                     comp.setFormula((line2.split(":"))[1].trim());
                                 }
                                 
+                                if (line2.startsWith("#REF")){
+                                    if (line2.contains(":")){
+                                        comp.setReference((line2.split(":"))[1].trim());
+                                    }
+                                }
+                                
+                                if (line2.startsWith("#COMMENT:")){
+                                    comp.addComent((line2.split(":"))[1].trim());
+                                }
+                                
                                 if (line2.startsWith("#LIST:")){
                                     boolean dsplistfinished = false;
-                                    ArrayList<Float> dsp = new ArrayList<Float>();
-                                    ArrayList<Float> inten = new ArrayList<Float>();
+
                                     while (!dsplistfinished){
                                         if (!scDBfile.hasNextLine()){
                                             dsplistfinished = true;
@@ -330,17 +397,73 @@ public final class PDDatabase {
                                         }
                                         //VavaLogger.LOG.info(line3);
                                         String[] dspline = line3.trim().split("\\s+");
-                                        
-                                        dsp.add(Float.parseFloat(dspline[3]));
-                                        inten.add(Float.parseFloat(dspline[4]));
+                                        int h = Integer.parseInt(dspline[0]);
+                                        int k = Integer.parseInt(dspline[1]);
+                                        int l = Integer.parseInt(dspline[2]);
+                                        float dsp = Float.parseFloat(dspline[3]);
+                                        float inten = Float.parseFloat(dspline[4]);
+                                        comp.addPeak(h, k, l, dsp, inten);
                                     }
-                                    comp.setDspacings(dsp);
-                                    comp.setIntensities(inten);
                                 }
+                                
+                                //COMPATIBILITAT AMB ALTRE BASE DE DADES
+                                if (line2.startsWith("#UXRD_REFERENCE ")){
+                                    comp.setReference(line2.substring(16).trim());
+                                }
+                                
+                                if (line2.startsWith("#UXRD_INFO CELL PARAMETERS:")){
+                                    String[] cellPars = line2.split("\\s+");
+                                    comp.setA(Float.parseFloat(cellPars[3]));
+                                    comp.setB(Float.parseFloat(cellPars[4]));
+                                    comp.setC(Float.parseFloat(cellPars[5]));
+                                    comp.setAlfa(Float.parseFloat(cellPars[6]));
+                                    comp.setBeta(Float.parseFloat(cellPars[7]));
+                                    comp.setGamma(Float.parseFloat(cellPars[8]));
+                                }
+//                                if (line2.startsWith("#S ")){
+//                                    comp.addCompoundName((line2.split(":"))[1].trim());
+//                                }
+                               
+                                if (line2.startsWith("#UXRD_INFO SPACE GROUP: ")){
+                                    comp.setSpaceGroup((line2.split(":"))[1].trim());
+                                }
+                                
+                                if (line2.startsWith("#UXRD_ELEMENTS")){
+                                    comp.setFormula(line2.substring(15).trim());
+                                }
+                                
+                                if (line2.startsWith("#L ")){
+                                    boolean dsplistfinished = false;
+
+                                    while (!dsplistfinished){
+                                        if (!scDBfile.hasNextLine()){
+                                            dsplistfinished = true;
+                                            cfinished = true;
+                                            continue;
+                                        }
+                                        String line3 = scDBfile.nextLine();
+                                        lines = lines + 1;
+                                        if (line3.trim().isEmpty()){
+                                            dsplistfinished = true;
+                                            cfinished = true;
+                                            continue;
+                                        }
+                                        //VavaLogger.LOG.info(line3);
+                                        String[] dspline = line3.trim().split("\\s+");
+                                        int h = Integer.parseInt(dspline[2]);
+                                        int k = Integer.parseInt(dspline[3]);
+                                        int l = Integer.parseInt(dspline[4]);
+                                        float dsp = Float.parseFloat(dspline[0]);
+                                        float inten = Float.parseFloat(dspline[1]);
+                                        comp.addPeak(h, k, l, dsp, inten);
+                                    }
+                                }
+                                
+                                
                             } catch (Exception e) {
                                 // TODO Auto-generated catch block
                                 e.printStackTrace();
-                                VavaLogger.LOG.info("error reading compound num. "+comp.getOv_number());
+                                VavaLogger.LOG.info("error reading compound num. "+comp.getCnumber());
                             }                        
                             
                         }
@@ -362,7 +485,7 @@ public final class PDDatabase {
         }
         
         public String getReadedFile(){
-            if (this.isZipFile){
+            if (this.readLocal){
 //                return this.zfile.toString();
                 return "(internal)";
             }else{
@@ -421,14 +544,13 @@ public final class PDDatabase {
                 
                 while (itrPks.hasNext()){
                     float dsp = itrPks.next();  //pic entrat a buscar
-//                    float value = takeClosest(c.getDspacings(),dsp);
-                    int index = takeClosestIndex(c.getDspacings(),dsp);
-                    diffPositions = diffPositions + Math.abs(dsp-c.getDspacings().get(index));
+                    int index = c.closestPeak(dsp);
+                    diffPositions = diffPositions + Math.abs(dsp-c.getPeaks().get(index).getDsp());
                     float intensity = this.slistInten.get(npk);
                     //normalitzem la intensitat utilitzant el maxim dels N primers pics.
                     intensity = (intensity/maxIslist) * maxI_factorPerNormalitzar;
-                    if (c.getIntensities().get(index)>=0){ //no tenim en compte les -1 (NaN)
-                        diffIntensities = diffIntensities + Math.abs(intensity-c.getIntensities().get(index));    
+                    if (c.getPeaks().get(index).getInten()>=0){ //no tenim en compte les -1 (NaN)
+                        diffIntensities = diffIntensities + Math.abs(intensity-c.getPeaks().get(index).getInten());    
                     }
                     npk = npk +1;
                 }

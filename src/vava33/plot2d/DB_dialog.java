@@ -43,6 +43,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -79,12 +80,11 @@ import org.apache.commons.math3.util.FastMath;
 
 import java.awt.event.InputMethodListener;
 import java.awt.event.InputMethodEvent;
+import net.miginfocom.swing.MigLayout;
 
-public class database_dialog extends JDialog {
+public class DB_dialog extends JFrame {
 
-    private static final String localDB = "/latFiles/codDB.zip";
     private static final long serialVersionUID = -6104927797410689910L;
-    private static boolean cod_acknowledged = false;
     private JButton btnLoadDB;
     private JCheckBox cbox_onTop;
     private JCheckBox chckbxPDdata;
@@ -115,19 +115,25 @@ public class database_dialog extends JDialog {
     private JCheckBox chckbxNameFilter;
     private JTextField txtNamefilter;
     private JCheckBox chckbxNpksInfo;
-    private JLabel lblHeader;
     
     private int maxNsol = 50;
     private JButton btnResetSearch;
+    private JButton btnSaveDb;
+    private JLabel lblHeader;
+    private JPanel panel;
+    private JPanel panel_1;
+    private JPanel panel_2;
+    private JButton btnAddCompound;
+    private JButton btnEditCompound;
     
     /**
      * Create the dialog.
      */
-    public database_dialog(MainFrame mf) {
+    public DB_dialog(MainFrame mf) {
         this.mf = mf;
-        setIconImage(Toolkit.getDefaultToolkit().getImage(database_dialog.class.getResource("/img/Icona.png")));
+        setIconImage(Toolkit.getDefaultToolkit().getImage(DB_dialog.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("Phase Identification");
+        setTitle("Compound DB");
         // setBounds(100, 100, 660, 730);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
@@ -137,190 +143,135 @@ public class database_dialog extends JDialog {
         setBounds(x, y, 600, 660);
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
-        GridBagLayout gbl_contentPanel = new GridBagLayout();
-        gbl_contentPanel.columnWidths = new int[] { 0, 0 };
-        gbl_contentPanel.rowHeights = new int[] { 0, 0 };
-        gbl_contentPanel.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-        gbl_contentPanel.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
-        contentPanel.setLayout(gbl_contentPanel);
+        contentPanel.setLayout(new MigLayout("", "[grow]", "[598px,grow]"));
         {
             this.splitPane = new JSplitPane();
             splitPane.setResizeWeight(0.7);
             this.splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
-            GridBagConstraints gbc_splitPane = new GridBagConstraints();
-            gbc_splitPane.fill = GridBagConstraints.BOTH;
-            gbc_splitPane.gridx = 0;
-            gbc_splitPane.gridy = 0;
-            contentPanel.add(this.splitPane, gbc_splitPane);
+            contentPanel.add(this.splitPane, "cell 0 0,grow");
             {
                 this.panel_left = new JPanel();
                 this.splitPane.setLeftComponent(this.panel_left);
-                GridBagLayout gbl_panel_left = new GridBagLayout();
-                gbl_panel_left.columnWidths = new int[] { 0, 0, 0, 0, 0 };
-                gbl_panel_left.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0 };
-                gbl_panel_left.columnWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 0.0 };
-                gbl_panel_left.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, Double.MIN_VALUE };
-                this.panel_left.setLayout(gbl_panel_left);
                 {
                     {
-                        this.chckbxPDdata = new JCheckBox("ShowRings");
-                        this.chckbxPDdata.addItemListener(new ItemListener() {
-                            @Override
-                            public void itemStateChanged(ItemEvent arg0) {
-                                do_chckbxCalibrate_itemStateChanged(arg0);
-                            }
-                        });
                         {
-                            this.btnLoadDB = new JButton("Load Database");
-                            this.btnLoadDB.addActionListener(new ActionListener() {
-                                @Override
-                                public void actionPerformed(ActionEvent arg0) {
-                                    do_btnLoadDB_actionPerformed(arg0);
+                            panel_left.setLayout(new MigLayout("", "[grow]", "[25px][grow][]"));
+                            {
+                                panel = new JPanel();
+                                panel_left.add(panel, "cell 0 0,grow");
+                                panel.setLayout(new MigLayout("", "[40.00px][][][][grow]", "[25px][25px][23px]"));
+                                this.btnLoadDB = new JButton("Load DB");
+                                panel.add(btnLoadDB, "cell 0 0,growx,aligny center");
+                                {
+                                    btnSaveDb = new JButton("Save DB");
+                                    panel.add(btnSaveDb, "cell 1 0,alignx center,aligny center");
+                                    this.chckbxPDdata = new JCheckBox("ShowRings");
+                                    panel.add(chckbxPDdata, "cell 2 0,alignx left,aligny center");
+                                    this.chckbxPDdata.addItemListener(new ItemListener() {
+                                        @Override
+                                        public void itemStateChanged(ItemEvent arg0) {
+                                            do_chckbxCalibrate_itemStateChanged(arg0);
+                                        }
+                                    });
+                                    this.chckbxPDdata.setSelected(true);
+                                    this.cbox_onTop = new JCheckBox("on top");
+                                    panel.add(cbox_onTop, "cell 4 0,alignx right,aligny center");
+                                    cbox_onTop.setSelected(true);
+                                    this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
+                                    this.cbox_onTop.addItemListener(new ItemListener() {
+                                        @Override
+                                        public void itemStateChanged(ItemEvent arg0) {
+                                            do_cbox_onTop_itemStateChanged(arg0);
+                                        }
+                                    });
+                                    this.cbox_onTop.setActionCommand("on top");
+                                    {
+                                        btnSearchByPeaks = new JButton("Search by peaks");
+                                        panel.add(btnSearchByPeaks, "cell 0 1 2 1,growx,aligny center");
+                                        {
+                                            chckbxIntensityInfo = new JCheckBox("Intensity info");
+                                            panel.add(chckbxIntensityInfo, "cell 2 1,alignx left,aligny center");
+                                        }
+                                        {
+                                            chckbxNpksInfo = new JCheckBox("Npks info");
+                                            panel.add(chckbxNpksInfo, "cell 3 1,alignx left,aligny center");
+                                            chckbxNpksInfo.setSelected(true);
+                                        }
+                                        this.lblHelp = new JLabel("?");
+                                        panel.add(lblHelp, "cell 4 1,alignx right,aligny center");
+                                        lblHelp.setEnabled(false);
+                                        lblHelp.setVisible(false);
+                                        this.lblHelp.addMouseListener(new MouseAdapter() {
+                                            @Override
+                                            public void mouseEntered(MouseEvent e) {
+                                                do_lbllist_mouseEntered(e);
+                                            }
+
+                                            @Override
+                                            public void mouseExited(MouseEvent e) {
+                                                do_lbllist_mouseExited(e);
+                                            }
+
+                                            @Override
+                                            public void mouseReleased(MouseEvent e) {
+                                                do_lbllist_mouseReleased(e);
+                                            }
+                                        });
+                                        this.lblHelp.setFont(new Font("Tahoma", Font.BOLD, 14));
+                                        {
+                                            chckbxNameFilter = new JCheckBox("Apply name filter:");
+                                            panel.add(chckbxNameFilter, "cell 0 2 2 1,alignx right,aligny center");
+                                        }
+                                        {
+                                            txtNamefilter = new JTextField();
+                                            panel.add(txtNamefilter, "cell 2 2 3 1,growx,aligny center");
+                                            txtNamefilter.setColumns(10);
+                                            
+                                            txtNamefilter.getDocument().addDocumentListener(new DocumentListener() {
+                                                public void changedUpdate(DocumentEvent e) {
+                                                    filterList();
+                                                  }
+                                                  public void removeUpdate(DocumentEvent e) {
+                                                    filterList();
+                                                  }
+                                                  public void insertUpdate(DocumentEvent e) {
+                                                    filterList();
+                                                  }
+                                                });
+                                        }
+                                        btnSearchByPeaks.addActionListener(new ActionListener() {
+                                            public void actionPerformed(ActionEvent e) {
+                                                do_btnSearchByPeaks_actionPerformed(e);
+                                            }
+                                        });
+                                    }
+                                    btnSaveDb.addActionListener(new ActionListener() {
+                                        public void actionPerformed(ActionEvent arg0) {
+                                            do_btnSaveDb_actionPerformed(arg0);
+                                        }
+                                    });
                                 }
-                            });
-                            GridBagConstraints gbc_btnLoadDB = new GridBagConstraints();
-                            gbc_btnLoadDB.fill = GridBagConstraints.HORIZONTAL;
-                            gbc_btnLoadDB.insets = new Insets(5, 5, 5, 5);
-                            gbc_btnLoadDB.gridx = 0;
-                            gbc_btnLoadDB.gridy = 0;
-                            this.panel_left.add(this.btnLoadDB, gbc_btnLoadDB);
+                                this.btnLoadDB.addActionListener(new ActionListener() {
+                                    @Override
+                                    public void actionPerformed(ActionEvent arg0) {
+                                        do_btnLoadDB_actionPerformed(arg0);
+                                    }
+                                });
+                            }
                         }
-                        this.chckbxPDdata.setSelected(true);
-                        GridBagConstraints gbc_chckbxPDdata = new GridBagConstraints();
-                        gbc_chckbxPDdata.anchor = GridBagConstraints.WEST;
-                        gbc_chckbxPDdata.insets = new Insets(5, 0, 5, 5);
-                        gbc_chckbxPDdata.gridx = 1;
-                        gbc_chckbxPDdata.gridy = 0;
-                        this.panel_left.add(this.chckbxPDdata, gbc_chckbxPDdata);
                     }
                 }
                 {
+                    panel_1 = new JPanel();
+                    panel_left.add(panel_1, "cell 0 1,grow");
+                    panel_1.setLayout(new MigLayout("", "[grow][]", "[][grow][]"));
                     {
-                        btnSearchByPeaks = new JButton("Search by peaks");
-                        btnSearchByPeaks.addActionListener(new ActionListener() {
-                            public void actionPerformed(ActionEvent e) {
-                                do_btnSearchByPeaks_actionPerformed(e);
-                            }
-                        });
-                        this.cbox_onTop = new JCheckBox("on top");
-                        cbox_onTop.setSelected(true);
-                        this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
-                        this.cbox_onTop.addItemListener(new ItemListener() {
-                            @Override
-                            public void itemStateChanged(ItemEvent arg0) {
-                                do_cbox_onTop_itemStateChanged(arg0);
-                            }
-                        });
-                        this.cbox_onTop.setActionCommand("on top");
-                        GridBagConstraints gbc_cbox_onTop = new GridBagConstraints();
-                        gbc_cbox_onTop.insets = new Insets(5, 0, 5, 0);
-                        gbc_cbox_onTop.anchor = GridBagConstraints.EAST;
-                        gbc_cbox_onTop.gridx = 4;
-                        gbc_cbox_onTop.gridy = 0;
-                        this.panel_left.add(this.cbox_onTop, gbc_cbox_onTop);
-                        GridBagConstraints gbc_btnSearchByPeaks = new GridBagConstraints();
-                        gbc_btnSearchByPeaks.fill = GridBagConstraints.HORIZONTAL;
-                        gbc_btnSearchByPeaks.insets = new Insets(0, 5, 5, 5);
-                        gbc_btnSearchByPeaks.gridx = 0;
-                        gbc_btnSearchByPeaks.gridy = 1;
-                        panel_left.add(btnSearchByPeaks, gbc_btnSearchByPeaks);
-                    }
-                    {
-                        chckbxIntensityInfo = new JCheckBox("Intensity info");
-                        GridBagConstraints gbc_chckbxIntensityInfo = new GridBagConstraints();
-                        gbc_chckbxIntensityInfo.anchor = GridBagConstraints.WEST;
-                        gbc_chckbxIntensityInfo.insets = new Insets(0, 0, 5, 5);
-                        gbc_chckbxIntensityInfo.gridx = 1;
-                        gbc_chckbxIntensityInfo.gridy = 1;
-                        panel_left.add(chckbxIntensityInfo, gbc_chckbxIntensityInfo);
-                    }
-                    {
-                        chckbxNpksInfo = new JCheckBox("Npks info");
-                        chckbxNpksInfo.setSelected(true);
-                        GridBagConstraints gbc_chckbxNpksInfo = new GridBagConstraints();
-                        gbc_chckbxNpksInfo.anchor = GridBagConstraints.WEST;
-                        gbc_chckbxNpksInfo.insets = new Insets(0, 0, 5, 5);
-                        gbc_chckbxNpksInfo.gridx = 3;
-                        gbc_chckbxNpksInfo.gridy = 1;
-                        panel_left.add(chckbxNpksInfo, gbc_chckbxNpksInfo);
-                    }
-                    this.lblHelp = new JLabel("?");
-                    lblHelp.setEnabled(false);
-                    lblHelp.setVisible(false);
-                    this.lblHelp.addMouseListener(new MouseAdapter() {
-                        @Override
-                        public void mouseEntered(MouseEvent e) {
-                            do_lbllist_mouseEntered(e);
-                        }
-
-                        @Override
-                        public void mouseExited(MouseEvent e) {
-                            do_lbllist_mouseExited(e);
-                        }
-
-                        @Override
-                        public void mouseReleased(MouseEvent e) {
-                            do_lbllist_mouseReleased(e);
-                        }
-                    });
-                    this.lblHelp.setFont(new Font("Tahoma", Font.BOLD, 14));
-                    GridBagConstraints gbc_lbllist = new GridBagConstraints();
-                    gbc_lbllist.anchor = GridBagConstraints.EAST;
-                    gbc_lbllist.insets = new Insets(0, 0, 5, 0);
-                    gbc_lbllist.gridx = 4;
-                    gbc_lbllist.gridy = 1;
-                    this.panel_left.add(this.lblHelp, gbc_lbllist);
-                    {
-                        chckbxNameFilter = new JCheckBox("Apply name filter:");
-                        GridBagConstraints gbc_chckbxNameFilter = new GridBagConstraints();
-                        gbc_chckbxNameFilter.anchor = GridBagConstraints.EAST;
-                        gbc_chckbxNameFilter.insets = new Insets(0, 0, 5, 5);
-                        gbc_chckbxNameFilter.gridx = 0;
-                        gbc_chckbxNameFilter.gridy = 2;
-                        panel_left.add(chckbxNameFilter, gbc_chckbxNameFilter);
-                    }
-                    {
-                        txtNamefilter = new JTextField();
-                        GridBagConstraints gbc_txtNamefilter = new GridBagConstraints();
-                        gbc_txtNamefilter.gridwidth = 4;
-                        gbc_txtNamefilter.insets = new Insets(0, 0, 5, 0);
-                        gbc_txtNamefilter.fill = GridBagConstraints.HORIZONTAL;
-                        gbc_txtNamefilter.gridx = 1;
-                        gbc_txtNamefilter.gridy = 2;
-                        panel_left.add(txtNamefilter, gbc_txtNamefilter);
-                        txtNamefilter.setColumns(10);
-                        
-                        txtNamefilter.getDocument().addDocumentListener(new DocumentListener() {
-                            public void changedUpdate(DocumentEvent e) {
-                                filterList();
-                              }
-                              public void removeUpdate(DocumentEvent e) {
-                                filterList();
-                              }
-                              public void insertUpdate(DocumentEvent e) {
-                                filterList();
-                              }
-                            });
-                    }
-                    {
-                        lblHeader = new JLabel("Header");
-                        GridBagConstraints gbc_lblHeader = new GridBagConstraints();
-                        gbc_lblHeader.fill = GridBagConstraints.HORIZONTAL;
-                        gbc_lblHeader.gridwidth = 5;
-                        gbc_lblHeader.insets = new Insets(0, 0, 5, 0);
-                        gbc_lblHeader.gridx = 0;
-                        gbc_lblHeader.gridy = 3;
-                        panel_left.add(lblHeader, gbc_lblHeader);
+                        lblHeader = new JLabel("");
+                        panel_1.add(lblHeader, "cell 0 0 2 1");
                     }
                     {
                         this.scrollPane = new JScrollPane();
-                        GridBagConstraints gbc_scrollPane = new GridBagConstraints();
-                        gbc_scrollPane.gridwidth = 5;
-                        gbc_scrollPane.fill = GridBagConstraints.BOTH;
-                        gbc_scrollPane.insets = new Insets(0, 5, 5, 5);
-                        gbc_scrollPane.gridx = 0;
-                        gbc_scrollPane.gridy = 4;
-                        this.panel_left.add(this.scrollPane, gbc_scrollPane);
+                        panel_1.add(scrollPane, "cell 0 1 2 1,grow");
                         {
                             this.listCompounds = new JList();
                             listCompounds.setFont(new Font("Monospaced", Font.PLAIN, 15));
@@ -333,35 +284,39 @@ public class database_dialog extends JDialog {
                             this.scrollPane.setViewportView(this.listCompounds);
                         }
                     }
+                    {
+                        pBarDB = new JProgressBar();
+                        panel_1.add(pBarDB, "cell 0 2,growx");
+                        pBarDB.setStringPainted(true);
+                    }
+                    btnResetSearch = new JButton("reset list");
+                    panel_1.add(btnResetSearch, "cell 1 2");
+                    btnResetSearch.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent arg0) {
+                            do_btnResetSearch_actionPerformed(arg0);
+                        }
+                    });
+                }
+                {
                 }
             }
             {
                 this.panel_right = new JPanel();
                 this.panel_right.setBackground(Color.BLACK);
                 this.splitPane.setRightComponent(this.panel_right);
-                GridBagLayout gbl_panel_right = new GridBagLayout();
-                gbl_panel_right.columnWidths = new int[] { 0, 0 };
-                gbl_panel_right.rowHeights = new int[] { 0, 0 };
-                gbl_panel_right.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-                gbl_panel_right.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
-                this.panel_right.setLayout(gbl_panel_right);
+                panel_right.setLayout(new MigLayout("", "[grow]", "[grow]"));
                 {
                     this.scrollPane_1 = new JScrollPane();
                     scrollPane_1.setViewportBorder(null);
                     this.scrollPane_1.setBorder(null);
-                    GridBagConstraints gbc_scrollPane_1 = new GridBagConstraints();
-                    gbc_scrollPane_1.insets = new Insets(5, 5, 5, 5);
-                    gbc_scrollPane_1.fill = GridBagConstraints.BOTH;
-                    gbc_scrollPane_1.gridx = 0;
-                    gbc_scrollPane_1.gridy = 0;
-                    this.panel_right.add(this.scrollPane_1, gbc_scrollPane_1);
+                    this.panel_right.add(this.scrollPane_1, "cell 0 0,grow");
                     {
-                        database_dialog.tAOut = new LogJTextArea();
-                        database_dialog.tAOut.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
-                        database_dialog.tAOut.setWrapStyleWord(true);
-                        database_dialog.tAOut.setLineWrap(true);
-                        database_dialog.tAOut.setEditable(false);
-                        this.scrollPane_1.setViewportView(database_dialog.tAOut);
+                        DB_dialog.tAOut = new LogJTextArea();
+                        DB_dialog.tAOut.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
+                        DB_dialog.tAOut.setWrapStyleWord(true);
+                        DB_dialog.tAOut.setLineWrap(true);
+                        DB_dialog.tAOut.setEditable(false);
+                        this.scrollPane_1.setViewportView(DB_dialog.tAOut);
                     }
                 }
             }
@@ -369,14 +324,6 @@ public class database_dialog extends JDialog {
         {
             JPanel buttonPane = new JPanel();
             getContentPane().add(buttonPane, BorderLayout.SOUTH);
-            {
-                GridBagLayout gbl_buttonPane = new GridBagLayout();
-                gbl_buttonPane.columnWidths = new int[] { 0, 0, 0 };
-                gbl_buttonPane.rowHeights = new int[] { 0, 0 };
-                gbl_buttonPane.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-                gbl_buttonPane.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
-                buttonPane.setLayout(gbl_buttonPane);
-            }
             JButton okButton = new JButton("close");
             okButton.addActionListener(new ActionListener() {
                 @Override
@@ -387,12 +334,9 @@ public class database_dialog extends JDialog {
             {
                 btnTestclosest = new JButton("testClosest");
                 btnTestclosest.setVisible(false);
+                buttonPane.setLayout(new MigLayout("", "[112px][70px]", "[25px]"));
                 btnTestclosest.setEnabled(false);
-                GridBagConstraints gbc_btnTestclosest = new GridBagConstraints();
-                gbc_btnTestclosest.insets = new Insets(0, 0, 0, 5);
-                gbc_btnTestclosest.gridx = 0;
-                gbc_btnTestclosest.gridy = 0;
-                buttonPane.add(btnTestclosest, gbc_btnTestclosest);
+                buttonPane.add(btnTestclosest, "cell 0 0,alignx center,aligny center");
                 btnTestclosest.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent arg0) {
                         do_btnTestclosest_actionPerformed(arg0);
@@ -400,61 +344,47 @@ public class database_dialog extends JDialog {
                 });
             }
             okButton.setActionCommand("OK");
-            GridBagConstraints gbc_okButton = new GridBagConstraints();
-            gbc_okButton.anchor = GridBagConstraints.EAST;
-            gbc_okButton.insets = new Insets(5, 5, 5, 5);
-            gbc_okButton.gridx = 1;
-            gbc_okButton.gridy = 0;
-            buttonPane.add(okButton, gbc_okButton);
+            buttonPane.add(okButton, "cell 1 0,alignx right,aligny center");
             getRootPane().setDefaultButton(okButton);
         }
-
         {
-            btnShowDsp = new JButton("Show d-spacing");
-            btnShowDsp.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent arg0) {
-                    do_btnShowDsp_actionPerformed(arg0);
+            {
+                panel_2 = new JPanel();
+                panel_left.add(panel_2, "cell 0 2,grow");
+                panel_2.setLayout(new MigLayout("", "[][][]", "[]"));
+                {
+                    btnAddCompound = new JButton("Add Compound");
+                    btnAddCompound.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent arg0) {
+                            do_btnAddCompound_actionPerformed(arg0);
+                        }
+                    });
+                    panel_2.add(btnAddCompound, "cell 0 0");
                 }
-            });
-            {
-                pBarDB = new JProgressBar();
-                pBarDB.setStringPainted(true);
-                GridBagConstraints gbc_pBarDB = new GridBagConstraints();
-                gbc_pBarDB.gridwidth = 3;
-                gbc_pBarDB.fill = GridBagConstraints.BOTH;
-                gbc_pBarDB.insets = new Insets(0, 5, 5, 5);
-                gbc_pBarDB.gridx = 0;
-                gbc_pBarDB.gridy = 5;
-                panel_left.add(pBarDB, gbc_pBarDB);
-            }
-            {
-                btnResetSearch = new JButton("reset list");
-                btnResetSearch.addActionListener(new ActionListener() {
+                {
+                    btnEditCompound = new JButton("Edit Compound");
+                    btnEditCompound.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                            do_btnEditCompound_actionPerformed(e);
+                        }
+                    });
+                    panel_2.add(btnEditCompound, "cell 1 0");
+                }
+                btnShowDsp = new JButton("Compound info");
+                panel_2.add(btnShowDsp, "cell 2 0,alignx center,aligny center");
+                btnShowDsp.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent arg0) {
-                        do_btnResetSearch_actionPerformed(arg0);
+                        do_btnShowDsp_actionPerformed(arg0);
                     }
                 });
-                GridBagConstraints gbc_btnResetSearch = new GridBagConstraints();
-                gbc_btnResetSearch.anchor = GridBagConstraints.EAST;
-                gbc_btnResetSearch.insets = new Insets(0, 0, 5, 5);
-                gbc_btnResetSearch.gridx = 3;
-                gbc_btnResetSearch.gridy = 5;
-                panel_left.add(btnResetSearch, gbc_btnResetSearch);
             }
-            GridBagConstraints gbc_btnShowDsp = new GridBagConstraints();
-            gbc_btnShowDsp.insets = new Insets(0, 0, 5, 5);
-            gbc_btnShowDsp.gridx = 4;
-            gbc_btnShowDsp.gridy = 5;
-            panel_left.add(btnShowDsp, gbc_btnShowDsp);
         }
-        
         tAOut.ln("** PDDatabase **");
 
 //      dataFile = mf.getOpenedFile();
 //      patt2D = mf.getPatt2D();
         lm = new DefaultListModel();
         listCompounds.setModel(lm);
-        lblHeader.setText("");
 
     }
 
@@ -474,7 +404,7 @@ public class database_dialog extends JDialog {
         pm.setProgress(0);
         pBarDB.setString("Reading DB");
         pBarDB.setStringPainted(true);
-        openDBFwk = new PDDatabase.openDBfileWorker();
+        openDBFwk = new PDDatabase.openDBfileWorker(null,false);
         openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
 
             @Override
@@ -522,19 +452,25 @@ public class database_dialog extends JDialog {
         
         if (n == JOptionPane.YES_OPTION) {
             //load internal DB
-            URL zipUrl = this.getClass().getResource(localDB);
-            try{
-                File zipFile = new File(zipUrl.toURI());
-                ZipFile zip = new ZipFile(zipFile);
-                //reset current Database
-                PDDatabase.reset();
-                //read database file in zip
-                openDBFwk.setFileToRead(zip);
-                openDBFwk.execute();
-                this.acknowledgeCOD();
-            }catch(Exception e){
-                e.printStackTrace();
-            }
+            PDDatabase.reset();
+            openDBFwk.setReadLocal(true);
+            openDBFwk.execute();
+//            this.acknowledgeCOD();
+            
+            //            URL zipUrl = this.getClass().getResource(localDB);
+//            try{
+//                File zipFile = new File(zipUrl.toURI());
+//                ZipFile zip = new ZipFile(zipFile);
+////                InputStream is = zip.getInputStream(zip.getEntry("codDB.db"));
+//                //reset current Database
+//                PDDatabase.reset();
+//                //read database file in zip
+//                openDBFwk.setFileToRead(zip);
+//                openDBFwk.execute();
+//                this.acknowledgeCOD();
+//            }catch(Exception e){
+//                e.printStackTrace();
+//            }
             
             //////File file = new File(classLoader.getResource("file/test.xml").getFile());
             return;
@@ -594,38 +530,38 @@ public class database_dialog extends JDialog {
         tAOut.ln("");
         tAOut.ln("** PDDatabase HELP **");
         tAOut.ln("");
-        tAOut.ln("Acknowledgements:\n"
-                + "The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD) "
-                + "for which the d-spacings have been calculated according to the reported cell parameters and contents (on 06/03/2015).\n"
-                + "COD references (http://www.crystallography.net/):\n"
-                + "Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427\n"
-                + "Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.");
-        tAOut.ln("");
+//        tAOut.ln("Acknowledgements:\n"
+//                + "The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD) "
+//                + "for which the d-spacings have been calculated according to the reported cell parameters and contents (on 06/03/2015).\n"
+//                + "COD references (http://www.crystallography.net/):\n"
+//                + "Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427\n"
+//                + "Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.");
+//        tAOut.ln("");
     }
     
-    protected void acknowledgeCOD_tArea(){
-        tAOut.ln("");
-        tAOut.ln("The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD, http://www.crystallography.net) "
-                + "for which the d-spacings have been calculated according to the reported cell parameters and contents (on 06/03/2015 by OV).\n"
-                + "COD references:\n"
-                + "Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427\n"
-                + "Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.");
-        tAOut.ln("");        
-    }
+//    protected void acknowledgeCOD_tArea(){
+//        tAOut.ln("");
+//        tAOut.ln("The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD, http://www.crystallography.net) "
+//                + "for which the d-spacings have been calculated according to the reported cell parameters and contents (on 06/03/2015 by OV).\n"
+//                + "COD references:\n"
+//                + "Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427\n"
+//                + "Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.");
+//        tAOut.ln("");        
+//    }
     
-    protected void acknowledgeCOD(){
-        if (!cod_acknowledged){
-            String codack="<html> <div style=\"text-align:justify\"> The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD, http://www.crystallography.net) for which the d-spacings have been calculated according to the reported cell parameters (on 06/03/2015 by OV) <br> <br> <font size=-1>COD references: <br> Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427 <br> Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.<br> </font> </div> </html>";
-            Help_dialog hd = new Help_dialog("COD acknowledgements",codack);
-            hd.setSize(750,320);
-            hd.setLocationRelativeTo(this);
-            hd.setLocation(hd.getLocation().x, hd.getLocation().y-240);
-            hd.setVisible(true);
-            this.setAlwaysOnTop(true); //to get the focus
-//            this.requestFocusInWindow();
-            cod_acknowledged=true;
-        }
-    }
+//    protected void acknowledgeCOD(){
+//        if (!cod_acknowledged){
+//            String codack="<html> <div style=\"text-align:justify\"> The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD, http://www.crystallography.net) for which the d-spacings have been calculated according to the reported cell parameters (on 06/03/2015 by OV) <br> <br> <font size=-1>COD references: <br> Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427 <br> Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.<br> </font> </div> </html>";
+//            Help_dialog hd = new Help_dialog("COD acknowledgements",codack);
+//            hd.setSize(750,320);
+//            hd.setLocationRelativeTo(this);
+//            hd.setLocation(hd.getLocation().x, hd.getLocation().y-240);
+//            hd.setVisible(true);
+//            this.setAlwaysOnTop(true); //to get the focus
+////            this.requestFocusInWindow();
+//            cod_acknowledged=true;
+//        }
+//    }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
         this.dispose();
@@ -637,7 +573,7 @@ public class database_dialog extends JDialog {
             String sel = (String) listCompounds.getSelectedValue();
             int ov_index = Integer.parseInt((sel.trim().split("\\s+"))[0]);
             PDCompound comp = PDDatabase.get_compound_from_ovNum(ov_index);
-            tAOut.ln(comp.printInfoMultipleLines());
+//            tAOut.ln(comp.printInfoMultipleLines());
             return comp;
         } else {
             return null;
@@ -677,8 +613,13 @@ public class database_dialog extends JDialog {
 //        tAOut.ln(c.getOv_number()+" "+c.getCompName()+" "+c.getFormula()+" "+c.getCodCODE());
 //        tAOut.ln(c.getA()+" "+c.getB()+" "+c.getC()+" "+c.getAlfa()+" "+c.getBeta()+" "+c.getGamma());
         tAOut.ln(c.printInfoMultipleLines());
-        for (int i=0; i<c.getDspacings().size();i++){
-            tAOut.ln(c.getDspacings().get(i)+" "+c.getIntensities().get(i));
+        for (int i=0; i<c.getPeaks().size();i++){
+            int h = c.getPeaks().get(i).getH();
+            int k = c.getPeaks().get(i).getK();
+            int l = c.getPeaks().get(i).getL();
+            float dsp = c.getPeaks().get(i).getDsp();
+            float inten = c.getPeaks().get(i).getInten();
+            tAOut.ln(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));
         }
         
         //debug:
@@ -693,7 +634,10 @@ public class database_dialog extends JDialog {
         this.showPDDataRings = showPDDataRings;
     }
     protected void do_listCompounds_valueChanged(ListSelectionEvent arg0) {
-        mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), this.getCurrentCompound());
+        if (arg0.getValueIsAdjusting()) return;
+        PDCompound comp = this.getCurrentCompound();
+        mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), comp);
+        if (comp!=null)tAOut.ln(comp.printInfoLine());
     }
     
     
@@ -722,28 +666,28 @@ public class database_dialog extends JDialog {
     
     
     protected void do_btnTestclosest_actionPerformed(ActionEvent arg0) {
-        ArrayList<Float> lab6pks = new ArrayList<Float>();
-        lab6pks.add(4.15710f);
-        lab6pks.add(2.93950f);
-        lab6pks.add(2.40010f);
-        lab6pks.add(2.07850f);
-        lab6pks.add(1.85910f);
-        lab6pks.add(1.69710f);
-        lab6pks.add(1.46970f);
-        lab6pks.add(1.38570f);
-        lab6pks.add(1.38570f);
-        lab6pks.add(1.31460f);
-        lab6pks.add(1.25340f);
-        PDDatabase.takeClosest(lab6pks,4.141f);
-        PDDatabase.takeClosest(lab6pks,2.936f);
-        PDDatabase.takeClosest(lab6pks,2.395f);
-        PDDatabase.takeClosest(lab6pks,2.075f);
-        PDDatabase.takeClosest(lab6pks,1.861f);
-        PDDatabase.takeClosest(lab6pks,1.697f);
-        PDDatabase.takeClosest(lab6pks,1.466f);
-        PDDatabase.takeClosest(lab6pks,1.383f);
-        PDDatabase.takeClosest(lab6pks,1.312f);
-        PDDatabase.takeClosest(lab6pks,1.249f);
+//        ArrayList<Float> lab6pks = new ArrayList<Float>();
+//        lab6pks.add(4.15710f);
+//        lab6pks.add(2.93950f);
+//        lab6pks.add(2.40010f);
+//        lab6pks.add(2.07850f);
+//        lab6pks.add(1.85910f);
+//        lab6pks.add(1.69710f);
+//        lab6pks.add(1.46970f);
+//        lab6pks.add(1.38570f);
+//        lab6pks.add(1.38570f);
+//        lab6pks.add(1.31460f);
+//        lab6pks.add(1.25340f);
+//        PDDatabase.takeClosest(lab6pks,4.141f);
+//        PDDatabase.takeClosest(lab6pks,2.936f);
+//        PDDatabase.takeClosest(lab6pks,2.395f);
+//        PDDatabase.takeClosest(lab6pks,2.075f);
+//        PDDatabase.takeClosest(lab6pks,1.861f);
+//        PDDatabase.takeClosest(lab6pks,1.697f);
+//        PDDatabase.takeClosest(lab6pks,1.466f);
+//        PDDatabase.takeClosest(lab6pks,1.383f);
+//        PDDatabase.takeClosest(lab6pks,1.312f);
+//        PDDatabase.takeClosest(lab6pks,1.249f);
     }
     
     //CANVIEM PER NO UTILITZAR EL LM AMB TOTS ELS COMPOSTOS  -- AL FINAL NO, fem boto per tornar a mostrar tots
@@ -778,7 +722,7 @@ public class database_dialog extends JDialog {
             if (nsol >= maxNsol) break;
             PDDatabase.SearchResult c = itrcomp.next();
             int nrefcomp = c.getC().getNrRefUpToDspacing(minDSPin);
-            String outString = String.format("%6d  %7.3f  %d/%d  %s [%s]", c.getC().getOv_number(),c.getResidual(),nDSPin,nrefcomp,c.getC().getCompName(),c.getC().getFormula());
+            String outString = String.format("%6d  %7.3f  %d/%d  %s [%s]", c.getC().getCnumber(),c.getResidual(),nDSPin,nrefcomp,c.getC().getCompName(),c.getC().getFormula());
             lm.addElement(outString);
             nsol = nsol + 1;
         }
@@ -864,7 +808,21 @@ public class database_dialog extends JDialog {
             listCompounds.setModel(filteredListModel);
             filteredListModel.setFilter(new FilteredListModel.Filter() {
                 public boolean accept(Object element) {
-                    String s = (String)element;
+//                    String s = (String)element;
+                    
+                    //PROVA PER BUSCAR EN TOTS ELS CAMPS DE LA DATABASE (name, namealt, cell, comment, spacegroup,...)
+                    String listentry = (String)element;
+                    PDCompound comp = PDDatabase.get_compound_from_ovNum(Integer.parseInt(listentry.trim().split("\\s+")[0]));
+                    StringBuilder compinfo = new StringBuilder();
+                    compinfo.append(comp.getCompName()).append(" ");
+                    compinfo.append(comp.getFormula()).append(" ");
+                    compinfo.append(comp.getAltNames()).append(" ");
+                    compinfo.append(comp.getCellParameters()).append(" ");
+                    compinfo.append(comp.getSpaceGroup()).append(" ");
+                    compinfo.append(comp.getAllComments()).append(" ");
+                    
+                    String s = compinfo.toString().trim();
+                    
                     String[] sMult = txtNamefilter.getText().split("\\s+");
                     for (int i=0; i<sMult.length; i++){
                         if (!FileUtils.containsIgnoreCase(s, sMult[i])){
@@ -900,4 +858,204 @@ public class database_dialog extends JDialog {
     protected void do_btnResetSearch_actionPerformed(ActionEvent arg0) {
         this.updateListAllCompounds();
     }
+    protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
+        File f = FileUtils.fchooser(null, null, true);
+        boolean ok = PDDatabase.saveDB(f);
+        if (ok){
+            tAOut.stat("DB saved to "+f.toString());
+        }else{
+            tAOut.stat("Error saving file "+f.toString());
+        }
+        
+    }
+    protected void do_btnAddCompound_actionPerformed(ActionEvent arg0) {
+        DB_editor dbe = new DB_editor(null);
+        dbe.setVisible(true);
+    }
+    protected void do_btnEditCompound_actionPerformed(ActionEvent e) {
+        DB_editor dbe = new DB_editor(this.getCurrentCompound());
+        dbe.setVisible(true);
+    }
 }
+
+
+
+
+
+
+
+
+//ALTRES COSES QUE HE DESCARTAT
+
+//public void loadSearchPeaksResults(ArrayList<Float> searchlist){
+//    //aqui en principi tindrem una llista de resultats a PDDatabase i s'haurà de mostrar
+//    lm.clear();
+//    ArrayList<PDDatabase.SearchResult> res = PDDatabase.getSearchresults();
+//    Collections.sort(res);
+//    float minDSPin = Collections.min(searchlist);
+//    int nDSPin = searchlist.size();
+//    Iterator<PDDatabase.SearchResult> itrcomp = res.iterator();
+//    while (itrcomp.hasNext()){
+//        PDDatabase.SearchResult c = itrcomp.next();
+//        Iterator<Float> itref = c.getC().getDspacings().iterator();
+//        int nrefcomp = 0;
+//        while (itref.hasNext()){
+//            float r = itref.next();
+//            if (r>=(minDSPin-0.05f)){
+//                nrefcomp = nrefcomp + 1;
+//            }
+//        }
+//        lm.addElement(c.getC().printCompound().trim()+" "+c.getResidual()+" "+nDSPin+" "+nrefcomp);
+//    }
+//    lblHeader.setText(" RefNum  Residual  inputRefs/compoundRefs  CompoundName  [Formula] ");
+//}
+
+
+//private static class checkDBread implements Runnable {
+//
+//    Thread th;
+//    String fpath;
+//    
+//    checkDBread(Thread t, String filepath){
+//        this.th=t;
+//        this.fpath=filepath;
+//    }
+//    @Override
+//    public void run() {
+//        // TODO Auto-generated method stub
+//        while (th.isAlive()){
+//            try {
+//                VavaLogger.LOG.info("Sleep");
+//                Thread.sleep(1000);
+//            } catch (InterruptedException e) {
+//                // TODO Auto-generated catch block
+//                e.printStackTrace();
+//            }
+//            if (th.isInterrupted()){
+//                tAOut.stat("reading of DB file "+this.fpath+" stopped!");
+//                tAOut.stat(" --> ncompounds = "+PDDatabase.getnCompounds());    
+//                return;                    
+//            }
+//        }
+//        tAOut.stat("reading of DB file "+this.fpath+" stopped!");
+//        tAOut.stat(" --> ncompounds = "+PDDatabase.getnCompounds());    
+//    }
+//}
+
+
+//this.pBarDB.setIndeterminate(true);
+//this.pBarDB.setString("reading DB");
+//this.pBarDB.setStringPainted(true);
+
+//readDBFileThread = PDDatabase.readDataFile(fileChooser.getSelectedFile(),pBarDB);
+//checkDBread th = new checkDBread(readDBFileThread,fileChooser.getSelectedFile().toString()); 
+//SwingUtilities.invokeLater(th);
+
+
+
+
+
+//////////////AQUEST VA PERFECTE, ABANS DE CANVIAR PER LLEGIR ZIP
+
+//protected void do_btnLoadDB_actionPerformed(ActionEvent arg0) {
+//    
+//    //preguntem si carregar la DB interna o carregar un fitxer apart:
+//    
+//    URL zipUrl = this.getClass().getResource(localDB);
+//    try{
+//        File zipFile = new File(zipUrl.toURI());
+//        ZipFile zip = new ZipFile(zipFile);
+////        InputStream is = zip.getInputStream(zip.getEntry("codDB.db"));        
+//        pm = new ProgressMonitor(this,
+//                "Reading DB file...",
+//                "", 0, 100);
+//        pm.setProgress(0);
+//        openDBFwk = new PDDatabase.openDBfileWorker(zip); 
+//        openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
+//
+//            @Override
+//            public void propertyChange(PropertyChangeEvent evt) {
+//              //VavaLogger.LOG.info("hello from propertyChange");
+//              VavaLogger.LOG.info(evt.getPropertyName());
+//              if ("progress" == evt.getPropertyName() ) {
+//                  int progress = (Integer) evt.getNewValue();
+//                  pm.setProgress(progress);
+//                  pm.setNote(String.format("%d%%\n", progress));
+//                  if (pm.isCanceled() || openDBFwk.isDone()) {
+//                      Toolkit.getDefaultToolkit().beep();
+//                      if (pm.isCanceled()) {
+//                          openDBFwk.cancel(true);
+//                          tAOut.stat("reading of DB file "+openDBFwk.getReadedFile()+" stopped!");
+//                          tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
+//                      } else {
+//                          tAOut.stat("reading of DB file "+openDBFwk.getReadedFile()+" finished!");
+//                          tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
+//                      }
+//                      pm.close();
+//                      updateListAllCompounds();
+//                      //startButton.setEnabled(true);
+//                  }
+//              }
+//            }
+//        });
+//                
+//        openDBFwk.execute();
+//    }catch(Exception e){
+//        e.printStackTrace();
+//    }
+//    
+//    //////File file = new File(classLoader.getResource("file/test.xml").getFile());
+//    
+//    
+//    //Carrega un fitxer de base de dades
+//    JFileChooser fileChooser = new JFileChooser();
+//    FileNameExtensionFilter filter = new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat");
+//    fileChooser.addChoosableFileFilter(filter);
+//    fileChooser.setCurrentDirectory(new File(MainFrame.getWorkdir()));
+//    int selection = fileChooser.showOpenDialog(null);
+//    if (selection != JFileChooser.APPROVE_OPTION) {
+//        tAOut.stat("No data file selected");
+//        return;
+//    }
+//    //reset current Database
+//    PDDatabase.reset();
+//    
+//    pm = new ProgressMonitor(this,
+//            "Reading DB file...",
+//            "", 0, 100);
+//    pm.setProgress(0);
+//    openDBFwk = new PDDatabase.openDBfileWorker(fileChooser.getSelectedFile());
+//    openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
+//
+//        @Override
+//        public void propertyChange(PropertyChangeEvent evt) {
+//          //VavaLogger.LOG.info("hello from propertyChange");
+//          VavaLogger.LOG.info(evt.getPropertyName());
+//          if ("progress" == evt.getPropertyName() ) {
+//              int progress = (Integer) evt.getNewValue();
+//              pm.setProgress(progress);
+//              pm.setNote(String.format("%d%%\n", progress));
+//              if (pm.isCanceled() || openDBFwk.isDone()) {
+//                  Toolkit.getDefaultToolkit().beep();
+//                  if (pm.isCanceled()) {
+//                      openDBFwk.cancel(true);
+//                      tAOut.stat("reading of DB file "+openDBFwk.getDbfile()+" stopped!");
+//                      tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
+//                  } else {
+//                      tAOut.stat("reading of DB file "+openDBFwk.getDbfile()+" stopped!");
+//                      tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
+//                  }
+//                  pm.close();
+//                  updateListAllCompounds();
+//                  //startButton.setEnabled(true);
+//              }
+//          }
+//        }
+//    });
+//            
+//    openDBFwk.execute();
+//            
+//    //DEBUG ADD ALL COMPOUNDS TO LIST
+////    this.updateList();
+//    
+//}

@@ -7,7 +7,7 @@ import java.util.Locale;
 
 import org.apache.commons.math3.util.FastMath;
 
-public class PuntCercle {
+public class PuntCercle implements Comparable<PuntCercle>{
 
     private static Color colorCercle = Color.red;
     private static Color colorPunt = Color.green;
@@ -113,4 +113,16 @@ public class PuntCercle {
                 FastMath.toDegrees(this.t2), this.intensity);
         return linia;
     }
+    @Override
+    public int compareTo(PuntCercle o) {
+        // compareTo should return < 0 if this is supposed to be
+        // less than other, > 0 if this is supposed to be greater than 
+        // other and 0 if they are supposed to be equal
+        if (this.getT2()>=o.getT2()){
+            return 1;
+        }
+        return -1;
+    }
+    
+    
 }

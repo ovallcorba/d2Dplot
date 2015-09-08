@@ -112,7 +112,7 @@ public class MainFrame extends JFrame {
     private Pklist_dialog pkListWin;
     private LogJTextArea tAOut;
     private IntegracioRadial irWin;
-    private database_dialog dbDialog;
+    private DB_dialog dbDialog;
     private ArrayList<LAT_data> customLATs;
 
     public static String getBinDir() {return binDir;}
@@ -948,7 +948,11 @@ public class MainFrame extends JFrame {
         }
         solFile = fileChooser.getSelectedFile();
         panelImatge.clearSolutions();
-        solFile = openSol(solFile);
+        if (FileUtils.getExtension(solFile).equalsIgnoreCase("XDS")){
+            solFile = openXDS(solFile);
+        }else{
+            solFile = openSol(solFile);
+        }
         if (solFile == null) {
             tAOut.stat("No SOL file opened");
         } else {
@@ -1141,6 +1145,46 @@ public class MainFrame extends JFrame {
         }
     }
 
+    private File openXDS(File xdsFile) {
+        // list of: x,y,z,Intensity,(iseg),h,k,l
+        // (z is the image number where the centroid of the reflection is... it is FLOAT, does not correspond to exact an image)
+        try {
+            OrientSolucio.setNumSolucions(1); // num de solucions
+            OrientSolucio.setHasFc(0); // 0 sense Fc, 1 amb Fc
+            OrientSolucio.setGrainIdent(0);
+
+            panelImatge.getSolucions().add(new OrientSolucio(0)); // afegim una solucio
+            panelImatge.getSolucions().get(0).setGrainNr(0);
+            panelImatge.getSolucions().get(0).setValorFrot(0.0f); // valor funcio rotacio
+
+            int npunts = 0;
+            
+            Scanner scSolfile = new Scanner(xdsFile);
+            while(scSolfile.hasNextLine()){
+                String line = scSolfile.nextLine();
+                if (line.isEmpty()) continue;
+                npunts = npunts + 1;
+                VavaLogger.LOG.info("xdsfileline= "+line);
+                String lineS[] = line.trim().split("\\s+");
+                panelImatge
+                        .getSolucions()
+                        .get(0)
+                        .addSolPoint(Float.parseFloat(lineS[0]), Float.parseFloat(lineS[1]),
+                                Integer.parseInt(lineS[4]), Integer.parseInt(lineS[5]),
+                                Integer.parseInt(lineS[6]), 1.0f,
+                                Float.parseFloat(lineS[2]));
+                
+
+            }
+            scSolfile.close();
+            panelImatge.getSolucions().get(0).setNumReflexions(npunts);
+            
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return xdsFile;
+    }
+    
     private File openSol(File solFile) {
 
         String line;
@@ -1482,7 +1526,7 @@ public class MainFrame extends JFrame {
             if (exZones != null) exZones.dispose();
 
             if (dbDialog == null) {
-                dbDialog = new database_dialog(this);
+                dbDialog = new DB_dialog(this);
             }
             dbDialog.setVisible(true);
             panelImatge.setDBdialog(dbDialog);
@@ -1536,10 +1580,11 @@ public class MainFrame extends JFrame {
         }
         // llegim el LAT
         File latf = fileChooser.getSelectedFile();
-        LAT_data ld = new LAT_data(FileUtils.getFNameNoExt(latf));
+        LAT_data ld = new LAT_data(FileUtils.getFNameNoExt(latf.getName()));
         boolean ok = ld.readLATfile(latf);
         if (ok){
-            combo_LATdata.addItem(FileUtils.getFNameNoExt(latf));
+            combo_LATdata.addItem(FileUtils.getFNameNoExt(latf.getName()));
+            this.getCustomLATs().add(ld); //AFEGIDA!
         }
         
     }
