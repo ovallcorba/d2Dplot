@@ -11,9 +11,6 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -23,25 +20,14 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.BufferedInputStream;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.Scanner;
-import java.util.zip.ZipFile;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -54,8 +40,6 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.ProgressMonitor;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -63,13 +47,13 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
-import com.vava33.jutils.VavaLogger;
+import vava33.plot2d.auxi.VavaLogger;
 
-import vava33.plot2d.auxi.ExZone;
 import vava33.plot2d.auxi.FilteredListModel;
+import vava33.plot2d.auxi.ImgOps;
 import vava33.plot2d.auxi.PDCompound;
 import vava33.plot2d.auxi.PDDatabase;
-import vava33.plot2d.auxi.Pattern2D;
+import vava33.plot2d.auxi.PDSearchResult;
 import vava33.plot2d.auxi.PuntCercle;
 
 import javax.swing.event.ListSelectionListener;
@@ -78,8 +62,6 @@ import javax.swing.JProgressBar;
 
 import org.apache.commons.math3.util.FastMath;
 
-import java.awt.event.InputMethodListener;
-import java.awt.event.InputMethodEvent;
 import net.miginfocom.swing.MigLayout;
 
 public class DB_dialog extends JFrame {
@@ -254,7 +236,7 @@ public class DB_dialog extends JFrame {
                                 this.btnLoadDB.addActionListener(new ActionListener() {
                                     @Override
                                     public void actionPerformed(ActionEvent arg0) {
-                                        do_btnLoadDB_actionPerformed(arg0);
+                                        do_btnLoadDB_actionPerformed(arg0,true);
                                     }
                                 });
                             }
@@ -385,7 +367,8 @@ public class DB_dialog extends JFrame {
 //      patt2D = mf.getPatt2D();
         lm = new DefaultListModel();
         listCompounds.setModel(lm);
-
+        tAOut.ln(" Reading default database: "+PDDatabase.getDefaultDBpath());
+        do_btnLoadDB_actionPerformed(null,false);
     }
 
     @Override
@@ -394,8 +377,8 @@ public class DB_dialog extends JFrame {
         super.dispose();
     }
 
-
-    protected void do_btnLoadDB_actionPerformed(ActionEvent arg0) {
+    //boolean ask for default or not
+    protected void do_btnLoadDB_actionPerformed(ActionEvent arg0,boolean ask) {
         
         //primer creem el progress monitor, el worker i hi afegim el listener
         pm = new ProgressMonitor(this,
@@ -437,9 +420,11 @@ public class DB_dialog extends JFrame {
         });
         
         //Ara preguntem si carregar la DB interna o carregar un fitxer apart:
-        Object[] options = {"Load default DB",
-                            "Open external DB file"};
-        int n = JOptionPane.showOptionDialog(this,
+        int n = JOptionPane.YES_OPTION; //per defecte obrim local
+        if (ask){
+            Object[] options = {"Load default DB",
+            "Open external DB file"};
+            n = JOptionPane.showOptionDialog(this,
             "Open default DB or one from a file?",
             "Load DB",
             JOptionPane.YES_NO_OPTION,
@@ -447,8 +432,9 @@ public class DB_dialog extends JFrame {
             null,
             options,
             options[0]);
-        
-        VavaLogger.LOG.info("option = "+n);
+            
+            VavaLogger.LOG.info("option = "+n);
+        }
         
         if (n == JOptionPane.YES_OPTION) {
             //load internal DB
@@ -570,15 +556,30 @@ public class DB_dialog extends JFrame {
     public PDCompound getCurrentCompound() {
         if (listCompounds == null){return null;}
         if (listCompounds.getSelectedIndex() >= 0) {
-            String sel = (String) listCompounds.getSelectedValue();
-            int ov_index = Integer.parseInt((sel.trim().split("\\s+"))[0]);
-            PDCompound comp = PDDatabase.get_compound_from_ovNum(ov_index);
-//            tAOut.ln(comp.printInfoMultipleLines());
-            return comp;
-        } else {
-            return null;
+            if (listCompounds.getSelectedValue() instanceof PDCompound){
+                PDCompound comp = (PDCompound) listCompounds.getSelectedValue();
+                return comp;
+            }
+            if (listCompounds.getSelectedValue() instanceof PDSearchResult){
+                PDSearchResult sr = (PDSearchResult) listCompounds.getSelectedValue();
+                return sr.getC();
+            }
         }
+        return null;
     }
+    
+//    public PDCompound getCurrentCompound() {
+//        if (listCompounds == null){return null;}
+//        if (listCompounds.getSelectedIndex() >= 0) {
+//            String sel = (String) listCompounds.getSelectedValue();
+//            int ov_index = Integer.parseInt((sel.trim().split("\\s+"))[0]);
+//            PDCompound comp = PDDatabase.get_compound_from_ovNum(ov_index);
+////            tAOut.ln(comp.printInfoMultipleLines());
+//            return comp;
+//        } else {
+//            return null;
+//        }
+//    }
 
     public boolean isShowDataRings() {
         return showPDDataRings;
@@ -593,7 +594,8 @@ public class DB_dialog extends JFrame {
         int ncomp = PDDatabase.getCompList().size();
         while (itrcomp.hasNext()){
             PDCompound c = (PDCompound) itrcomp.next();
-            lm.addElement(c.printCompound()); //he tret el .trim()
+//            lm.addElement(c.printCompound()); //he tret el .trim()
+            lm.addElement(c); 
             //progress
             if (n%100 == 0){
                 pBarDB.setValue((int)(((float)n/(float)ncomp)/100.f));    
@@ -613,14 +615,14 @@ public class DB_dialog extends JFrame {
 //        tAOut.ln(c.getOv_number()+" "+c.getCompName()+" "+c.getFormula()+" "+c.getCodCODE());
 //        tAOut.ln(c.getA()+" "+c.getB()+" "+c.getC()+" "+c.getAlfa()+" "+c.getBeta()+" "+c.getGamma());
         tAOut.ln(c.printInfoMultipleLines());
-        for (int i=0; i<c.getPeaks().size();i++){
-            int h = c.getPeaks().get(i).getH();
-            int k = c.getPeaks().get(i).getK();
-            int l = c.getPeaks().get(i).getL();
-            float dsp = c.getPeaks().get(i).getDsp();
-            float inten = c.getPeaks().get(i).getInten();
-            tAOut.ln(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));
-        }
+//        for (int i=0; i<c.getPeaks().size();i++){
+//            int h = c.getPeaks().get(i).getH();
+//            int k = c.getPeaks().get(i).getK();
+//            int l = c.getPeaks().get(i).getL();
+//            float dsp = c.getPeaks().get(i).getDsp();
+//            float inten = c.getPeaks().get(i).getInten();
+//            tAOut.ln(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));
+//        }
         
         //debug:
         mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), c);
@@ -694,39 +696,41 @@ public class DB_dialog extends JFrame {
     public void loadSearchPeaksResults(ArrayList<Float> searchlist){
         //aqui en principi tindrem una llista de resultats a PDDatabase i s'haurà de mostrar
         lm.clear();
-        float minDSPin = Collections.min(searchlist);
-        int nDSPin = searchlist.size();
+//        float minDSPin = Collections.min(searchlist);
+//        int nDSPin = searchlist.size();
+        PDSearchResult.setMinDSPin(Collections.min(searchlist));
+        PDSearchResult.setnDSPin(searchlist.size());
         
-        ArrayList<PDDatabase.SearchResult> res = PDDatabase.getSearchresults();
+        ArrayList<PDSearchResult> res = PDDatabase.getSearchresults();
         
         //mirem si hi ha criteris complementaris pel residual
         if (chckbxIntensityInfo.isSelected() || chckbxNpksInfo.isSelected()){
-            Iterator<PDDatabase.SearchResult> itrcomp = res.iterator();
+            Iterator<PDSearchResult> itrcomp = res.iterator();
             while (itrcomp.hasNext()){
-                PDDatabase.SearchResult c = itrcomp.next();
+                PDSearchResult c = itrcomp.next();
                 float resid = c.getResidual();
                 if (chckbxIntensityInfo.isSelected()){
                     resid = resid + c.getResidual_intensities();
                 }
                 if (chckbxNpksInfo.isSelected()){
-                    resid = resid * (Math.max(c.getC().getNrRefUpToDspacing(minDSPin)/nDSPin,1));
+                    resid = resid * ((Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1))/2);
+//                    resid = resid * (Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1)); 
+//                                  * (Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1));
                 }
                 c.setResidual(resid);
             }            
         }
         
         Collections.sort(res);
-        Iterator<PDDatabase.SearchResult> itrcomp = res.iterator();
+        Iterator<PDSearchResult> itrcomp = res.iterator();
         int nsol = 0;
         while (itrcomp.hasNext()){
             if (nsol >= maxNsol) break;
-            PDDatabase.SearchResult c = itrcomp.next();
-            int nrefcomp = c.getC().getNrRefUpToDspacing(minDSPin);
-            String outString = String.format("%6d  %7.3f  %d/%d  %s [%s]", c.getC().getCnumber(),c.getResidual(),nDSPin,nrefcomp,c.getC().getCompName(),c.getC().getFormula());
-            lm.addElement(outString);
+            PDSearchResult c = itrcomp.next();
+            lm.addElement(c);
             nsol = nsol + 1;
         }
-        lblHeader.setText(" RefNum  Residual  inputRefs/compoundRefs  CompoundName  [Formula] ");
+        lblHeader.setText(" Residual  inputRefs/compoundRefs  CompoundName  [Formula] ");
     }
     
     public void searchPeaks(final ArrayList<Float> searchlist, ArrayList<Float> searchlistIntensities){
@@ -775,20 +779,20 @@ public class DB_dialog extends JFrame {
     
     
     protected void do_btnSearchByPeaks_actionPerformed(ActionEvent e) {
-        if (mf.getPanelImatge().getPuntsCercles().isEmpty()){
+        if (MainFrame.getPatt2D().getPuntsCercles().isEmpty()){
             tAOut.stat("Please select some peaks clicking in the image");
             return;
         }
-        Iterator<PuntCercle> itrP = mf.getPanelImatge().getPuntsCercles().iterator();
+        Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
         ArrayList<Float> searchlist = new ArrayList<Float>();
         ArrayList<Float> searchlistInten = new ArrayList<Float>();
         while (itrP.hasNext()) {
             PuntCercle pa = itrP.next();
-            float dsp = (float)mf.getPanelImatge().calcDsp(pa.getT2());
+            float dsp = (float)MainFrame.getPatt2D().calcDsp(pa.getT2());
             if (dsp > MainFrame.minDspacingToSearch){
                 searchlist.add(dsp);    
                 //per la intensitat fem el promig de l'anell
-                float circleInt = mf.getPatt2D().intRadCircle((float)FastMath.toDegrees(pa.getT2()), -1.f);
+                float circleInt = ImgOps.intRadCircle(MainFrame.getPatt2D(),(float)FastMath.toDegrees(pa.getT2()), -1.f);
                 VavaLogger.LOG.info("Intensity (NOT normalized to 100 or 1st peak) of peak: "+(float)FastMath.toDegrees(pa.getT2())+" is "+circleInt);
                 searchlistInten.add(circleInt);
             }
@@ -811,8 +815,24 @@ public class DB_dialog extends JFrame {
 //                    String s = (String)element;
                     
                     //PROVA PER BUSCAR EN TOTS ELS CAMPS DE LA DATABASE (name, namealt, cell, comment, spacegroup,...)
-                    String listentry = (String)element;
-                    PDCompound comp = PDDatabase.get_compound_from_ovNum(Integer.parseInt(listentry.trim().split("\\s+")[0]));
+//                    PDCompound comp = null;
+//                    if (element instanceof PDCompound){
+//                        comp = (PDCompound) listCompounds.getSelectedValue();
+//                    }
+//                    if (element instanceof PDSearchResult){
+//                        PDSearchResult sr = (PDSearchResult) listCompounds.getSelectedValue();
+//                        comp = sr.getC();
+//                    }
+//                    if (comp == null) return false;
+                    PDCompound comp = null;
+                    try{
+                        comp = (PDCompound)element;    
+                    }catch(Exception e){
+                        System.out.println("trying searchresult...");
+                        comp = ((PDSearchResult)element).getC();
+                    }
+                    if (comp == null) return false;
+                    
                     StringBuilder compinfo = new StringBuilder();
                     compinfo.append(comp.getCompName()).append(" ");
                     compinfo.append(comp.getFormula()).append(" ");
@@ -860,6 +880,7 @@ public class DB_dialog extends JFrame {
     }
     protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
         File f = FileUtils.fchooser(null, null, true);
+        if (f == null)return;
         boolean ok = PDDatabase.saveDB(f);
         if (ok){
             tAOut.stat("DB saved to "+f.toString());
@@ -869,11 +890,11 @@ public class DB_dialog extends JFrame {
         
     }
     protected void do_btnAddCompound_actionPerformed(ActionEvent arg0) {
-        DB_editor dbe = new DB_editor(null);
+        DB_editor dbe = new DB_editor(null,this);
         dbe.setVisible(true);
     }
     protected void do_btnEditCompound_actionPerformed(ActionEvent e) {
-        DB_editor dbe = new DB_editor(this.getCurrentCompound());
+        DB_editor dbe = new DB_editor(this.getCurrentCompound(),this);
         dbe.setVisible(true);
     }
 }

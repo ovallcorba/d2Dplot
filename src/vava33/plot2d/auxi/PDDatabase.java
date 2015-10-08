@@ -20,58 +20,18 @@ import javax.swing.SwingWorker;
 
 //import vava33.plot2d.auxi.PDCompound.DBreflection;
 
-import com.vava33.jutils.VavaLogger;
+
+import org.apache.commons.math3.util.FastMath;
+
+import vava33.plot2d.auxi.VavaLogger;
 
 public final class PDDatabase {
 
     private static int nCompounds = 0;
 //    private static final String localDB = "/latFiles/codDB.db";
-    private static final String localDB = "sample.db";
+    private static final String localDB = "default.db";
     private static ArrayList<PDCompound> compList = new ArrayList<PDCompound>();
-    private static ArrayList<SearchResult> searchresults = new ArrayList<SearchResult>();
-    
-    public static class SearchResult implements Comparable<SearchResult>{
-        
-        private PDCompound c;
-        private float residual_positions;
-        private float residual_intensities;
-        
-        public SearchResult(PDCompound comp, float res, float resInten){
-            this.c=comp;
-            this.residual_positions=res;
-            this.residual_intensities=resInten;
-        }
-        
-        public float getResidual() {
-            return residual_positions;
-        }
-        public void setResidual(float residual) {
-            this.residual_positions = residual;
-        }
-        public float getResidual_intensities() {
-            return residual_intensities;
-        }
-
-        public void setResidual_intensities(float residual_intensities) {
-            this.residual_intensities = residual_intensities;
-        }
-
-        public PDCompound getC() {
-            return c;
-        }
-        public void setC(PDCompound c) {
-            this.c = c;
-        }
-
-        @Override
-        public int compareTo(SearchResult arg0) {
-            float comparedR = arg0.getResidual();
-            float diff = this.residual_positions - comparedR;
-            if (diff > 0) return 1;
-            if (diff < 0) return -1;
-            return 0;
-        }
-    }
+    private static ArrayList<PDSearchResult> searchresults = new ArrayList<PDSearchResult>();
     
     
     public static void reset(){
@@ -84,16 +44,16 @@ public final class PDDatabase {
         nCompounds = nCompounds + 1;
     }
 
-    public static PDCompound get_compound_from_ovNum(int num){
-        Iterator<PDCompound> it = compList.iterator();
-        while (it.hasNext()){
-            PDCompound c = it.next();
-            if (c.getCnumber() == num){
-                return c;
-            }
-        }
-        return null;
-    }
+//    public static PDCompound get_compound_from_ovNum(int num){
+//        Iterator<PDCompound> it = compList.iterator();
+//        while (it.hasNext()){
+//            PDCompound c = it.next();
+//            if (c.getCnumber() == num){
+//                return c;
+//            }
+//        }
+//        return null;
+//    }
     
     public static int getnCompounds() {
         return nCompounds;
@@ -173,9 +133,13 @@ public final class PDDatabase {
             is.close();
         }
     }
-  
     
-    public static ArrayList<SearchResult> getSearchresults() {
+    public static String getDefaultDBpath(){
+        File f = new File(localDB);
+        return f.getAbsolutePath();
+    }
+    
+    public static ArrayList<PDSearchResult> getSearchresults() {
         return searchresults;
     }
     
@@ -199,11 +163,12 @@ public final class PDDatabase {
             
             Iterator<PDCompound> itC = compList.iterator();
             
-            int n = 1;
+//            int n = 1;
             while (itC.hasNext()){
                 PDCompound c = itC.next();
 //                output.println(String.format("#COMP: %d %s",c.getCnumber(),c.getCompName().get(0)));
-                output.println(String.format("#COMP: %d %s",n,c.getCompName().get(0)));
+//                output.println(String.format("#COMP: %d %s",n,c.getCompName().get(0)));
+                output.println(String.format("#COMP: %s",c.getCompName().get(0)));
                 
                 String altnames = c.getAltNames();
                 if (!altnames.isEmpty())output.println(String.format("#NAMEALT: %s",altnames));
@@ -244,7 +209,7 @@ public final class PDDatabase {
                     output.println(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));                    
                 }
                 output.println(); //linia en blanc entre compostos
-                n = n +1;
+//                n = n +1;
             }
             output.close();
         }catch(Exception e){
@@ -329,15 +294,30 @@ public final class PDDatabase {
                     
                     if ((line.startsWith("#COMP")) || (line.startsWith("#S "))) {  //#S per compatibilitat amb altres DBs
                         //new compound
-                        String[] cname = line.split("\\s+");
-                        StringBuilder sb = new StringBuilder();
-                        for (int i=2;i<cname.length;i++){
-                            sb.append(cname[i]);
-                            sb.append(" ");
+                        
+                        PDCompound comp;
+                        if (line.startsWith("#S ")){
+                          String[] cname = line.split("\\s+");
+                          StringBuilder sb = new StringBuilder();
+                          for (int i=2;i<cname.length;i++){
+                              sb.append(cname[i]);
+                              sb.append(" ");
+                          }
+                          
+                          comp = new PDCompound(sb.toString().trim());
+                        }else{
+                          comp = new PDCompound(line.split(":")[1].trim());
                         }
                         
-                        PDCompound comp = new PDCompound(sb.toString().trim());
-                        comp.setCnumber(Integer.parseInt(cname[1]));
+//                        String[] cname = line.split("\\s+");
+//                        StringBuilder sb = new StringBuilder();
+//                        for (int i=2;i<cname.length;i++){
+//                            sb.append(cname[i]);
+//                            sb.append(" ");
+//                        }
+//                        
+//                        PDCompound comp = new PDCompound(sb.toString().trim());
+//                        comp.setCnumber(Integer.parseInt(cname[1]));
                         
                         boolean cfinished = false;
                         while (!cfinished){
@@ -463,7 +443,7 @@ public final class PDDatabase {
                             } catch (Exception e) {
                                 // TODO Auto-generated catch block
                                 e.printStackTrace();
-                                VavaLogger.LOG.info("error reading compound num. "+comp.getCnumber());
+                                VavaLogger.LOG.info("error reading compound: "+comp.getCompName());
                             }                        
                             
                         }
@@ -487,7 +467,7 @@ public final class PDDatabase {
         public String getReadedFile(){
             if (this.readLocal){
 //                return this.zfile.toString();
-                return "(internal)";
+                return localDB;
             }else{
                 return this.dbfile.toString();
             }
@@ -545,16 +525,20 @@ public final class PDDatabase {
                 while (itrPks.hasNext()){
                     float dsp = itrPks.next();  //pic entrat a buscar
                     int index = c.closestPeak(dsp);
-                    diffPositions = diffPositions + Math.abs(dsp-c.getPeaks().get(index).getDsp());
+                    float diffpk = FastMath.abs(dsp-c.getPeaks().get(index).getDsp());
+//                    diffPositions = diffPositions + diffpk; //es podria fer més estricte
+//                    diffPositions = diffPositions + (1+diffpk)*(1+diffpk); //una especie de quadrat...
+                    diffPositions = diffPositions + (diffpk*2.5f); 
                     float intensity = this.slistInten.get(npk);
                     //normalitzem la intensitat utilitzant el maxim dels N primers pics.
                     intensity = (intensity/maxIslist) * maxI_factorPerNormalitzar;
                     if (c.getPeaks().get(index).getInten()>=0){ //no tenim en compte les -1 (NaN)
-                        diffIntensities = diffIntensities + Math.abs(intensity-c.getPeaks().get(index).getInten());    
+                        diffIntensities = diffIntensities + FastMath.abs(intensity-c.getPeaks().get(index).getInten());    
                     }
                     npk = npk +1;
                 }
-                searchresults.add(new SearchResult(c,diffPositions,diffIntensities));
+//                searchresults.add(new PDSearchResult(c,(float)FastMath.sqrt(diffPositions),diffIntensities));
+                searchresults.add(new PDSearchResult(c,diffPositions,diffIntensities));
                 compIndex = compIndex + 1;
                 
                 if ((compIndex % 500) == 0){
@@ -571,5 +555,4 @@ public final class PDDatabase {
             this.stop = stop;
         }
     }
-    
 }

@@ -3,13 +3,10 @@ package vava33.plot2d.auxi;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
-
-import org.apache.commons.math3.util.FastMath;
 
 public class PDCompound {
     
-    private int cnumber; //compound number in the DB
+//    private int cnumber; //compound number in the DB
     private ArrayList<String> compName;
     private float a;
     private float b;
@@ -71,50 +68,63 @@ public class PDCompound {
         this.formula = elem;
     }
     
-    public String printCompound(){
+    public String toString(){
         //return String.format("%d %s %s", this.getOv_number(), this.getCompName(), this.getFormula());
-        return String.format("%6d %s [%s]", this.getCnumber(), this.getCompName().get(0), this.getFormula());
+//        return String.format("%6d %s [%s]", this.getCnumber(), this.getCompName().get(0), this.getFormula());
+        return String.format("%s [%s]", this.getCompName().get(0), this.getFormula());
     }
     
     public String printInfoLine(){
-        return String.format("#%d: %.4f %.4f %.4f %.3f %.3f %.3f (s.g. %s)", this.getCnumber(), this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma(),this.getSpaceGroup());
+        return String.format("%s: %.4f %.4f %.4f %.3f %.3f %.3f (s.g. %s)", this.getCompName().get(0), this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma(),this.getSpaceGroup());
     }
     
     //TODO: REESTILITZAR
     public String printInfoMultipleLines(){
         //return String.format("%d %s %s", this.getOv_number(), this.getCompName(), this.getFormula());
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("--- Compound num. %d  ---\n", this.getCnumber()));
-        sb.append(String.format(" Name:     %s\n", this.getCompName().get(0)));
+//        sb.append(String.format("--- Compound num. %d  ---\n", this.getCnumber()));
+        sb.append(String.format(" %s [%s]\n", this.getCompName().get(0),this.getFormula()));
         String altnames = this.getAltNames();
-        if (!altnames.isEmpty())sb.append(String.format(" NameAlt:     %s\n", altnames));
-        sb.append(String.format(" Formula:  %s\n", this.getFormula()));
-        sb.append(String.format(" CellPars: %.4f %.4f %.4f %.3f %.3f %.3f\n", this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma()));
-        sb.append(String.format(" SGroup:   %s\n", this.getSpaceGroup()));
+        if (!altnames.isEmpty())sb.append(String.format(" Other names: %s\n", altnames));
+//        sb.append(String.format(" Formula: %s\n", this.getFormula()));
+        sb.append(String.format(" Cell: %.4f %.4f %.4f %.3f %.3f %.3f (s.g. %s)\n", this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma(),this.getSpaceGroup()));
+//        sb.append(String.format(" SGroup: %s\n", this.getSpaceGroup()));
         if (!this.getReference().isEmpty()) {
-            sb.append(String.format(" Reference:     %s\n", this.getReference()));
-        }        
-        if (!this.getComment().isEmpty()) {
-            int index = 0;
-            while (index < getComment().size()){
-                sb.append(String.format(" Comment:     %s\n", this.getComment().get(index)));
-                index = index + 1;
-            }
-        }                
-        if (!this.getComment().isEmpty()) {
-            int index = 0;
-            while (index < getComment().size()){
-                sb.append(String.format(" Comment:     %s\n", this.getComment().get(index)));
-                index = index + 1;
-            }
-        }        
-        sb.append(String.format("-------\n"));
+            sb.append(String.format(" Reference: %s\n", this.getReference()));
+        }   
+        String comments = this.getAllComments();
+        if (!comments.isEmpty())sb.append(String.format(" Comments: %s\n", comments));
+        sb.append(" Reflection list:\n");
+        
+//        for (int i=0; i<this.getPeaks().size();i++){
+//          int h = this.getPeaks().get(i).getH();
+//          int k = this.getPeaks().get(i).getK();
+//          int l = this.getPeaks().get(i).getL();
+//          float dsp = this.getPeaks().get(i).getDsp();
+//          float inten = this.getPeaks().get(i).getInten();
+//          sb.append(String.format("   %3d %3d %3d %9.5f %7.2f\n",h,k,l,dsp,inten));
+//        }
+        
+        sb.append(this.getHKLlines());
+        
         return sb.toString();
+    }
+    
+    public String getHKLlines(){
+        StringBuilder sb = new StringBuilder();
+        for (int i=0; i<this.getPeaks().size();i++){
+            int h = this.getPeaks().get(i).getH();
+            int k = this.getPeaks().get(i).getK();
+            int l = this.getPeaks().get(i).getL();
+            float dsp = this.getPeaks().get(i).getDsp();
+            float inten = this.getPeaks().get(i).getInten();
+            sb.append(String.format("%3d %3d %3d %9.5f %7.2f\n",h,k,l,dsp,inten));
+          }
+          return sb.toString();
     }
     
     public String getCellParameters(){
         return String.format("%.4f %.4f %.4f %.3f %.3f %.3f", this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma());
-
     }
     
     public int getNrRefUpToDspacing(float dspacing){
@@ -298,13 +308,13 @@ public class PDCompound {
     }
     
     
-    public int getCnumber() {
-        return cnumber;
-    }
-
-    public void setCnumber(int cnumber) {
-        this.cnumber = cnumber;
-    }
+//    public int getCnumber() {
+//        return cnumber;
+//    }
+//
+//    public void setCnumber(int cnumber) {
+//        this.cnumber = cnumber;
+//    }
 
     public String getReference() {
         return reference;
