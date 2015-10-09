@@ -53,7 +53,7 @@ public class Contrast_dialog extends JDialog {
         setModal(true);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         this.ip=ip;
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Calib_dialog.class.getResource("/img/Icona.png")));
+        setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource("/img/Icona.png")));
         setTitle("Contrast Slide Parameters");
         setBounds(100, 100, 320, 290);
         getContentPane().setLayout(new BorderLayout());

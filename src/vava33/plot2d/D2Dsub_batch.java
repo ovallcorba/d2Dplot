@@ -1033,7 +1033,7 @@ public class D2Dsub_batch extends JFrame {
 					//save file
 					Pattern2D result = bs.getDataWork();
 					String pathOut = FileUtils.getFNameNoExt(fpath).concat("_BkgSub.bin");
-					ImgFileUtils.saveBIN(new File(pathOut), result);
+					ImgFileUtils.writeBIN(new File(pathOut), result);
 //					try{
 //						runBkg.interrupt();
 //					}catch(Exception e){
@@ -1046,7 +1046,7 @@ public class D2Dsub_batch extends JFrame {
 					if(chckbxSaveBkg.isSelected()){
 						Pattern2D fons = bs.getDataFons();
 						pathOut = FileUtils.getFNameNoExt(fpath).concat("_Bkg.bin");
-						ImgFileUtils.saveBIN(new File(pathOut), fons);
+						ImgFileUtils.writeBIN(new File(pathOut), fons);
 						tAOut.stat("Background saved to: "+ pathOut);	
 					}
 					
@@ -1209,7 +1209,7 @@ public class D2Dsub_batch extends JFrame {
 				
 				if(doLP){
 				    tAOut.stat("LP correction... ");
-				    dataWork = ImgOps.corrLP(dataWork, this.ipol, this.ilor, false);
+				    dataWork = ImgOps.corrLP(dataWork, this.ipol, this.ilor, -1, false);//EIX PER DEFECTE -1 VERTICAL
 				    tAOut.stat("LP correction... DONE!");
 				}
 				

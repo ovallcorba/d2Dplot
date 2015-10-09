@@ -17,20 +17,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.html.HTMLDocument;
-import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.JSeparator;
-import java.awt.Font;
-import java.awt.Dialog.ModalityType;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.JTextArea;
-import java.awt.SystemColor;
-import java.awt.Color;
-import java.io.IOException;
-
-import javax.swing.JTextPane;
 
 public class Help_dialog extends JDialog {
 

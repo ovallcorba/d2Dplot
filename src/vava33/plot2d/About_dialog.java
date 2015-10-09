@@ -14,9 +14,11 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
+import java.awt.Font;
 
 public class About_dialog extends JDialog {
 
@@ -52,7 +54,7 @@ public class About_dialog extends JDialog {
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 570, 630);
+        setBounds(x, y, 570, 680);
         getContentPane().setLayout(new BorderLayout());
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
@@ -72,7 +74,9 @@ public class About_dialog extends JDialog {
         }
         {
             JLabel lblAbout = new JLabel(
-                    "<html> \r\n<div style=\"text-align:center\"> \r\n<b><font size=+0>Oriol Vallcorba, Jordi Rius, Carlos Frontera & Carles Miravitlles</font></b>\r\n<br>\r\nInstitut de Ci\u00E8ncia de Materials de Barcelona<br>\r\nConsejo Superior de Investigaciones Cient\u00EDficas<br>\r\n08193 Bellaterra, Catalunya, Spain<br>\r\n<br>\r\nFor comments/errors/suggestions, please contact to: <strong>ovallcorba@icmab.es</strong><br>\r\n</div>\r\n<br>\r\n<div style=\"text-align:justify\"> \r\n<b><font size=+0>Conditions of use</font></b><br>\r\nThis software can be used free of charge for non-commercial academic purposes only. For any other purpose, please contact directly with the authors. Further distribution of this software is not allowed. The permission for using this software expires by end of 2015 and then it must be deleted.<br>\r\nCitation of the reference <u>XXXX</u> would be greatly appreciated when publishing works done with it.\r\n<br><br>\r\n<b><font size=+0>Disclaimer</font></b><br>\r\nThis software is distributed WITHOUT ANY WARRANTY. The authors (or their institutions) have no liabilities in respect of errors in the software, in the documentation and in any consequence of erroneous results or damages arising out of the use or inability to use this software. Use it at your own risk.\r\n<br><font size=-2>&nbsp;<br></font>\r\n<font size=-1>This 2D XRD visualization program is Java&trade; powered </font>\r\n<br><br>\r\n<b><font size=+0>Acknowledgements</font></b><br>\r\nThanks are due the Spanish \u2018Ministerio de Ciencia e Innovaci\u00F3n\u2019 and to the \u2018Generalitat the Catalunya\u2019 for continued financial support.\r\n<br><br>\r\n<font size=-1>\r\n&copy; O.Vallcorba & J.Rius 2013 <br>\r\nInstitut de Ci\u00E8ncia de Materials de Barcelona (CSIC)\r\n</font>\r\n<br>\r\n</div>\r\n</html> ");
+//                    "<html> \r\n<div style=\"text-align:center\"> \r\n<b><font size=+0>Oriol Vallcorba</font></b>\r\n<br>\r\nExperiments Division - MSPD Beamline (BL04)<br>\r\nALBA Synchrotron Light Source - CELLS (www.cells.es)<br>\r\n[Previous affiliation: Institut de Ci\u00E8ncia de Materials de Barcelona (ICMAB-CSIC)]<br>\r\n<br>\r\n<b><font size=+0>Jordi Rius</font></b>\r\n<br>\r\nInstitut de Ci\u00E8ncia de Materials de Barcelona (ICMAB)<br>\r\nConsejo Superior de Investigaciones Cient\u00EDficas (CSIC)<br>\r\n<br>\r\nFor comments/errors/suggestions, please contact to: <strong>ovallcorba@cells.es</strong><br>\r\n</div>\r\n<br>\r\n<div style=\"text-align:justify\"> \r\n<b><font size=+0>Conditions of use</font></b><br>\r\nThis software can be used free of charge for non-commercial academic purposes only. For any other purpose, please contact directly with the author. Further distribution of this software is not allowed.<br>\r\nCitation of the reference <u>XXXX</u> would be greatly appreciated when publishing works done with it.\r\n<br><br>\r\n<b><font size=+0>Disclaimer</font></b><br>\r\nThis software is distributed WITHOUT ANY WARRANTY. The authors (or their institutions) have no liabilities in respect of errors in the software, in the documentation and in any consequence of erroneous results or damages arising out of the use or inability to use this software. Use it at your own risk.\r\n<br><font size=-2>&nbsp;<br></font>\r\n<font size=-1>D2Dplot is programmed with Java&trade;</font>\r\n<br><br>\r\n<b><font size=+0>Acknowledgements</font></b><br>\r\nThanks are due the Spanish \u2018Ministerio de Ciencia e Innovaci\u00F3n\u2019 and to the \u2018Generalitat the Catalunya\u2019 for continued financial support.\r\n<br><br>\r\n<font size=-1>\r\n&copy; O.Vallcorba 2014 <br>\r\nICMAB-CSIC & ALBA-CELLS.\r\n</font>\r\n<br>\r\n</div>\r\n</html> ");
+                    "<html> <div style=\"text-align:center\"> Author: <b><font size=+0>Oriol Vallcorba</font></b><br>Experiments Division - MSPD Beamline (BL04)<br>ALBA Synchrotron Light Source - CELLS (www.cells.es)<br><br><font size=-1>Collaborator: <b> Jordi Rius</b><br>Institut de Ci\u00E8ncia de Materials de Barcelona (ICMAB)<br>Consejo Superior de Investigaciones Cient\u00EDficas (CSIC)</font><br><br>For comments/errors/suggestions, please contact to: <strong>ovallcorba@cells.es</strong><br></div><br><div style=\"text-align:justify\"> <b><font size=+0>Conditions of use</font></b><br>This software can be used free of charge for non-commercial academic purposes only. For any other purpose, please contact directly with the author. Further distribution of this software is not allowed.<br>Citation of the author/program/affiliation would be greatly appreciated when publishing works done with it.<br><br><b><font size=+0>Disclaimer</font></b><br>This software is distributed WITHOUT ANY WARRANTY. The authors (or their institutions) have no liabilities in respect of errors in the software, in the documentation and in any consequence of erroneous results or damages arising out of the use or inability to use this software. Use it at your own risk.<br><font size=-2>&nbsp;<br></font><font size=-1>D2Dplot is programmed with Java&trade;</font><br><br><b><font size=+0>Acknowledgements</font></b><br>Thanks are due the Spanish \u2018Ministerio de Ciencia e Innovaci\u00F3n\u2019 and to the \u2018Generalitat the Catalunya\u2019 for continued financial support.<br><br><font size=-1>&copy; O.Vallcorba 2014 <br>ALBA-CELLS.</font><br></div></html>");
+            lblAbout.setFont(new Font("Dialog", Font.PLAIN, 12));
             GridBagConstraints gbc_lblAbout = new GridBagConstraints();
             gbc_lblAbout.insets = new Insets(0, 5, 0, 5);
             gbc_lblAbout.fill = GridBagConstraints.HORIZONTAL;
@@ -147,6 +151,10 @@ public class About_dialog extends JDialog {
         // } catch (Exception e) {
         // e.printStackTrace();
         // }
+    	JOptionPane.showMessageDialog(this,
+    		    "Sorry, no user's guide yet!",
+    		    "D2Dplot",
+    		    JOptionPane.PLAIN_MESSAGE);
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {

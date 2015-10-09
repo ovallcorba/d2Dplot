@@ -6,7 +6,7 @@ package vava33.plot2d.auxi;
 ////
 //----------------------------------------------------------------------------//
 //<editor-fold defaultstate="collapsed" desc="hdr">                          //
-//Copyright © Hervé Bitteur and others 2000-2013. All rights reserved.      //
+//Copyright ï¿½ Hervï¿½ Bitteur and others 2000-2013. All rights reserved.      //
 //This software is released under the GNU General Public License.           //
 //Goto http://kenai.com/projects/audiveris to report bugs or suggestions.   //
 //----------------------------------------------------------------------------//
@@ -19,7 +19,7 @@ import java.awt.geom.Point2D;
 
 import org.apache.commons.math3.util.FastMath;
 
-import com.vava33.jutils.VavaLogger;
+import vava33.plot2d.auxi.VavaLogger;
 
 /**
  * Class {@code Ellipse} implements the direct algorithm of Fitzgibbon
@@ -32,7 +32,7 @@ import com.vava33.jutils.VavaLogger;
  * <p>It can also compute the ellipse characteristics (center, theta, major,
  * minor) from its algebraic equation.
  *
- * @author Hervé Bitteur
+ * @author Hervï¿½ Bitteur
  */
 public class Ellipse
 {

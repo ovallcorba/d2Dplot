@@ -33,7 +33,7 @@ import javax.swing.JList;
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.VavaLogger;
+import vava33.plot2d.auxi.VavaLogger;
 
 import javax.swing.JCheckBox;
 import javax.swing.SwingConstants;
@@ -263,7 +263,7 @@ public class Pklist_dialog extends JDialog {
         if (panelImatge.isShowIndexing()){
         	lm.clear();
         	//mostrem la llista puntsCercles
-            Iterator<PuntCercle> itrP = panelImatge.getPuntsCercles().iterator();
+            Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
             int i = 1;
             lblPeakList.setText(" Num     pX       pY       2T       I");
             while (itrP.hasNext()) {
@@ -276,7 +276,7 @@ public class Pklist_dialog extends JDialog {
         if (panelImatge.isShowHKLIndexing()){
         	//aqui no borrem sino que afegim
         	//mostrem a la llista els punts HKL que s'han modificat les coordenades clic
-    	    Iterator<OrientSolucio> itrOS = panelImatge.getSolucions().iterator();
+    	    Iterator<OrientSolucio> itrOS = MainFrame.getPatt2D().getSolucions().iterator();
     	    OrientSolucio os = null;
     	    while (itrOS.hasNext()) {
     	        os = itrOS.next();
@@ -308,12 +308,12 @@ public class Pklist_dialog extends JDialog {
 		if(list_pk.getModel().getSize()<=0)return;
 		if (panelImatge.isShowIndexing()){
 			//borrem la llista de PuntsCercles i actualiztem llista
-			panelImatge.getPuntsCercles().clear();
+		    MainFrame.getPatt2D().getPuntsCercles().clear();
 		}
 		if (panelImatge.isShowHKLIndexing()){
 			JOptionPane.showMessageDialog(this, "Peaks will not be deleted from the file, click on \"Save as\" to save the new list");
 			//posem tots els "clic" a -1
-    	    Iterator<OrientSolucio> itrOS = panelImatge.getSolucions().iterator();
+    	    Iterator<OrientSolucio> itrOS = MainFrame.getPatt2D().getSolucions().iterator();
     	    OrientSolucio os = null;
     	    while (itrOS.hasNext()) {
     	        os = itrOS.next();
@@ -343,19 +343,19 @@ public class Pklist_dialog extends JDialog {
 			float selx = Float.parseFloat(sel[1]);
 			float sely = Float.parseFloat(sel[2]);
 			float tol = 0.1f;
-            Iterator<PuntCercle> itrP = panelImatge.getPuntsCercles().iterator();
+            Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
             while (itrP.hasNext()) {
                 PuntCercle pa = itrP.next();
                 if ((FastMath.abs(pa.getX()-selx)<=tol)&&(FastMath.abs(pa.getY()-sely)<=tol)){
                 	//es el mateix punt, el borrem
-                	panelImatge.getPuntsCercles().remove(pa);
+                    MainFrame.getPatt2D().getPuntsCercles().remove(pa);
                 }
             }
 		}
 		if (panelImatge.isShowHKLIndexing()){
 			JOptionPane.showMessageDialog(this, "Peaks will not be deleted from the file, click on \"Save as\" to save the new list");
 			//posem a l'element seleccionat els "clic" a -1
-    	    Iterator<OrientSolucio> itrOS = panelImatge.getSolucions().iterator();
+    	    Iterator<OrientSolucio> itrOS = MainFrame.getPatt2D().getSolucions().iterator();
     	    OrientSolucio os = null;
     	    while (itrOS.hasNext()) {
     	        os = itrOS.next();
@@ -408,7 +408,7 @@ public class Pklist_dialog extends JDialog {
 			    //escribim els elements de la llista
 				//primer ordenem la llista !220415
 				ArrayList<PuntCercle> ord = new ArrayList<PuntCercle>();
-				Iterator<PuntCercle> itrP = panelImatge.getPuntsCercles().iterator();
+				Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
      		    while (itrP.hasNext()) {
      		        ord.add(itrP.next());
      		    }

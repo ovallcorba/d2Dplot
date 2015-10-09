@@ -24,8 +24,6 @@ import java.io.File;
 import javax.swing.ButtonModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -87,7 +85,6 @@ public class D2Dsub_frame extends JFrame {
     private Thread runBkg;
     private File glassD2File;
     private Pattern2D pattBef, pattAft, pattBkg;
-    private MainFrame principal;
     private JComboBox comboBox;
     private JTextField txtAmplada;
     private JTextField txtAngle;
@@ -123,14 +120,13 @@ public class D2Dsub_frame extends JFrame {
     /**
      * Create the dialog.
      */
-    public D2Dsub_frame(MainFrame mf) {
+    public D2Dsub_frame() {
     	addWindowListener(new WindowAdapter() {
     		@Override
     		public void windowClosing(WindowEvent arg0) {
     			do_this_windowClosing(arg0);
     		}
     	});
-        this.principal = mf;
         UIManager.put("ProgressBar.selectionBackground", Color.black);
         setIconImage(Toolkit.getDefaultToolkit().getImage(D2Dsub_frame.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -773,7 +769,7 @@ public class D2Dsub_frame extends JFrame {
         this.setBounds(x, y, width, height);
         
         //Diagrama inicial
-        setPattBef(this.principal.getPatt2D());
+        setPattBef(MainFrame.getPatt2D());
 		txtPathBefore.setText(getPattBef().getImgfile().toString());
         
         //mostrem titol i versio D2Dsub
@@ -802,7 +798,7 @@ public class D2Dsub_frame extends JFrame {
 	public void setPattAft(Pattern2D pattAft) {
 		this.pattAft = pattAft;
 		//s'ha de mostrar al mainframe i activar reload previous:
-        principal.updatePatt2D(this.pattAft,false);
+        MainFrame.updatePatt2D(this.pattAft,false);
         this.btnReload.setText("Reload Source");
 	}
 
@@ -840,10 +836,10 @@ public class D2Dsub_frame extends JFrame {
     protected void do_btnReload_actionPerformed(ActionEvent e) {
     	//torna a carregar el pattBefore al mainframe o b� el resultat
     	if(this.btnReload.getText().startsWith("Reload")){
-        	this.principal.updatePatt2D(this.getPattBef(),false);
+        	MainFrame.updatePatt2D(this.getPattBef(),false);
         	this.btnReload.setText("Load Result");
     	}else{ //load result
-    		this.principal.updatePatt2D(this.getPattAft(),false);
+    	    MainFrame.updatePatt2D(this.getPattAft(),false);
     		this.btnReload.setText("Reload Source");
     	}
     }
@@ -857,9 +853,9 @@ public class D2Dsub_frame extends JFrame {
     		tAOut.ln("WARNING: file not saved");
     		return false;
     	}
-    	fsave = ImgFileUtils.saveBIN(fsave, this.getPattAft());
+    	fsave = ImgFileUtils.writeBIN(fsave, this.getPattAft());
     	this.getPattAft().setImgfile(fsave);
-    	principal.updatePatt2D(fsave);
+    	MainFrame.updatePatt2D(fsave);
     	tAOut.ln("File saved: "+fsave.toString());
     	return true;
     }
@@ -1007,7 +1003,7 @@ public class D2Dsub_frame extends JFrame {
 	                JOptionPane.YES_NO_OPTION);
 	        if (n == JOptionPane.YES_OPTION) {
 	        	this.setPattBef(this.getPattAft());
-	            principal.updatePatt2D(this.getPattBef(),false);
+	        	MainFrame.updatePatt2D(this.getPattBef(),false);
 	        }
 		}
 		
@@ -1222,7 +1218,7 @@ public class D2Dsub_frame extends JFrame {
 				
 				if(doLP){
 					tAOut.afegirText(true, true,"LP correction... ");
-				    dataWork = ImgOps.corrLP(dataWork, this.ipol, this.ilor, false);
+				    dataWork = ImgOps.corrLP(dataWork, this.ipol, this.ilor,-1, false); //EIX PER DEFECTE -1 VERTICAL
 				    tAOut.afegirText(true, true,"LP correction... DONE!");
 				}
 				
@@ -1258,6 +1254,11 @@ public class D2Dsub_frame extends JFrame {
     
     private class NoneSelectedButtonGroup extends ButtonGroup {
 
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 1L;
+
         @Override
         public void setSelected(ButtonModel model, boolean selected) {
 
@@ -1286,11 +1287,11 @@ public class D2Dsub_frame extends JFrame {
 	        	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin)", "bin")};
 	        	File fsave = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
 	        	if (fsave == null){
-	    			this.principal.gettAOut().ln("WARNING: Background subtracted data not saved to image file!");
+	        	    MainFrame.gettAOut().ln("WARNING: Background subtracted data not saved to image file!");
 	        	}
-	        	ImgFileUtils.saveBIN(fsave, this.getPattAft());
+	        	ImgFileUtils.writeBIN(fsave, this.getPattAft());
 	        	this.getPattAft().setImgfile(fsave);
-	        	principal.updatePatt2D(fsave);
+	        	MainFrame.updatePatt2D(fsave);
 	        }
 		}
 		this.dispose();

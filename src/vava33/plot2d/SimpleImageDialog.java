@@ -1,7 +1,6 @@
 package vava33.plot2d;
 
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.Toolkit;
 
 import javax.swing.JButton;
@@ -13,8 +12,6 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
-
-import javax.swing.JTextField;
 
 import com.vava33.jutils.FileUtils;
 
@@ -28,7 +25,12 @@ import java.io.File;
 
 public class SimpleImageDialog extends JDialog {
 
-	private final JPanel contentPanel = new JPanel();
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+
+    private final JPanel contentPanel = new JPanel();
 
 	Pattern2D patt2D;
 	private ImagePanel panel;
@@ -135,7 +137,7 @@ public class SimpleImageDialog extends JDialog {
     	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin)", "bin")};
     	File fsave = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
     	if (fsave == null)return;
-    	fsave = ImgFileUtils.saveBIN(fsave, this.patt2D);
+    	fsave = ImgFileUtils.writeBIN(fsave, this.patt2D);
     	this.patt2D.setImgfile(fsave);
     }
 	protected void do_btnResetView_actionPerformed(ActionEvent e) {

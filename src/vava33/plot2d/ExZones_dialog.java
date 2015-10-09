@@ -43,8 +43,10 @@ import javax.swing.event.DocumentListener;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 
-import vava33.plot2d.auxi.ExZone;
+import vava33.plot2d.auxi.ImgFileUtils;
+import vava33.plot2d.auxi.PolyExZone;
 import vava33.plot2d.auxi.Pattern2D;
+import net.miginfocom.swing.MigLayout;
 
 public class ExZones_dialog extends JDialog {
 
@@ -67,15 +69,26 @@ public class ExZones_dialog extends JDialog {
     private JTextField txtMargin;
     
     private DefaultListModel lm;
-    private File dataFile;
     private Pattern2D patt2D;
-    private boolean setExZones;
-    private JCheckBox chckbxYToMask;
+    private JTextField txtThreshold;
 
+    private boolean setExZones;
+    
+    private boolean drawingExZone; //true while drawing
+    private boolean editingExZone; //true while editing
+    
+    private PolyExZone currentExZ;
+    private JLabel lblPolygonalZones;
+    private JLabel lblThreshold;
+    private JPanel panel;
+    private JButton btnApply;
+    private JButton btnReadExzFile;
+    
     /**
      * Create the dialog.
      */
-    public ExZones_dialog(MainFrame mf) {
+    public ExZones_dialog() {
+        setAlwaysOnTop(true);
         setIconImage(Toolkit.getDefaultToolkit().getImage(ExZones_dialog.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Excluded Zones");
@@ -85,7 +98,7 @@ public class ExZones_dialog extends JDialog {
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 312, 450);
+        setBounds(x, y, 409, 450);
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         GridBagLayout gbl_contentPanel = new GridBagLayout();
@@ -105,31 +118,21 @@ public class ExZones_dialog extends JDialog {
             {
                 this.panel_left = new JPanel();
                 this.splitPane.setLeftComponent(this.panel_left);
-                GridBagLayout gbl_panel_left = new GridBagLayout();
-                gbl_panel_left.columnWidths = new int[] { 0, 0, 0, 0, 0 };
-                gbl_panel_left.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
-                gbl_panel_left.columnWeights = new double[] { 0.0, 0.0, 0.0, 1.0, 0.0 };
-                gbl_panel_left.rowWeights = new double[] { 0.0, 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
-                this.panel_left.setLayout(gbl_panel_left);
                 {
-                    this.chckbxExZones = new JCheckBox("Show Excluded Zones");
+                    this.chckbxExZones = new JCheckBox("Show/Edit Excluded Zones");
                     this.chckbxExZones.addItemListener(new ItemListener() {
                         @Override
                         public void itemStateChanged(ItemEvent arg0) {
                             do_chckbxCalibrate_itemStateChanged(arg0);
                         }
                     });
+                    panel_left.setLayout(new MigLayout("", "[][][grow]", "[][][][][]"));
                     this.chckbxExZones.setSelected(true);
-                    GridBagConstraints gbc_chckbxExZones = new GridBagConstraints();
-                    gbc_chckbxExZones.gridwidth = 3;
-                    gbc_chckbxExZones.anchor = GridBagConstraints.WEST;
-                    gbc_chckbxExZones.insets = new Insets(5, 5, 5, 5);
-                    gbc_chckbxExZones.gridx = 0;
-                    gbc_chckbxExZones.gridy = 0;
-                    this.panel_left.add(this.chckbxExZones, gbc_chckbxExZones);
+                    this.panel_left.add(this.chckbxExZones, "cell 0 0 2 1,alignx left,aligny center");
                 }
                 {
                     this.cbox_onTop = new JCheckBox("on top");
+                    cbox_onTop.setSelected(true);
                     this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
                     this.cbox_onTop.addItemListener(new ItemListener() {
                         @Override
@@ -138,15 +141,65 @@ public class ExZones_dialog extends JDialog {
                         }
                     });
                     this.cbox_onTop.setActionCommand("on top");
-                    GridBagConstraints gbc_cbox_onTop = new GridBagConstraints();
-                    gbc_cbox_onTop.gridwidth = 2;
-                    gbc_cbox_onTop.insets = new Insets(5, 0, 5, 0);
-                    gbc_cbox_onTop.anchor = GridBagConstraints.EAST;
-                    gbc_cbox_onTop.gridx = 3;
-                    gbc_cbox_onTop.gridy = 0;
-                    this.panel_left.add(this.cbox_onTop, gbc_cbox_onTop);
+                    this.panel_left.add(this.cbox_onTop, "cell 2 0,alignx right,aligny center");
                 }
                 {
+                    {
+                        {
+                            this.lblMargin = new JLabel("Margin=");
+                            this.panel_left.add(this.lblMargin, "cell 0 1,alignx right,aligny center");
+                        }
+                    }
+                    {
+                        {
+                            this.txtMargin = new JTextField();
+                            this.txtMargin.setText("0");
+                            this.panel_left.add(this.txtMargin, "cell 1 1,growx,aligny center");
+                            this.txtMargin.setColumns(4);
+                        }
+                        
+                                // Listen for changes in the textbox margin
+                                txtMargin.getDocument().addDocumentListener(new DocumentListener() {
+                                    @Override
+                                    public void changedUpdate(DocumentEvent e) {
+                                        updateMargin();
+                                    }
+                        
+                                    @Override
+                                    public void insertUpdate(DocumentEvent e) {
+                                        updateMargin();
+                                    }
+                        
+                                    @Override
+                                    public void removeUpdate(DocumentEvent e) {
+                                        updateMargin();
+                                    }
+                        
+                                    public void updateMargin() {
+                                        if (txtMargin.getText().isEmpty()) {
+                                            patt2D.setMargin(0);
+                                            return;
+                                        }
+                                        try {
+                                            patt2D.setMargin(Integer.parseInt(txtMargin.getText()));
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                            tAOut.ln("Invalid margin entered");
+                                            patt2D.setMargin(0);
+                                        }
+                                    }
+                                });
+                    }
+                    {
+                        lblThreshold = new JLabel("Threshold=");
+                        panel_left.add(lblThreshold, "cell 0 2,alignx right");
+                    }
+                    {
+                        txtThreshold = new JTextField();
+                        txtThreshold.setText("0");
+                        panel_left.add(txtThreshold, "cell 1 2,growx,aligny center");
+                        txtThreshold.setColumns(10);
+                    }
                     this.lblHelp = new JLabel("?");
                     this.lblHelp.addMouseListener(new MouseAdapter() {
                         @Override
@@ -164,92 +217,44 @@ public class ExZones_dialog extends JDialog {
                             do_lbllist_mouseReleased(e);
                         }
                     });
+                    this.lblHelp.setFont(new Font("Tahoma", Font.BOLD, 14));
+                    this.panel_left.add(this.lblHelp, "cell 2 2,alignx right,aligny center");
                     {
+                        panel = new JPanel();
+                        panel_left.add(panel, "cell 0 3 3 1,grow");
+                        panel.setLayout(new MigLayout("", "[][grow][][][]", "[][75px:n,grow]"));
+                        {
+                            lblPolygonalZones = new JLabel("Polygonal zones");
+                            panel.add(lblPolygonalZones, "cell 0 0 3 1,alignx left,aligny center");
+                        }
                         this.btnAdd = new JButton("Add");
-                        this.btnAdd.addActionListener(new ActionListener() {
-                            @Override
-                            public void actionPerformed(ActionEvent arg0) {
-                                do_btnAdd_actionPerformed(arg0);
-                            }
-                        });
-                        GridBagConstraints gbc_btnAdd = new GridBagConstraints();
-                        gbc_btnAdd.insets = new Insets(0, 5, 5, 5);
-                        gbc_btnAdd.gridx = 0;
-                        gbc_btnAdd.gridy = 1;
-                        this.panel_left.add(this.btnAdd, gbc_btnAdd);
-                    }
-                    {
+                        panel.add(btnAdd, "cell 3 0,alignx center,aligny center");
                         this.btnDel = new JButton("Del");
+                        panel.add(btnDel, "cell 4 0,alignx center,aligny center");
+                        {
+                            this.scrollPane = new JScrollPane();
+                            panel.add(scrollPane, "cell 0 1 5 1,grow");
+                            {
+                                this.listZones = new JList();
+                                this.listZones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                                this.scrollPane.setViewportView(this.listZones);
+                            }
+                        }
                         this.btnDel.addActionListener(new ActionListener() {
                             @Override
                             public void actionPerformed(ActionEvent e) {
                                 do_btnDel_actionPerformed(e);
                             }
                         });
-                        GridBagConstraints gbc_btnDel = new GridBagConstraints();
-                        gbc_btnDel.insets = new Insets(0, 0, 5, 5);
-                        gbc_btnDel.gridx = 1;
-                        gbc_btnDel.gridy = 1;
-                        this.panel_left.add(this.btnDel, gbc_btnDel);
-                    }
-                    {
-                        this.scrollPane = new JScrollPane();
-                        GridBagConstraints gbc_scrollPane = new GridBagConstraints();
-                        gbc_scrollPane.gridwidth = 5;
-                        gbc_scrollPane.fill = GridBagConstraints.BOTH;
-                        gbc_scrollPane.insets = new Insets(0, 5, 5, 0);
-                        gbc_scrollPane.gridx = 0;
-                        gbc_scrollPane.gridy = 2;
-                        this.panel_left.add(this.scrollPane, gbc_scrollPane);
-                        {
-                            this.listZones = new JList();
-                            this.listZones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-                            this.scrollPane.setViewportView(this.listZones);
-                        }
-                    }
-                    {
-                        this.lblMargin = new JLabel("Margin=");
-                        GridBagConstraints gbc_lblMargin = new GridBagConstraints();
-                        gbc_lblMargin.anchor = GridBagConstraints.EAST;
-                        gbc_lblMargin.insets = new Insets(0, 5, 5, 5);
-                        gbc_lblMargin.gridx = 0;
-                        gbc_lblMargin.gridy = 3;
-                        this.panel_left.add(this.lblMargin, gbc_lblMargin);
-                    }
-                    {
-                        this.txtMargin = new JTextField();
-                        txtMargin.setBackground(Color.WHITE);
-                        this.txtMargin.setText("0");
-                        GridBagConstraints gbc_txtMargin = new GridBagConstraints();
-                        gbc_txtMargin.insets = new Insets(0, 0, 5, 5);
-                        gbc_txtMargin.fill = GridBagConstraints.HORIZONTAL;
-                        gbc_txtMargin.gridx = 1;
-                        gbc_txtMargin.gridy = 3;
-                        this.panel_left.add(this.txtMargin, gbc_txtMargin);
-                        this.txtMargin.setColumns(4);
-                    }
-                    {
-                        this.btnWriteExzFile = new JButton("write EXZ file");
-                        this.btnWriteExzFile.addActionListener(new ActionListener() {
+                        this.btnAdd.addActionListener(new ActionListener() {
                             @Override
                             public void actionPerformed(ActionEvent arg0) {
-                                do_btnWriteExzFile_actionPerformed(arg0);
+                                do_btnAdd_actionPerformed(arg0);
                             }
                         });
-                        GridBagConstraints gbc_btnWriteExzFile = new GridBagConstraints();
-                        gbc_btnWriteExzFile.insets = new Insets(0, 0, 5, 0);
-                        gbc_btnWriteExzFile.anchor = GridBagConstraints.EAST;
-                        gbc_btnWriteExzFile.gridwidth = 3;
-                        gbc_btnWriteExzFile.gridx = 2;
-                        gbc_btnWriteExzFile.gridy = 3;
-                        this.panel_left.add(this.btnWriteExzFile, gbc_btnWriteExzFile);
                     }
-                    this.lblHelp.setFont(new Font("Tahoma", Font.BOLD, 14));
-                    GridBagConstraints gbc_lbllist = new GridBagConstraints();
-                    gbc_lbllist.insets = new Insets(0, 0, 5, 0);
-                    gbc_lbllist.gridx = 4;
-                    gbc_lbllist.gridy = 1;
-                    this.panel_left.add(this.lblHelp, gbc_lbllist);
+                    {
+                    }
                 }
             }
             {
@@ -285,94 +290,66 @@ public class ExZones_dialog extends JDialog {
         {
             JPanel buttonPane = new JPanel();
             getContentPane().add(buttonPane, BorderLayout.SOUTH);
-            {
-                GridBagLayout gbl_buttonPane = new GridBagLayout();
-                gbl_buttonPane.columnWidths = new int[] { 0, 0, 0 };
-                gbl_buttonPane.rowHeights = new int[] { 0, 0 };
-                gbl_buttonPane.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-                gbl_buttonPane.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
-                buttonPane.setLayout(gbl_buttonPane);
-            }
-            JButton okButton = new JButton("close");
+            JButton okButton = new JButton("Close");
             okButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent arg0) {
                     do_okButton_actionPerformed(arg0);
                 }
             });
+            buttonPane.setLayout(new MigLayout("", "[grow][][54px][54px]", "[28px]"));
+            {
+                btnReadExzFile = new JButton("Read EXZ file");
+                btnReadExzFile.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        do_btnReadExzFile_actionPerformed(e);
+                    }
+                });
+                buttonPane.add(btnReadExzFile, "cell 0 0,alignx right");
+            }
+            {
+                this.btnWriteExzFile = new JButton("Write EXZ file");
+                buttonPane.add(btnWriteExzFile, "cell 1 0,alignx right");
+                this.btnWriteExzFile.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent arg0) {
+                        do_btnWriteExzFile_actionPerformed(arg0);
+                    }
+                });
+            }
+            {
+                btnApply = new JButton("Apply");
+                btnApply.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent arg0) {
+                        do_btnApply_actionPerformed(arg0);
+                    }
+                });
+                buttonPane.add(btnApply, "cell 2 0,alignx right,aligny top");
+            }
             okButton.setActionCommand("OK");
-            GridBagConstraints gbc_okButton = new GridBagConstraints();
-            gbc_okButton.anchor = GridBagConstraints.EAST;
-            gbc_okButton.insets = new Insets(5, 5, 5, 5);
-            gbc_okButton.gridx = 1;
-            gbc_okButton.gridy = 0;
-            buttonPane.add(okButton, gbc_okButton);
+            buttonPane.add(okButton, "cell 3 0,alignx right,aligny center");
             getRootPane().setDefaultButton(okButton);
         }
 
-        // Listen for changes in the textbox margin
-        txtMargin.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                updateMargin();
-            }
-
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                updateMargin();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                updateMargin();
-            }
-
-            public void updateMargin() {
-                if (txtMargin.getText().isEmpty()) {
-                    patt2D.setMargin(0);
-                    return;
-                }
-                try {
-                    patt2D.setMargin(Integer.parseInt(txtMargin.getText()));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    tAOut.ln("Invalid margin entered");
-                    patt2D.setMargin(0);
-                }
-            }
-        });
-
         tAOut.ln("** Excluded zones definition **");
 
-        dataFile = mf.getOpenedFile();
-        patt2D = mf.getPatt2D();
+        MainFrame.getOpenedFile();
+        patt2D = MainFrame.getPatt2D();
         lm = new DefaultListModel();
         listZones.setModel(lm);
-        {
-            this.chckbxYToMask = new JCheckBox("Y0 to Mask");
-            this.chckbxYToMask.addItemListener(new ItemListener() {
-                public void itemStateChanged(ItemEvent arg0) {
-                    do_chckbxYToMask_itemStateChanged(arg0);
-                }
-            });
-            GridBagConstraints gbc_chckbxYToMask = new GridBagConstraints();
-            gbc_chckbxYToMask.gridwidth = 2;
-            gbc_chckbxYToMask.insets = new Insets(0, 0, 0, 5);
-            gbc_chckbxYToMask.gridx = 0;
-            gbc_chckbxYToMask.gridy = 4;
-            this.panel_left.add(this.chckbxYToMask, gbc_chckbxYToMask);
-        }
 
-        if (this.readEXZfile()) {
+        if (ImgFileUtils.readEXZ(patt2D,null)) {
             tAOut.ln("Excluded zones file (.EXZ) found!");
+            updateList();
         } else {
             tAOut.ln("Excluded zones file (.EXZ) not found. Set them if any.");
         }
 
     }
-
+    
     @Override
     public void dispose() {
+        //ask for apply?
         this.chckbxExZones.setSelected(false);
         super.dispose();
     }
@@ -389,81 +366,55 @@ public class ExZones_dialog extends JDialog {
     //
     // }
     protected void do_btnAdd_actionPerformed(ActionEvent arg0) {
-        //afegeix poligon per defecte
-        ExZone p = new ExZone();
-        patt2D.getExZones().add(p);
-        lm.addElement(p.printLnVertexs());
+//        //afegeix poligon per defecte
+//        ExZone p = new ExZone(true);
+//        patt2D.getExZones().add(p);
+//        lm.addElement(p.printLnVertexs());
+        //Dibuixem poligon
+        if (btnAdd.getText()=="Add") {
+            PolyExZone p = new PolyExZone(false);
+            btnAdd.setText("FINISH");
+            currentExZ = p;
+            this.setDrawingExZone(true);
+        }else{//s'ha acabat el dawing
+            this.setDrawingExZone(false);
+            if (currentExZ.npoints>0){
+                btnAdd.setText("Add");
+                patt2D.getExZones().add(currentExZ);
+                lm.addElement(currentExZ.printLnVertexs());
+                this.updateList();
+                listZones.setSelectedIndex(lm.size()-1);
+            }
+        }
     }
-
     protected void do_btnDel_actionPerformed(ActionEvent e) {
         patt2D.getExZones().remove(listZones.getSelectedIndex());
         this.updateList();
     }
 
     protected void do_btnWriteExzFile_actionPerformed(ActionEvent arg0) {
-        File exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
-        if(exfile.exists()){
-            //avisem que es sobreescriur�
-            Object[] options = {"Yes","No"};
-            int n = JOptionPane.showOptionDialog(this,
-                    "EXZ file will be overwritten. Continue?",
-                    "File exists",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null, //do not use a custom Icon
-                    options, //the titles of buttons
-                    options[1]); //default button title
-            if (n!=0){return;} // si s'ha cancelat o tancat la finestra no es segueix salvant 
+        btnApply.doClick();
+        //TODO ADD CURRENTDIRECTORY
+        File exfile = FileUtils.fchooserNoAskOverwrite(null, null, true);
+        if (exfile != null){
+            ImgFileUtils.writeEXZ(exfile, patt2D);            
         }
-        // creem un printwriter amb el fitxer file (el que estem escribint)
-        try {
-            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(exfile)));
-            // ESCRIBIM AL FITXER:
-            output.println("! Excluded zones file for: " + dataFile.getName());
-            output.println("MARGIN="+ patt2D.getMargin());
-            int y0msk=0;
-            if(chckbxYToMask.isSelected()) y0msk=1;
-            output.println("Y0TOMASK="+ y0msk);
-            output.println("NEXZONES="+ patt2D.getExZones().size());
+       
+//        File exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
+//        if(exfile.exists()){
+//            //avisem que es sobreescriur�
+//            Object[] options = {"Yes","No"};
+//            int n = JOptionPane.showOptionDialog(this,
+//                    "EXZ file will be overwritten. Continue?",
+//                    "File exists",
+//                    JOptionPane.YES_NO_OPTION,
+//                    JOptionPane.QUESTION_MESSAGE,
+//                    null, //do not use a custom Icon
+//                    options, //the titles of buttons
+//                    options[1]); //default button title
+//            if (n!=0){return;} // si s'ha cancelat o tancat la finestra no es segueix salvant 
+//        }
 
-            Iterator<ExZone> it = patt2D.getExZones().iterator();
-            while (it.hasNext()) {
-                ExZone p = it.next();
-                StringBuilder sb = new StringBuilder();
-                for (int i=0;i<p.npoints;i++){
-                    sb.append(p.getXYvertex(i)).append(" ");
-                }
-//                int ULx = p.getXVertex(0);
-//                int ULy = Math.round(r.y);
-//                int URx = Math.round(r.x + r.width - 1);
-//                int URy = Math.round(r.y);
-//                int BRx = Math.round(r.x + r.width - 1); // -1 perqu� al representar fem +1
-//                int BRy = Math.round(r.y + r.height - 1);
-//                int BLx = Math.round(r.x);
-//                int BLy = Math.round(r.y + r.height - 1);
-//                String element = ULx + " " + ULy + " " + URx + " " + URy + " " + BRx + " " + BRy + " " + BLx + " " + BLy;
-                output.println(" " + sb.toString().trim());
-            }
-            
-            //COMENTARIS INFO
-            output.println("!");
-            output.println("! MARGIN    Margin of the image in pixels");
-            output.println("! Y0TOMASK  Set pixels with intensity=0 to intensity=-1 (masouk) [values 1=Yes, 0=No]");
-            output.println("! NEXZONES  Number of Excluded Zones. ");
-            output.println("!           This line is followed by the N excluded zones defined as four vertex");
-            output.println("!           polygons in clockwise order. For example for a rectangle-like shape:");
-            output.println("!           ULx ULy URx URy BRx BRy BLx BLy");
-            output.println("!           (space separated and in pixel units. UL: upper-left corner of a rectangle,");
-            output.println("!           UR: upper-right corner of a rectangle, BR: bottom-right corner of a rectangle,");
-            output.println("!           BL: bottom-left corner of a rectangle)");
-            
-            output.close();
-            tAOut.ln("EXZ file saved successfully");
-            
-        } catch (IOException e) {
-            e.printStackTrace();
-            tAOut.ln("Error writing EXZ file");
-        }
     }
 
     protected void do_cbox_onTop_itemStateChanged(ItemEvent arg0) {
@@ -502,10 +453,11 @@ public class ExZones_dialog extends JDialog {
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
+        if (FileUtils.YesNoDialog("Apply Changes?"))btnApply.doClick();
         this.dispose();
     }
 
-    public ExZone getCurrentZone() {
+    public PolyExZone getCurrentZone() {
         if (listZones.getSelectedIndex() >= 0) {
             return patt2D.getExZones().get(listZones.getSelectedIndex());
         } else {
@@ -517,98 +469,70 @@ public class ExZones_dialog extends JDialog {
         return setExZones;
     }
 
-    private boolean readEXZfile() {
-        File exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".exz"));
-        if (!exfile.exists()) {
-            exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
-            if (!exfile.exists())
-                return false;
-        }
-        // aqui hauriem de tenir exfile ben assignada, la llegim
-        String line;
-        try {
-            Scanner scExFile = new Scanner(exfile);
-            boolean llegint = true;
-            
-            while(llegint){
-                if (scExFile.hasNextLine()) {
-                    line = scExFile.nextLine();
-                } else {
-                    scExFile.close();
-                    llegint=false;
-                    continue;
-                }
-                
-                if(line.startsWith("!")){
-                    continue;
-                }
-                
-                int iigual=line.indexOf("=")+1;
-                
-                if(line.trim().startsWith("MARGIN")){
-                    patt2D.setMargin(Integer.parseInt(line.substring(iigual, line.trim().length()).trim()));
-                    txtMargin.setText(Integer.toString(patt2D.getMargin()));
-                    continue;
-                }
-                if(line.trim().startsWith("Y0TOMASK")){
-                    int ytm = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
-                    if(ytm==1){
-                        chckbxYToMask.setSelected(true);    
-                        patt2D.setY0toMask(1);
-                    }else{
-                        chckbxYToMask.setSelected(false);
-                        patt2D.setY0toMask(0);
-                    }
-                    continue;
-                }
-                //reiniciem zones excloses de la imatge
-                patt2D.getExZones().clear();
-                if(line.trim().startsWith("NEXZONES")){
-                    int nexz = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
-                    //ara llegim les zones
-                    for (int i = 0; i < nexz; i++) {
-                        line = scExFile.nextLine();
-                        //tolerem una linia de comentari
-                        if(line.trim().startsWith("!"))line = scExFile.nextLine();
-                        String[] zona = line.trim().split(" ");
-                        patt2D.addExZone(new ExZone(Integer.parseInt(zona[0]),
-                                Integer.parseInt(zona[1]),Integer.parseInt(zona[2]),Integer.parseInt(zona[3]),
-                                Integer.parseInt(zona[4]),Integer.parseInt(zona[5]),Integer.parseInt(zona[6]),
-                                Integer.parseInt(zona[7])));
-                    }
-                    continue;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-        updateList();
-        return true;
-    }
 
     public void updateList() {
         lm.clear();
-        Iterator<ExZone> it = patt2D.getExZones().iterator();
+        Iterator<PolyExZone> it = patt2D.getExZones().iterator();
         while (it.hasNext()) {
-            ExZone p = it.next();
+            PolyExZone p = it.next();
             lm.addElement(p.printLnVertexs().trim());
         }
     }
 
     public void updateSelectedElement() {
         if (listZones.getSelectedIndex() >= 0) {
-            ExZone p =  patt2D.getExZones().get(listZones.getSelectedIndex());
+            PolyExZone p =  patt2D.getExZones().get(listZones.getSelectedIndex());
             lm.set(listZones.getSelectedIndex(), p.printLnVertexs().trim());
         }
     }
 
-    protected void do_chckbxYToMask_itemStateChanged(ItemEvent arg0) {
-        if(arg0.getStateChange()==ItemEvent.SELECTED){
-            patt2D.setY0toMask(1);
-        }else{
-            patt2D.setY0toMask(0);
+    public boolean isDrawingExZone() {
+        return drawingExZone;
+    }
+
+    public void setDrawingExZone(boolean drawingExZone) {
+        this.drawingExZone = drawingExZone;
+    }
+
+    public boolean isEditingExZone() {
+        return editingExZone;
+    }
+
+    public void setEditingExZone(boolean editingExZone) {
+        this.editingExZone = editingExZone;
+    }
+
+    public PolyExZone getCurrentExZ() {
+        return currentExZ;
+    }
+
+    public void setCurrentExZ(PolyExZone currentExZ) {
+        this.currentExZ = currentExZ;
+    }
+    protected void do_btnApply_actionPerformed(ActionEvent arg0) {
+        try{
+            patt2D.setMargin(Integer.parseInt(txtMargin.getText()));            
+        }catch(Exception e){
+            patt2D.setMargin(0);
+            tAOut.ln("Error reading margin, it should be an integer number");
         }
-           
+        try{
+            patt2D.setY0toMask(Integer.parseInt(txtThreshold.getText()));            
+        }catch(Exception e){
+            patt2D.setY0toMask(0);
+            tAOut.ln("Error reading threshold, it should be an integer number");
+        }
+        MainFrame.getPanelImatge().pintaImatge();
+    }
+    protected void do_btnReadExzFile_actionPerformed(ActionEvent e) {
+        //TODO ADD CURRENTDIRECTORY
+        File exfile = FileUtils.fchooser(null, null, false);
+        if (exfile != null){
+            ImgFileUtils.readEXZ(patt2D,exfile);
+            updateList();
+            txtThreshold.setText(Integer.toString(patt2D.getY0toMask()));
+            txtMargin.setText(Integer.toString(patt2D.getMargin()));
+        }
+        
     }
 }
