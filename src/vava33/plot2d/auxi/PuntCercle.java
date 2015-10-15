@@ -21,6 +21,7 @@ public class PuntCercle implements Comparable<PuntCercle>{
     private Ellipse2D.Float cercle;
     int intensity;
     private Ellipse2D.Float punt;
+    private EllipsePars ellipse;
     double t2; // angle 2 theta en RADIANTS
     float x, y; // coordenades del pixel
 
@@ -55,6 +56,19 @@ public class PuntCercle implements Comparable<PuntCercle>{
         setPunt(new Ellipse2D.Float(x - midaPunt / 2, y - midaPunt / 2, midaPunt, midaPunt));
         float radi = FastMath.round(FastMath.sqrt(FastMath.pow(x - xCentre, 2) + FastMath.pow(y - yCentre, 2)));
         setCercle(new Ellipse2D.Float(xCentre - radi, yCentre - radi, 2 * radi, 2 * radi));
+        this.t2 = angle;
+        this.intensity = inten;
+    }
+    
+    // tota la informacio junta
+    public PuntCercle(Point2D.Float p, Pattern2D patt2D, float angle, int inten) {
+        // p es el punt clicat ja passat a pixels, afegirem un "punt" (centrant
+        // una esfera petita d'aresta Xpx)
+        // la mida punt es pot fer interactiva mes endavant si es vol
+        this.x = (float) p.getX();
+        this.y = (float) p.getY();
+        setPunt(new Ellipse2D.Float(x - midaPunt / 2, y - midaPunt / 2, midaPunt, midaPunt));
+        setEllipse(this.getElliPars(patt2D, p));
         this.t2 = angle;
         this.intensity = inten;
     }
@@ -122,6 +136,51 @@ public class PuntCercle implements Comparable<PuntCercle>{
             return 1;
         }
         return -1;
+    }
+    
+    //pattern contains calibration info
+    private EllipsePars getElliPars(Pattern2D patt2D, Point2D.Float pixel){
+        
+        double twothRad = patt2D.calcT2new(pixel, false);
+//        double phiRad = patt2D.getAzimAngle(FastMath.round(pixel.x), FastMath.round(pixel.y), false);
+        double phiRad = FastMath.toRadians(patt2D.getRotDeg());
+        
+        
+        double tantth = FastMath.tan(twothRad);
+        double sintth = FastMath.sin(twothRad);
+        double costth = FastMath.cos(twothRad);
+        double tiltrad = FastMath.toRadians(patt2D.getTiltDeg());
+        double tanTilt = FastMath.tan(tiltrad);
+        double sinTilt = FastMath.sin(tiltrad);
+        double cosTilt = FastMath.cos(tiltrad);
+        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
+        double tmes = FastMath.tan((twothRad+tiltrad)/2);
+        double distPix = patt2D.getDistMD()/patt2D.getPixSx();
+        
+        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
+        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
+        
+        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
+        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
+        
+        double rMaj = (vmes+vmenys)/2;
+        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
+        double zdis = (fmes-fmenys)/2;
+//      #NB: zdis is || to major axis & phi is rotation of minor axis
+//      #thus shift from beam to ellipse center is [Z*sin(phi),-Z*cos(phi)]
+//          elcent = [cent[0]+zdis*sind(phi),cent[1]-zdis*cosd(phi)]
+//          return elcent,phi,radii
+        double ellicentX = patt2D.getCentrX()+zdis * FastMath.sin(phiRad);
+        double ellicentY = patt2D.getCentrY()-zdis * FastMath.cos(phiRad);
+        
+        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,phiRad);
+        
+    }
+    public EllipsePars getEllipse() {
+        return ellipse;
+    }
+    public void setEllipse(EllipsePars ellipse) {
+        this.ellipse = ellipse;
     }
     
     

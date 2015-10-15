@@ -37,9 +37,10 @@ import javax.swing.event.ChangeListener;
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.VavaLogger;
+import vava33.plot2d.auxi.VavaLogger;
 
-import vava33.plot2d.auxi.ExZone;
+import vava33.plot2d.auxi.EllipsePars;
+import vava33.plot2d.auxi.PolyExZone;
 import vava33.plot2d.auxi.LAT_data;
 import vava33.plot2d.auxi.LAT_data.HKL_reflection;
 import vava33.plot2d.auxi.OrientSolucio;
@@ -61,22 +62,16 @@ public class ImagePanel extends JPanel {
     private static int CLICAR = MouseEvent.BUTTON1;
     private static int ZOOM_BORRAR = MouseEvent.BUTTON3;
     private static float incZoom = 0.05f;
+    private static int contrast_fun=0;
+    private static float swinglim=4.5f;
+    private static int hklfontSize=13;
+    private static float factSliderMax=3.f;
     private static String theta = "\u03B8";
-
-    private JCheckBox chckbxColor;
-    private JCheckBox chckbxInvertY;
-    private JLabel lbl2t;
-    private JButton lblContrast;
-    private JLabel lblCoord;
-    private JLabel lblIntensity;
-    private JPanel panel;
-    private JSlider slider_contrast;
 
     private Calib_dialog calibration;
     private Rectangle2D.Float currentRect;
-    private ExZone currentPol4;
+    private PolyExZone currentPol;
     private ExZones_dialog exZones;
-    private DB_dialog dbDialog;
     boolean fit = true;
     private BufferedImage image;
     private boolean mouseBox = false;
@@ -85,7 +80,6 @@ public class ImagePanel extends JPanel {
     private int originX, originY;
     private dades2d panelImatge;
     private Pattern2D patt2D;
-    private ArrayList<PuntCercle> puntsCercles;
     private ArrayList<HKL_reflection> compoundRings;
     private float scalefit;
     private boolean showHKLsol = false;
@@ -95,16 +89,19 @@ public class ImagePanel extends JPanel {
     private boolean showRings = false;
     private boolean showDSPRings = false;
     private PDCompound dspCompound = null;
-    private ArrayList<OrientSolucio> solucions; // contindra les solucions
-//    private ArrayList<OrientSolucio> hklClics; // contindra els clicks (provem de utilitzar el solucions igualment) 
     private BufferedImage subimage;
     private Point2D.Float zoomPoint, dragPoint;
     private float factorContrast;
-    private static int contrast_fun=0;
 
-    private static float swinglim=4.5f;
-    private static int hklfontSize=13;
-    private static float factSliderMax=3.f;
+    private JCheckBox chckbxColor;
+    private JCheckBox chckbxInvertY;
+    private JLabel lbl2t;
+    private JButton lblContrast;
+    private JLabel lblCoord;
+    private JLabel lblIntensity;
+    private JPanel panel;
+    private JSlider slider_contrast;
+    private JCheckBox chckbxAuto;
     
     /**
      * Create the panel.
@@ -113,9 +110,9 @@ public class ImagePanel extends JPanel {
         super();
         GridBagLayout gridBagLayout = new GridBagLayout();
         gridBagLayout.columnWidths = new int[] { 0, 0, 0, 0, 0 };
-        gridBagLayout.rowHeights = new int[] { 0, 0, 35, 0 };
+        gridBagLayout.rowHeights = new int[] { 0, 0, 35, 0, 0 };
         gridBagLayout.columnWeights = new double[] { 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
-        gridBagLayout.rowWeights = new double[] { 1.0, 0.0, 0.0, Double.MIN_VALUE };
+        gridBagLayout.rowWeights = new double[] { 1.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
         setLayout(gridBagLayout);
         this.setPanelImatge(new dades2d());
         this.getPanelImatge().setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
@@ -157,7 +154,7 @@ public class ImagePanel extends JPanel {
         this.panel = new JPanel();
         this.panel.setBorder(null);
         GridBagConstraints gbc_panel = new GridBagConstraints();
-        gbc_panel.insets = new Insets(0, 0, 1, 0);
+        gbc_panel.insets = new Insets(0, 0, 5, 0);
         gbc_panel.gridwidth = 4;
         gbc_panel.gridx = 0;
         gbc_panel.gridy = 1;
@@ -194,7 +191,7 @@ public class ImagePanel extends JPanel {
         });
         GridBagConstraints gbc_lblContrast = new GridBagConstraints();
         gbc_lblContrast.anchor = GridBagConstraints.EAST;
-        gbc_lblContrast.insets = new Insets(0, 5, 0, 5);
+        gbc_lblContrast.insets = new Insets(0, 5, 5, 5);
         gbc_lblContrast.gridx = 0;
         gbc_lblContrast.gridy = 2;
         add(this.lblContrast, gbc_lblContrast);
@@ -216,6 +213,7 @@ public class ImagePanel extends JPanel {
             }
         });
         GridBagConstraints gbc_slider = new GridBagConstraints();
+        gbc_slider.gridheight = 2;
         gbc_slider.fill = GridBagConstraints.HORIZONTAL;
         gbc_slider.insets = new Insets(0, 0, 0, 5);
         gbc_slider.gridx = 1;
@@ -229,7 +227,7 @@ public class ImagePanel extends JPanel {
             }
         });
         GridBagConstraints gbc_chckbxColor = new GridBagConstraints();
-        gbc_chckbxColor.insets = new Insets(0, 5, 0, 5);
+        gbc_chckbxColor.insets = new Insets(0, 5, 5, 5);
         gbc_chckbxColor.gridx = 2;
         gbc_chckbxColor.gridy = 2;
         add(this.chckbxColor, gbc_chckbxColor);
@@ -241,84 +239,21 @@ public class ImagePanel extends JPanel {
             }
         });
         GridBagConstraints gbc_chckbxInvertY = new GridBagConstraints();
-        gbc_chckbxInvertY.insets = new Insets(0, 5, 0, 0);
+        gbc_chckbxInvertY.insets = new Insets(0, 5, 5, 0);
         gbc_chckbxInvertY.gridx = 3;
         gbc_chckbxInvertY.gridy = 2;
         add(this.chckbxInvertY, gbc_chckbxInvertY);
 
         //iniciem
         this.factorContrast=3;
+        
+        chckbxAuto = new JCheckBox("Auto");
+        GridBagConstraints gbc_chckbxAuto = new GridBagConstraints();
+        gbc_chckbxAuto.insets = new Insets(0, 0, 0, 5);
+        gbc_chckbxAuto.gridx = 0;
+        gbc_chckbxAuto.gridy = 3;
+        add(chckbxAuto, gbc_chckbxAuto);
         this.resetView();
-    }
-
-    // afegim un punt i cercle a la llista de pics donat el punt en coordeandes
-    // del panell (cal convertir-les abans)
-    public void addPuntCercle(Point2D.Float p, int inten) {
-        if (!patt2D.checkIfDistMD()) {
-            this.getParentFrame().do_btnSetParams_actionPerformed(null);
-            if (this.patt2D.getDistMD() <= 0 || this.patt2D.getPixSx() <= 0 || this.patt2D.getPixSy() <= 0)
-                return;
-        }
-        p = this.getPixel(p);
-        double t2 = this.calcT2(p);
-        puntsCercles.add(new PuntCercle(p, patt2D.getCentrX(), patt2D.getCentrY(), t2, inten));
-    }
-
-    protected Rectangle calcSubimatgeDinsFrame() {
-        Point2D.Float startCoords = getPixel(new Point2D.Float(0, 0));
-        Point2D.Float endCoords = getPixel(new Point2D.Float(getPanelImatge().getWidth() - 1, getPanelImatge()
-                .getHeight() - 1));
-        int panelX1 = FastMath.round(startCoords.x);
-        int panelY1 = FastMath.round(startCoords.y);
-        int panelX2 = FastMath.round(endCoords.x);
-        int panelY2 = FastMath.round(endCoords.y);
-        // No intersection? (que no movem la imatge fora del panell)
-        if (panelX1 >= getImage().getWidth() || panelX2 < 0 || panelY1 >= getImage().getHeight() || panelY2 < 0) {
-            return null;
-        }
-        int x1 = (panelX1 < 0) ? 0 : panelX1;
-        int y1 = (panelY1 < 0) ? 0 : panelY1;
-        int x2 = (panelX2 >= getImage().getWidth()) ? getImage().getWidth() - 1 : panelX2;
-        int y2 = (panelY2 >= getImage().getHeight()) ? getImage().getHeight() - 1 : panelY2;
-        return new Rectangle(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
-    }
-
-    //retorna t2 en radiants
-    public double calcT2(Point2D.Float pixel) {
-        // calculem l'angle, dist MD esta en mm, el radi tambe ha d'estar en mm (utilitzem mida pixel)
-        float psy = this.patt2D.getPixSy();
-        float psx = this.patt2D.getPixSx();
-        float cX = patt2D.getCentrX();
-        float cy = patt2D.getCentrY();
-        double x2 = (pixel.getX() * psx - cX * psx) * (pixel.getX() * psx - cX * psx);
-        double y2 = (pixel.getY() * psy - cy * psy) * (pixel.getY() * psy - cy * psy);
-        double radi = FastMath.sqrt(x2 + y2);
-        double t2 = FastMath.atan(radi / patt2D.getDistMD());
-        return t2;
-    }
-    
-    //t2 en radiants
-    public double calcDsp(double t2rad){
-        float wl = this.patt2D.getWavel();
-        if (wl > 0){
-            double d = wl/(2*FastMath.sin(t2rad/2.));
-            return d;
-        }
-        return -1.d;
-    }
-
-    //t2 en radiants!
-    public double dspToT2(double dsp){
-        float wl = this.patt2D.getWavel();
-        if (wl > 0){
-            double t2 = 2 * FastMath.asin(wl/(2*dsp));
-            return t2;
-        }
-        return -1.d;
-    }
-    
-    public void clearSolutions() {
-        solucions.clear();
     }
 
     protected void do_chckbxColor_itemStateChanged(ItemEvent arg0) {
@@ -355,7 +290,7 @@ public class ImagePanel extends JPanel {
             incY = (p.y - dragPoint.y) / this.getScalefit();
             // hem d'enviar el punt clicat i l'increment a panel imatge perqu�
             // s'encarregui de moure el quadrat o redimensionar-lo
-            if (estaCalibrant()) {this.editQuadrat(dragPoint, incX, incY, true);}
+//            if (estaCalibrant()) {this.editQuadrat(dragPoint, incX, incY, true);}
             if (estaDefinintEXZ()) {this.editPolygon(dragPoint, incX, incY, true);}            
             this.dragPoint = p;
         }
@@ -371,9 +306,9 @@ public class ImagePanel extends JPanel {
             lblCoord.setText("[" + FileUtils.dfX_1.format(pix.x) + ";" + FileUtils.dfX_1.format(pix.y) + "]");
             int inten = 0;
             // El FastMath.round porta a 2048 i out of bound, millor no arrodonir i truncar aqu� igual que al if anterior
-            // inten=(int)(patt2D.getIntenB2(FastMath.round(pix.x),FastMath.round(pix.y))*patt2D.getScale());
-//            inten = (int) (patt2D.getIntenB2((int) (pix.x), (int) (pix.y)) * patt2D.getScale());
-            inten = (int) (patt2D.getIntenB2((int) (pix.x), (int) (pix.y)));
+            // inten=(int)(patt2D.getInten(FastMath.round(pix.x),FastMath.round(pix.y))*patt2D.getScale());
+//            inten = (int) (patt2D.getInten((int) (pix.x), (int) (pix.y)) * patt2D.getScale());
+            inten = (int) (patt2D.getInten((int) (pix.x), (int) (pix.y)));
             lblIntensity.setText("I= " + inten);
 //            if (patt2D.checkIfDistMD()) {
 //                lbl2t.setText("(2" + theta + "=" + FileUtils.dfX_3.format(FastMath.toDegrees(this.calcT2(pix))) + ")");
@@ -381,10 +316,11 @@ public class ImagePanel extends JPanel {
             String t2 = "";
             String dsp = "";
             if (patt2D.checkIfDistMD()){
-                double twothetaRad =  this.calcT2(pix);
+//                double twothetaRad =  patt2D.calcT2(pix);
+                double twothetaRad =  patt2D.calcT2new(pix,false);
                 t2 = "2" + theta + "=" + FileUtils.dfX_3.format(FastMath.toDegrees(twothetaRad));
                 if (patt2D.checkIfWavel()){
-                    dsp = "; dsp=" + FileUtils.dfX_3.format(this.calcDsp(twothetaRad));
+                    dsp = "; dsp=" + FileUtils.dfX_3.format(patt2D.calcDsp(twothetaRad));
                 }  
                 lbl2t.setText("(" + t2 + dsp + ")");
             }
@@ -428,13 +364,13 @@ public class ImagePanel extends JPanel {
             this.setMouseBox(false);
 
         // NOMES afegim els punts i cercles si tenim marcada la indexacio
-        if (showIndexing && this.isPatt2D()) {
+        if (showIndexing && this.isPatt2D() && !estaCalibrant() && !estaDefinintEXZ()) {
             // afegim o treiem punts de la llista DICVOL
             if (e.getButton() == CLICAR) {
                 int inten;
                 Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
-//                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)) * patt2D.getScale());
-                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)));
+//                inten = (int) (patt2D.getInten(FastMath.round(pix.x), FastMath.round(pix.y)) * patt2D.getScale());
+                inten = (int) (patt2D.getInten(FastMath.round(pix.x), FastMath.round(pix.y)));
                 this.addPuntCercle(new Point2D.Float(e.getPoint().x, e.getPoint().y), inten);
             }
             if (e.getButton() == ZOOM_BORRAR) {
@@ -448,10 +384,10 @@ public class ImagePanel extends JPanel {
             if (e.getButton() == CLICAR) {
                 int inten;
                 Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
-//                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)) * patt2D.getScale());
-                inten = (int) (patt2D.getIntenB2(FastMath.round(pix.x), FastMath.round(pix.y)));
+//                inten = (int) (patt2D.getInten(FastMath.round(pix.x), FastMath.round(pix.y)) * patt2D.getScale());
+                inten = (int) (patt2D.getInten(FastMath.round(pix.x), FastMath.round(pix.y)));
                 //busquem quin �s l'HKL m�s proper i l'assignem
-                PuntSolucio nearestPS = getNearestPS(pix.x,pix.y);
+                PuntSolucio nearestPS = MainFrame.getNearestPS(pix.x,pix.y);
         		if (nearestPS!=null){
         			nearestPS.setCoordXclic(pix.x);
         			nearestPS.setCoordYclic(pix.y);
@@ -470,32 +406,35 @@ public class ImagePanel extends JPanel {
 //        		}
 //            }
         }
-    }
-    
-    protected PuntSolucio getNearestPS(float px, float py){
-	    Iterator<OrientSolucio> itrOS = solucions.iterator();
-	    OrientSolucio os = null;
-	    while (itrOS.hasNext()) {
-	        os = itrOS.next();
-	        if (os.isShowSol()) {
-	        	break;
-	        }
-	    }
-	    if(os==null)return null;
-        // d'aquesta solucio, es busca el puntSolucio m�s proper al punt entrat
-        Iterator<PuntSolucio> itrS = os.getSol().iterator();
-        float minModul = Float.MAX_VALUE;
-        PuntSolucio nearestPS = null;
-        while (itrS.hasNext()) {
-            PuntSolucio s = itrS.next();
-            float modul = (float) FastMath.sqrt((s.getCoordX()-px)*(s.getCoordX()-px)+(s.getCoordY()-py)*(s.getCoordY()-py));
-            if (modul<minModul){
-            	nearestPS = s;
-            	minModul=modul;
+        
+        if(estaDefinintEXZ()){
+            if(exZones.isDrawingExZone()){
+                // afegim o treiem punts a la zona
+                if (e.getButton() == CLICAR) {
+                    Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
+                    exZones.getCurrentExZ().addPoint(Math.round(pix.x), Math.round(pix.y));
+                }
+            }            
+        }
+        
+        if(estaCalibrant()){
+            // afegim o treiem punts de la llista CALIB
+            Point2D.Float pix = null;
+            if (e.getButton() == CLICAR) {
+                pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
+            }
+//            if (e.getButton() == ZOOM_BORRAR) {
+//                
+//            }
+            
+            if (pix == null) return;
+            if (calibration.isSetting1stPeakCircle()){
+                calibration.addPointToRing1Circle(pix);
             }
         }
-        return nearestPS;
     }
+    
+
 
     protected void do_panelImatge_mouseWheelMoved(MouseWheelEvent e) {
         Point2D.Float p = new Point2D.Float(e.getPoint().x, e.getPoint().y);
@@ -510,7 +449,38 @@ public class ImagePanel extends JPanel {
 //        VavaLogger.LOG.info("min= "+slider_contrast.getMinimum());
 //        VavaLogger.LOG.info("val= "+slider_contrast.getValue());
     }
+    
+    protected void do_lblContrast_actionPerformed(ActionEvent arg0) {
+        Contrast_dialog cd = new Contrast_dialog(this);
+        cd.setVisible(true);
+    }
 
+    protected Rectangle calcSubimatgeDinsFrame() {
+        Point2D.Float startCoords = getPixel(new Point2D.Float(0, 0));
+        Point2D.Float endCoords = getPixel(new Point2D.Float(getPanelImatge().getWidth() - 1, getPanelImatge()
+                .getHeight() - 1));
+        int panelX1 = FastMath.round(startCoords.x);
+        int panelY1 = FastMath.round(startCoords.y);
+        int panelX2 = FastMath.round(endCoords.x);
+        int panelY2 = FastMath.round(endCoords.y);
+        // No intersection? (que no movem la imatge fora del panell)
+        if (panelX1 >= getImage().getWidth() || panelX2 < 0 || panelY1 >= getImage().getHeight() || panelY2 < 0) {
+            return null;
+        }
+        int x1 = (panelX1 < 0) ? 0 : panelX1;
+        int y1 = (panelY1 < 0) ? 0 : panelY1;
+        int x2 = (panelX2 >= getImage().getWidth()) ? getImage().getWidth() - 1 : panelX2;
+        int y2 = (panelY2 >= getImage().getHeight()) ? getImage().getHeight() - 1 : panelY2;
+        return new Rectangle(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+    }
+
+    // afegim un punt i cercle a la llista de pics donat el punt en coordeandes
+    // del panell (cal convertir-les abans)
+    public void addPuntCercle(Point2D.Float p, int inten) {
+        p = this.getPixel(p);
+        patt2D.addPuntCercle(p, inten);
+    }
+    
     /*
      * Mirar on es el dragpoint: - dins quadrat --> moure'l - a una aresta --> moure l'aresta - fora -> no fer res
      */
@@ -613,14 +583,15 @@ public class ImagePanel extends JPanel {
 //        float tolArista = 5; //+-5 pixels
         
         //provem de fer la tolerancia en relacio a scalefit
-        float tolVertex = FastMath.max(5/scalefit,2);
-        float tolArista = FastMath.max(5/scalefit,2);
+        float tolVertex = FastMath.max(5/scalefit,5);
+//        VavaLogger.LOG.info("tolvertex="+tolVertex);
+//        float tolArista = FastMath.max(5/scalefit,2);
         
         
         //primer mirem si hem clicat sobre algun vertex per moure'l
         int vertex=-1; //el vertex que cliquem
-        for(int i=0;i<currentPol4.npoints;i++){
-            Rectangle2D.Float r = new Rectangle2D.Float(currentPol4.getXVertex(i)-tolVertex,currentPol4.getYVertex(i)-tolVertex,tolVertex*2,tolVertex*2);
+        for(int i=0;i<currentPol.npoints;i++){
+            Rectangle2D.Float r = new Rectangle2D.Float(currentPol.getXVertex(i)-tolVertex,currentPol.getYVertex(i)-tolVertex,tolVertex*2,tolVertex*2);
             if (r.contains(clic)){
                 vertex=i;
                 break;
@@ -628,66 +599,16 @@ public class ImagePanel extends JPanel {
         }
         //ara vertex assenyala el vertex que hem clicat o b� -1 si no s'ha clicat a cap
         if(vertex>=0){
-            currentPol4.incXVertex(vertex, incX);
-            currentPol4.incYVertex(vertex, incY);
+            currentPol.incXVertex(vertex, incX);
+            currentPol.incYVertex(vertex, incY);
             if(repaint)this.repaint();
             return;
         }
         
-        //mirem si cliquem a una arista i movem els 2 vertexs que la formen
-        //hi ha 4 arestes (0-1,1-2,2-3,3-0), mirarem una a una si el punt clicat s'apropa a una tolerancia
-        Line2D.Float li = new Line2D.Float(currentPol4.getXVertex(0), currentPol4.getYVertex(0),
-                currentPol4.getXVertex(1), currentPol4.getYVertex(1));
-        if(li.ptLineDist(clic)<tolArista){
-            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
-            //movem els dos vertexs que formen la linia
-            currentPol4.incXVertex(0, incX);
-            currentPol4.incYVertex(0, incY);
-            currentPol4.incXVertex(1, incX);
-            currentPol4.incYVertex(1, incY);
-            if(repaint)this.repaint();
-            return;
-        }
-        li = new Line2D.Float(currentPol4.getXVertex(1), currentPol4.getYVertex(1),
-                currentPol4.getXVertex(2), currentPol4.getYVertex(2));
-        if(li.ptLineDist(clic)<tolArista){
-            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
-            //movem els dos vertexs que formen la linia
-            currentPol4.incXVertex(1, incX);
-            currentPol4.incYVertex(1, incY);
-            currentPol4.incXVertex(2, incX);
-            currentPol4.incYVertex(2, incY);
-            if(repaint)this.repaint();
-            return;
-        }
-        li = new Line2D.Float(currentPol4.getXVertex(2), currentPol4.getYVertex(2),
-                currentPol4.getXVertex(3), currentPol4.getYVertex(3));
-        if(li.ptLineDist(clic)<tolArista){
-            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
-            //movem els dos vertexs que formen la linia
-            currentPol4.incXVertex(2, incX);
-            currentPol4.incYVertex(2, incY);
-            currentPol4.incXVertex(3, incX);
-            currentPol4.incYVertex(3, incY);
-            if(repaint)this.repaint();
-            return;
-        }
-        li = new Line2D.Float(currentPol4.getXVertex(3), currentPol4.getYVertex(3),
-                currentPol4.getXVertex(0), currentPol4.getYVertex(0));
-        if(li.ptLineDist(clic)<tolArista){
-            //TODO: COMPROVAR QUE ESTIGUI AL SEGMENT i NO FORA (LINIA INFINITA)
-            //movem els dos vertexs que formen la linia
-            currentPol4.incXVertex(3, incX);
-            currentPol4.incYVertex(3, incY);
-            currentPol4.incXVertex(0, incX);
-            currentPol4.incYVertex(0, incY);
-            if(repaint)this.repaint();
-            return;
-        }
         
         //si no hem clicat a cap vertex mirem si hem clicat a dins i movem tota la zona
-        if(currentPol4.contains(clic)){
-            currentPol4.translate(FastMath.round(incX), FastMath.round(incY));
+        if(currentPol.contains(clic)){
+            currentPol.translate(FastMath.round(incX), FastMath.round(incY));
             if(repaint)this.repaint();
             return;
         }
@@ -719,6 +640,15 @@ public class ImagePanel extends JPanel {
     private boolean estaDefinintEXZ() {
         if (exZones != null) {
             if (exZones.isSetExZones()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private boolean estaPintantEXZ() {
+        if (exZones != null) {
+            if (exZones.isDrawingExZone()) {
                 return true;
             }
         }
@@ -786,9 +716,9 @@ public class ImagePanel extends JPanel {
         return panelImatge;
     }
 
-    public MainFrame getParentFrame() {
-        return (MainFrame) this.getTopLevelAncestor();
-    }
+//    public MainFrame getParentFrame() {
+//        return (MainFrame) this.getTopLevelAncestor();
+//    }
 
     public Pattern2D getPatt2D() {
         return patt2D;
@@ -800,16 +730,8 @@ public class ImagePanel extends JPanel {
         return new Point2D.Float(((p.x - originX) / scalefit), ((p.y - originY) / scalefit));
     }
 
-    public ArrayList<PuntCercle> getPuntsCercles() {
-        return puntsCercles;
-    }
-
     public float getScalefit() {
         return scalefit;
-    }
-
-    public ArrayList<OrientSolucio> getSolucions() {
-        return solucions;
     }
 
     public BufferedImage getSubimage() {
@@ -1019,13 +941,17 @@ public class ImagePanel extends JPanel {
             // creem imatge normal
             for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-                    if (this.chckbxColor.isSelected()) {
-                        // pintem en color
-                        col = intensityColor(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI(),
-                                this.slider_contrast.getValue() / (maxValSlider * factorContrast));
-                    } else {
-                        // pintem en BW
-                        col = intensityBW(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI());
+                    if (patt2D.isInExZone(j, i)) {// es mascara, el pintem magenta
+                        col = new Color(255, 0, 255);
+                    } else{
+                        if (this.chckbxColor.isSelected()) {
+                            // pintem en color
+                            col = intensityColor(patt2D.getInten(j, i), patt2D.getMaxI(), patt2D.getMinI(),
+                                    this.slider_contrast.getValue() / (maxValSlider * factorContrast));
+                        } else {
+                            // pintem en BW
+                            col = intensityBW(patt2D.getInten(j, i), patt2D.getMaxI(), patt2D.getMinI());
+                        }
                     }
                     im.setRGB(j, i, col.getRGB());
                 }
@@ -1035,13 +961,17 @@ public class ImagePanel extends JPanel {
             int fila = 0;
             for (int i = patt2D.getDimY() - 1; i >= 0; i--) {
                 for (int j = 0; j < patt2D.getDimX(); j++) {
-                    if (this.chckbxColor.isSelected()) {
-                        // pintem en color
-                        col = intensityColor(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI(),
-                                this.slider_contrast.getValue() / (maxValSlider * factorContrast));
-                    } else {
-                        // pintem en BW
-                        col = intensityBW(patt2D.getIntenB2(j, i), patt2D.getMaxI(), patt2D.getMinI());
+                    if (patt2D.isInExZone(j, i)) {// es mascara, el pintem magenta
+                        col = new Color(255, 0, 255);
+                    }else{
+                        if (this.chckbxColor.isSelected()) {
+                            // pintem en color
+                            col = intensityColor(patt2D.getInten(j, i), patt2D.getMaxI(), patt2D.getMinI(),
+                                    this.slider_contrast.getValue() / (maxValSlider * factorContrast));
+                        } else {
+                            // pintem en BW
+                            col = intensityBW(patt2D.getInten(j, i), patt2D.getMaxI(), patt2D.getMinI());
+                        }    
                     }
                     im.setRGB(j, fila, col.getRGB());
                 }
@@ -1051,52 +981,27 @@ public class ImagePanel extends JPanel {
         this.updateImage(im);
     }
 
-    public void recalcularCercles() {
-        Iterator<PuntCercle> itrPC = puntsCercles.iterator();
-        while (itrPC.hasNext()) {
-            PuntCercle pc = itrPC.next();
-            pc.recalcular(patt2D.getCentrX(), patt2D.getCentrY(), calcT2(new Point2D.Float(pc.getX(), pc.getY())));
-        }
-    }
-
     protected Rectangle2D.Float rectangleToFrameCoords(Rectangle2D.Float r) {
         Point2D.Float vertex = getFramePointFromPixel(new Point2D.Float(r.x, r.y));
         float width = (float) (r.getWidth() * scalefit);
         float height = (float) (r.getHeight() * scalefit);
         return new Rectangle2D.Float(vertex.x, vertex.y, width, height);
     }
+
     
-    protected ExZone Pol4ToFrameCoords(ExZone p) {
-        Point2D.Float v1 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(0),p.getYVertex(0)));
-        Point2D.Float v2 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(1),p.getYVertex(1)));
-        Point2D.Float v3 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(2),p.getYVertex(2)));
-        Point2D.Float v4 = getFramePointFromPixel(new Point2D.Float(p.getXVertex(3),p.getYVertex(3)));
-        return new ExZone(FastMath.round(v1.x),FastMath.round(v1.y), FastMath.round(v2.x),FastMath.round(v2.y),
-                FastMath.round(v3.x),FastMath.round(v3.y),FastMath.round(v4.x),FastMath.round(v4.y));
-    }
+    protected PolyExZone PolToFrameCoords(PolyExZone p) {
+        if (p.npoints<1)return null; //CHECK
+        PolyExZone exz = new PolyExZone(false);
+        for (int i=0; i<p.npoints;i++){
+            Point2D.Float v = getFramePointFromPixel(new Point2D.Float(p.getXVertex(i),p.getYVertex(i)));
+            exz.addPoint(FastMath.round(v.x), FastMath.round(v.y));
+        }
+        return exz;
+    }    
 
     // donat un punt clicat mirarem si hi ha cercle a aquest pixel i en cas que aixi sigui el borrarem
     public void removePuntCercle(Point2D.Float clic) {
-        clic = this.getPixel(clic); // el passem a pixels primer
-        Iterator<PuntCercle> itrPC = puntsCercles.iterator();
-        int i = 0;
-        int indexTrobat = -1;
-        while (itrPC.hasNext()) {
-            Ellipse2D.Float e = itrPC.next().getCercle();
-            // determinarem l'equacio del cercle i mirarem si el punt satisf�
-            // cercle centre (xc,yc) i radi r : (x-xc)2+(y-yc)2=r2
-            double sumx2y2 = (clic.getX() - patt2D.getCentrX()) * (clic.getX() - patt2D.getCentrX())
-                    + (clic.getY() - patt2D.getCentrY()) * (clic.getY() - patt2D.getCentrY());
-            double r2 = (e.width / 2.f) * (e.width / 2.f);
-            double tolerancia = r2 / 30; // tolarancia del radi +- x pixels
-            if (sumx2y2 > (r2 - tolerancia) && sumx2y2 < (r2 + tolerancia)) {
-                indexTrobat = i;
-            }
-            i++;
-        }
-        if (indexTrobat >= 0) {
-            puntsCercles.remove(indexTrobat);
-        }
+        patt2D.removePuntCercle(this.getPixel(clic)); // el passem a pixels
     }
 
     public void resetView() {
@@ -1152,7 +1057,6 @@ public class ImagePanel extends JPanel {
     }
 
     public void setDBdialog(DB_dialog dbDialog) {
-        this.dbDialog = dbDialog;
     }
 
     public void setImage(BufferedImage image) {
@@ -1160,19 +1064,24 @@ public class ImagePanel extends JPanel {
     }
 
     public void setImagePatt2D(Pattern2D pattern) {
-    	this.patt2D = pattern;
-    	
-    	//slider contrast reinici
-    	if(pattern!=null){
-//    		this.slider_contrast.setValue(0); //per tal que es reinici al centre
-        	this.contrast_slider_properties(this.patt2D.getMinI(),this.calcOptMaxISlider());	
-        }
+    	if(pattern == null)return;
         
+        this.patt2D = pattern;
+
+        VavaLogger.LOG.info("slider value before (max,min)= "+this.slider_contrast.getValue()+" ("+this.slider_contrast.getMaximum()+","+this.slider_contrast.getMinimum()+")");
+//      this.slider_contrast.setValue(0); //per tal que es reinici al centre
+        if(this.chckbxAuto.isSelected()){
+            this.contrast_slider_properties(this.patt2D.getMinI(),this.calcOptMaxISlider());    
+        }else{
+            this.contrast_slider_properties(this.slider_contrast.getMinimum(),this.slider_contrast.getMaximum());
+        }
+        VavaLogger.LOG.info("slider value after (max,min)= "+this.slider_contrast.getValue()+" ("+this.slider_contrast.getMaximum()+","+this.slider_contrast.getMinimum()+")");
         this.pintaImatge();
         getPanelImatge().repaint();
-        puntsCercles = new ArrayList<PuntCercle>();
-        solucions = new ArrayList<OrientSolucio>();
-        this.resetView();// this.scalefit = 0.0f;
+        this.patt2D.clearPuntsCercles();
+        this.patt2D.clearSolutions();
+
+        this.resetView();// this.scalefit = 0.0f;        
     }
 
     public void setMouseBox(boolean mouseCalib) {
@@ -1280,45 +1189,118 @@ public class ImagePanel extends JPanel {
 
         private static final long serialVersionUID = 1L;
 
-        private void drawCalibration(Graphics2D g1) {
-            currentRect = calibration.getSelectedRectangle();
-            g1.setPaint(Color.CYAN);
-            BasicStroke stroke = new BasicStroke(1.5f);
-            g1.setStroke(stroke);
-            if (currentRect != null) {
-                // dibuixem l'emmagatzemat
-                // hem de convertir les coordenades de pixels
-                // d'imatge a coordenades de pantalla (panell)
-                g1.draw(rectangleToFrameCoords(currentRect));
-                // dibuixarem tamb� una el�lipse (prova)
-                stroke = new BasicStroke(4.0f);
-                g1.setStroke(stroke);
-                Ellipse2D.Float e = new Ellipse2D.Float(currentRect.x, currentRect.y, currentRect.width,
-                        currentRect.height);
-                g1.draw(ellipseToFrameCoords(e));
-            } else {
-                if (calibration.getSelected() >= 0) {
-                    // dibuixem un standard per comen�ar
-                    currentRect = new Rectangle2D.Float(patt2D.getDimX() / 4, patt2D.getDimY() / 4,
-                            patt2D.getDimX() / 2, patt2D.getDimX() / 2);
-                    calibration.setSelectedRectangle(currentRect);
-                    g1.draw(rectangleToFrameCoords(currentRect));
-                    stroke = new BasicStroke(4.0f);
-                    g1.setStroke(stroke);
-                    Ellipse2D.Float e = new Ellipse2D.Float(currentRect.x, currentRect.y, currentRect.width,
-                            currentRect.height);
-                    g1.draw(ellipseToFrameCoords(e));
-                }
-            }
-        }
+        private void drawCalibrationC(Graphics2D g1){
+          ArrayList<Point2D.Float> points = calibration.getPointsRing1circle();
+          int radiPunt = Calib_dialog.getRadipunt();
+          BasicStroke stroke = new BasicStroke(1.5f);
+          g1.setStroke(stroke);
+          if (points != null){
+              g1.setColor(Color.orange);
+              Iterator<Point2D.Float> itrP = points.iterator();
+              while (itrP.hasNext()){
+                  Point2D.Float p = itrP.next();
+                  p = getFramePointFromPixel(p);
+                  g1.drawOval((int)p.x-radiPunt, (int)p.y-radiPunt, radiPunt*2, radiPunt*2);
+              }
+          }
+          
+          if (calibration.getSolutions()!=null){
 
+              //dibuixem els punts estimats dels anells
+              if(calibration.isShowGuessPoints()){
+                  g1.setColor(Color.red);
+                  Iterator<EllipsePars> itre = calibration.getSolutions().iterator();
+                  while (itre.hasNext()){
+                      EllipsePars e = itre.next();
+                      points =  e.getEstimPoints();
+                      Iterator<Point2D.Float> itrP = points.iterator();
+                      while (itrP.hasNext()){
+                          Point2D.Float p = itrP.next();
+                          p = getFramePointFromPixel(p);
+                          g1.drawOval((int)p.x-radiPunt, (int)p.y-radiPunt, radiPunt*2, radiPunt*2);
+                      }
+                  }
+              }
+              
+              //ara dibuixem les ellipses fitejades
+              if(calibration.isShowFittedEllipses()){
+                  g1.setColor(Color.green);
+                  Iterator<EllipsePars> itre = calibration.getSolutions().iterator();
+                  while (itre.hasNext()){
+                      EllipsePars e = itre.next();
+                      Point2D.Float cen = getFramePointFromPixel(new Point2D.Float((float)e.getXcen(),(float)e.getYcen()));
+                      g1.drawOval((int)cen.x-radiPunt, (int)cen.y-radiPunt, radiPunt*2, radiPunt*2);
+                      points =  e.getEllipsePoints(0, 360, 5);
+                      if (points==null)continue;
+                      //escribim a quin anell de LaB6 pertany (sobre el 1r punt)
+                      Point2D.Float pLabel = getFramePointFromPixel(points.get(0));
+                      g1.drawString(Integer.toString(e.getLab6ring()), pLabel.x, pLabel.y-2);
+                      for (int i = 0; i < points.size(); i++){
+                          Point2D.Float p1 = getFramePointFromPixel(points.get(i));
+                          Point2D.Float p2 = null;
+                          if (i==(points.size()-1)){
+                              p2 = getFramePointFromPixel(points.get(0));
+                          }else{
+                              p2 = getFramePointFromPixel(points.get(i+1));
+                          }
+                          g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
+                      }
+                  }
+              }
+
+              if(calibration.isShowSearchEllipsesBoundaries()){
+                  //DEBUG ELLIPSES + and - BOUNDARIES
+                  g1.setColor(Color.magenta);
+                  if (calibration.getElliCerques()==null) return;
+                  Iterator<EllipsePars> itre = calibration.getElliCerques().iterator();
+                  while (itre.hasNext()){
+                      EllipsePars e = itre.next();
+                      Point2D.Float cen = getFramePointFromPixel(new Point2D.Float((float)e.getXcen(),(float)e.getYcen()));
+                      g1.drawOval((int)cen.x-radiPunt, (int)cen.y-radiPunt, radiPunt*2, radiPunt*2);
+                      points =  e.getEllipsePoints(0, 360, 5);
+                      if (points==null)continue;
+                      for (int i = 0; i < points.size(); i++){
+                          Point2D.Float p1 = getFramePointFromPixel(points.get(i));
+                          Point2D.Float p2 = null;
+                          if (i==(points.size()-1)){
+                              p2 = getFramePointFromPixel(points.get(0));
+                          }else{
+                              p2 = getFramePointFromPixel(points.get(i+1));
+                          }
+                          g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
+                      }
+                  }   
+              }
+
+          }
+          
+        }
+ 
         private void drawExZones(Graphics2D g1) {
-            currentPol4 = exZones.getCurrentZone();
+            currentPol = exZones.getCurrentZone();
             g1.setPaint(Color.CYAN);
             BasicStroke stroke = new BasicStroke(1.0f);
             g1.setStroke(stroke);
-            if (currentPol4 != null) {
-                g1.draw(Pol4ToFrameCoords(currentPol4));
+            if (currentPol != null) {
+                g1.draw(PolToFrameCoords(currentPol));
+                exZones.updateSelectedElement();
+            }
+            // dibuixem el marge
+            int marge = patt2D.getMargin();
+            if (marge <= 0)
+                return;
+            Rectangle2D.Float r = new Rectangle2D.Float(marge, marge, patt2D.getDimX() - 2 * marge, patt2D.getDimY()
+                    - 2 * marge);
+            g1.draw(rectangleToFrameCoords(r));
+        }
+        
+        private void drawExZones2(Graphics2D g1) {
+            currentPol = exZones.getCurrentExZ();
+            g1.setPaint(Color.CYAN);
+            BasicStroke stroke = new BasicStroke(1.0f);
+            g1.setStroke(stroke);
+            if (currentPol.npoints>0) {
+                g1.draw(PolToFrameCoords(currentPol));
                 exZones.updateSelectedElement();
             }
             // dibuixem el marge
@@ -1331,7 +1313,7 @@ public class ImagePanel extends JPanel {
         }
 
         private void drawIndexing(Graphics2D g1) {
-            Iterator<PuntCercle> itrPC = puntsCercles.iterator();
+            Iterator<PuntCercle> itrPC = patt2D.getPuntsCercles().iterator();
             while (itrPC.hasNext()) {
                 PuntCercle pc = itrPC.next();
                 Ellipse2D.Float e = pc.getCercle();
@@ -1347,6 +1329,41 @@ public class ImagePanel extends JPanel {
                 g1.setStroke(stroke);
                 g1.draw(ellipseToFrameCoords(p));
                 g1.fill(ellipseToFrameCoords(p));
+            }
+        }
+
+        private void drawIndexing2(Graphics2D g1) {
+            Iterator<PuntCercle> itrPC = patt2D.getPuntsCercles().iterator();
+            while (itrPC.hasNext()) {
+                PuntCercle pc = itrPC.next();
+                EllipsePars e = pc.getEllipse();
+                Ellipse2D.Float p = pc.getPunt();
+                g1.setPaint(PuntCercle.getColorPunt());
+                BasicStroke stroke = new BasicStroke(3.0f);
+                g1.setStroke(stroke);
+                g1.draw(ellipseToFrameCoords(p));
+                g1.fill(ellipseToFrameCoords(p));
+                
+                g1.setPaint(PuntCercle.getColorCercle());
+                stroke = new BasicStroke(1.f);
+//                BasicStroke stroke = new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[] {15,15}, 0);
+                g1.setStroke(stroke);
+                // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
+                Point2D.Float cen = getFramePointFromPixel(new Point2D.Float((float)e.getXcen(),(float)e.getYcen()));
+                int radiPunt = Calib_dialog.getRadipunt();
+                g1.drawOval((int)cen.x-radiPunt, (int)cen.y-radiPunt, radiPunt*2, radiPunt*2);
+                ArrayList<Point2D.Float>points =  e.getEllipsePoints(0, 360, 5);
+                if (points==null)continue;
+                for (int i = 0; i < points.size(); i++){
+                    Point2D.Float p1 = getFramePointFromPixel(points.get(i));
+                    Point2D.Float p2 = null;
+                    if (i==(points.size()-1)){
+                        p2 = getFramePointFromPixel(points.get(0));
+                    }else{
+                        p2 = getFramePointFromPixel(points.get(i+1));
+                    }
+                    g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
+                }
             }
         }
         
@@ -1378,7 +1395,7 @@ public class ImagePanel extends JPanel {
             while (itpks.hasNext()) {
                 PDReflection ref = itpks.next();
                 float dsp = ref.getDsp();
-                float t2 = (float) dspToT2(dsp);
+                float t2 = (float) patt2D.dspToT2(dsp);
                 //2theta to pixels
                 float radi = (float) FastMath.tan(t2) * patt2D.getDistMD();
                 float cX = patt2D.getCentrX();
@@ -1434,7 +1451,7 @@ public class ImagePanel extends JPanel {
 //        }
         
         private void drawSolPoints(Graphics2D g1) {
-            Iterator<OrientSolucio> itrOS = solucions.iterator();
+            Iterator<OrientSolucio> itrOS = patt2D.getSolucions().iterator();
             while (itrOS.hasNext()) {
                 OrientSolucio os = itrOS.next();
                 if (os.isShowSol()) {
@@ -1521,12 +1538,13 @@ public class ImagePanel extends JPanel {
                 if (showSolPoints) {drawSolPoints(g1);}
 
                 // nomes hauria d'haver-hi la possibilitat d'1 opcio, drawIndexing o drawHKLindexing
-                if (showIndexing || showHKLIndexing) {drawIndexing(g1);}
+                if (showIndexing || showHKLIndexing) {drawIndexing2(g1);}
 //                if (showHKLIndexing) {drawHKLIndexing(g1);}
                 
                 // nomes hauria d'haver-hi la possibilitat d'1 opcio, calibracio o zones excloses
-                if (estaCalibrant()) {drawCalibration(g1);}
+                if (estaCalibrant()) {drawCalibrationC(g1);}
                 if (estaDefinintEXZ()) {drawExZones(g1);}
+                if (estaPintantEXZ()) {drawExZones2(g1);}
                 
                 if (isShowRings() ){
                     //VavaLogger.LOG.info("hello from isShowRings()");
@@ -1592,7 +1610,11 @@ public class ImagePanel extends JPanel {
 	//max=-1 for auto calc max intensity
 	public void contrast_slider_properties(int min, int max){
 		int old_val = slider_contrast.getValue();
-		if(old_val==0){old_val=-1;}
+		if(old_val==0){
+		    old_val=-1;
+		    min=this.patt2D.getMinI();
+		    max=this.calcOptMaxISlider();    
+		}
 //		int old_max = slider_contrast.getMaximum();
 //		int old_min = slider_contrast.getMinimum();
 		this.slider_contrast.setMaximum(max);
@@ -1600,7 +1622,7 @@ public class ImagePanel extends JPanel {
         this.slider_contrast.setMinorTickSpacing((int)((float)(max-min)/50.f));
         //posicionem al valor que teniem si encara est� a l'escala i sino mantenim
         //la posicio en el nou valor (no cal, es posa a l'extrem m�s proper possible)
-        if(old_val>0){
+        if((old_val>0)&&(!this.chckbxAuto.isSelected())){
         	this.slider_contrast.setValue(old_val);	
         }else{
         	//posem al mig
@@ -1627,8 +1649,4 @@ public class ImagePanel extends JPanel {
 
         
 	}
-    protected void do_lblContrast_actionPerformed(ActionEvent arg0) {
-        Contrast_dialog cd = new Contrast_dialog(this);
-        cd.setVisible(true);
-    }
 }

@@ -2,7 +2,6 @@ package vava33.plot2d.auxi;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -10,7 +9,7 @@ import java.util.Iterator;
 
 import org.apache.commons.math3.util.FastMath;
 
-import com.vava33.jutils.VavaLogger;
+import vava33.plot2d.auxi.VavaLogger;
 
 public class LAT_data {
     
