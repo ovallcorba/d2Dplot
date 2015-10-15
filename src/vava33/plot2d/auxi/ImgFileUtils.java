@@ -3,14 +3,20 @@ package vava33.plot2d.auxi;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Scanner;
 
 import javax.imageio.ImageIO;
@@ -19,8 +25,8 @@ import javax.swing.JOptionPane;
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.VavaLogger;
 
+import vava33.plot2d.auxi.VavaLogger;
 import vava33.plot2d.MainFrame;
 
 public final class ImgFileUtils {
@@ -99,15 +105,15 @@ public final class ImgFileUtils {
                     for (int j = 0; j < patt2D.getDimX(); j++) { // per cada
                                                                  // columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j, i, (short) FileUtils.B2toInt(buff));
+                        patt2D.setInten(j, i, FileUtils.B2toInt(buff));
                         count = count + 1;
                         // nomes considerem valors superiors a zero pel minI
-                        if (patt2D.getIntenB2(j, i) >= 0) {
-                            if (patt2D.getIntenB2(j, i) > patt2D.getMaxI()) {
-                                patt2D.setMaxI(patt2D.getIntenB2(j, i));
+                        if (patt2D.getInten(j, i) >= 0) {
+                            if (patt2D.getInten(j, i) > patt2D.getMaxI()) {
+                                patt2D.setMaxI(patt2D.getInten(j, i));
                             }
-                            if (patt2D.getIntenB2(j, i) < patt2D.getMinI()) {
-                                patt2D.setMinI(patt2D.getIntenB2(j, i));
+                            if (patt2D.getInten(j, i) < patt2D.getMinI()) {
+                                patt2D.setMinI(patt2D.getInten(j, i));
                             }
                         }
                     }
@@ -137,7 +143,7 @@ public final class ImgFileUtils {
                 }
 
                 // calculem el factor d'escala
-                patt2D.setScale(patt2D.getMaxI() / (float)MainFrame.shortsize);
+                patt2D.setScale(patt2D.getMaxI() / (float)MainFrame.satur32); //els bin tenen maxim 32
 
                 in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                            // buffer
@@ -151,7 +157,7 @@ public final class ImgFileUtils {
                     for (int j = 0; j < patt2D.getDimX(); j++) { // per cada
                                                                  // columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
+                        patt2D.setInten(j, i, (int) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                     }
                 }
                 // corregim maxI i minI
@@ -215,12 +221,12 @@ public final class ImgFileUtils {
                 for (int i=0;i<patt2D.getDimY();i++){ //per cada fila (Y)
                     for (int j=0;j<patt2D.getDimX();j++){  //per cada columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j,i,(short)((float)FileUtils.B2toInt(buff)));
+                        patt2D.setInten(j,i,(int)((float)FileUtils.B2toInt(buff)));
                         count = count+1;
                         //nomes considerem valors superiors a zero pel minI
-                        if(patt2D.getIntenB2(j,i)>=0){
-                            if(patt2D.getIntenB2(j,i)>patt2D.getMaxI()){patt2D.setMaxI(patt2D.getIntenB2(j,i));}
-                            if(patt2D.getIntenB2(j,i)<patt2D.getMinI()){patt2D.setMinI(patt2D.getIntenB2(j,i));}
+                        if(patt2D.getInten(j,i)>=0){
+                            if(patt2D.getInten(j,i)>patt2D.getMaxI()){patt2D.setMaxI(patt2D.getInten(j,i));}
+                            if(patt2D.getInten(j,i)<patt2D.getMinI()){patt2D.setMinI(patt2D.getInten(j,i));}
                         }
                     }
                 }   
@@ -241,7 +247,7 @@ public final class ImgFileUtils {
                 }     
                 
                 //calculem el factor d'escala
-                patt2D.setScale((float)patt2D.getMaxI()/(float)MainFrame.shortsize);    
+                patt2D.setScale((float)patt2D.getMaxI()/(float)MainFrame.satur32);    
 
                 in = new BufferedInputStream(new FileInputStream(d2File)); //reiniciem buffer lectura
                 in.read(buff); //dimx
@@ -254,7 +260,7 @@ public final class ImgFileUtils {
                 for (int i=0;i<patt2D.getDimY();i++){ //per cada fila (Y)
                     for (int j=0;j<patt2D.getDimX();j++){  //per cada columna (X)
                         in.read(buff);
-                        patt2D.setIntenB2(j,i,(short)((float)FileUtils.B2toInt(buff)/patt2D.getScale()));
+                        patt2D.setInten(j,i,(int)((float)FileUtils.B2toInt(buff)/patt2D.getScale()));
                     }
                 }   
                 //corregim maxI i minI
@@ -341,12 +347,12 @@ public final class ImgFileUtils {
             InputStream in = new BufferedInputStream(new FileInputStream(d2File));
             byte[] buff = new byte[nbytePerPixel];
             byte[] header = new byte[headerSize * 512];
-            patt2D = new Pattern2D(dimX, dimY, centrX, centrY, maxI, minI, -1, false);
+            patt2D = new Pattern2D(dimX, dimY, centrX, centrY, maxI, minI, -1, true);
             int count = 0;
             in.read(header);
 
             // si la intensitat m�xima supera el short escalem
-            patt2D.setScale(FastMath.max(maxI / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(maxI / (float)MainFrame.satur65, 1.000f));
 
             // llegim els bytes
             for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
@@ -369,7 +375,7 @@ public final class ImgFileUtils {
                     // valorLlegit=buffer.getInt();
                     // break;
                     }
-                    patt2D.setIntenB2(j, i, (short) (valorLlegit / patt2D.getScale()));
+                    patt2D.setInten(j, i, (int)(valorLlegit / patt2D.getScale()));
                     count = count + 1;
                 }
             }
@@ -410,7 +416,7 @@ public final class ImgFileUtils {
                     int fila = offset / dimX; // LA Y
                     int col = (offset % dimX); // +1 //LA X
 
-                    patt2D.setIntenB2(col, fila, (short) (intensity / patt2D.getScale()));
+                    patt2D.setInten(col, fila, (int) (intensity / patt2D.getScale()));
                 }
             }
             in.close();
@@ -480,7 +486,7 @@ public final class ImgFileUtils {
             InputStream in = new BufferedInputStream(new FileInputStream(d2File));
             byte[] buff = new byte[2];
             byte[] header = new byte[headerSize];
-            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI, -1.0f, false);
+            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI, -1.0f, true);
             int count = 0;
             in.read(header);
 
@@ -508,7 +514,7 @@ public final class ImgFileUtils {
 
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
-            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.satur65, 1.000f));
 
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
@@ -520,7 +526,7 @@ public final class ImgFileUtils {
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
                                                              // (X)
                     in.read(buff);
-                    patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
+                    patt2D.setInten(j, i, (int) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                 }
             }
             // corregim maxI i minI
@@ -558,7 +564,7 @@ public final class ImgFileUtils {
             for (int i = 0; i < 50; i++) {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
-                    int iigual=line.indexOf("=")+1;;
+                    int iigual=line.indexOf("=")+1;
                     if (line.contains("Size =")) {
                         binSize = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
                     }
@@ -587,7 +593,10 @@ public final class ImgFileUtils {
                 }
             }
             headerSize = (int) (d2File.length()-binSize);
-
+            
+            VavaLogger.LOG.config("EDF header size (bytes)="+headerSize);
+            VavaLogger.writeNameNumPairs("CONFIG", true, "dimX,dimY,beamCX,beamCY,pixSize,distOD,wl", dimX,dimY,beamCX,beamCY,pixSize,distOD,wl);
+            VavaLogger.writeNameNumPairs("CONFIG",true, "binsize,d2fileLength",binSize,d2File.length());
             // calculem el pixel central
 //            beamCX = beamCX / pixSize;
 //            beamCY = beamCY / pixSize;
@@ -598,7 +607,7 @@ public final class ImgFileUtils {
             InputStream in = new BufferedInputStream(new FileInputStream(d2File));
             byte[] buff = new byte[2];
             byte[] header = new byte[headerSize];
-            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI, -1.0f, false);
+            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI, -1.0f, true);
             int count = 0;
             in.read(header);
 
@@ -627,7 +636,7 @@ public final class ImgFileUtils {
             
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
-            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.satur65, 1.000f));
             
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
@@ -639,7 +648,159 @@ public final class ImgFileUtils {
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
                                                              // (X)
                     in.read(buff);
-                    patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
+                    patt2D.setInten(j, i, (int) (FileUtils.B2toInt(buff) / patt2D.getScale()));
+                }
+            }
+            // corregim maxI i minI
+            patt2D.setMaxI((int) (patt2D.getMaxI() / patt2D.getScale()));
+            patt2D.setMinI((int) (patt2D.getMinI() / patt2D.getScale()));
+
+            in.close();
+            long end = System.nanoTime();
+            patt2D.setMillis((float) ((end - start) / 1000000d));
+            patt2D.setPixCount(count);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        // parametres instrumentals
+        patt2D.setExpParam(pixSize, pixSize, distOD, wl);
+
+        return patt2D; // correcte
+    }
+    
+    public static Pattern2D readD2D(File d2File) {
+        Pattern2D patt2D = null;
+        long start = System.nanoTime(); // control temps
+        int headerSize = 0;
+        int binSize = 0;
+        float pixSize = 0;
+        float distOD = 0;
+        float beamCX = 0, beamCY = 0, wl = 0;
+        int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
+        float tilt = 0, rot = 0;
+        int margin = 0, thresh =0;
+        ArrayList<PolyExZone> exzones = new ArrayList<PolyExZone>(); 
+
+        //primer treiem la info de les linies de text
+        try {
+            Scanner scD2file = new Scanner(d2File);
+            for (int i = 0; i < 50; i++) {
+                if (scD2file.hasNextLine()) {
+                    String line = scD2file.nextLine();
+                    int iigual=line.indexOf("=")+1;;
+                    if (line.contains("Size =")) {
+                        binSize = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Dim_1")) {
+                        dimX = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Dim_2")) {
+                        dimY = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Beam_center_x")) {
+                        beamCX = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Beam_center_y")) {
+                        beamCY = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Pixel_size_x") || line.contains("pixelsize_x")) {
+                        pixSize = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                        pixSize = pixSize/1000.f;
+                    }
+                    if (line.contains("Ref_distance")) {
+                        distOD = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Ref_wave")) {
+                        wl = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Det_tiltDeg")) {
+                        tilt = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("Det_rotDeg")) {
+                        rot = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("EXZmarg")) {
+                        margin = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if (line.contains("EXZthres")) {
+                        thresh = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    }
+                    if(line.trim().startsWith("EXZpol")){
+                        String linia = line.substring(iigual, line.trim().length()).trim();
+                        String[] values = linia.split("\\s+");
+                        PolyExZone z = new PolyExZone(false);
+                        for (int j = 0; j < values.length; j=j+2) {
+                            //parelles x1 y1 x2 y2 .... que son els vertexs
+                            z.addPoint(Integer.parseInt(values[j]), Integer.parseInt(values[j+1]));
+                        }
+                        exzones.add(z);
+                    }
+                }
+            }
+            
+            headerSize = (int) (d2File.length()-binSize);
+            
+            VavaLogger.LOG.config("D2D header size (bytes)="+headerSize);
+            
+            // calculem el pixel central
+//            beamCX = beamCX / pixSize;
+//            beamCY = beamCY / pixSize;
+
+            scD2file.close();
+
+            // ARA LLEGIREM ELS BYTES
+            InputStream in = new BufferedInputStream(new FileInputStream(d2File));
+            byte[] buff = new byte[2];
+            byte[] header = new byte[headerSize];
+            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI, -1.0f, true);
+            //info especifica d2d format
+            patt2D.setTiltDeg(tilt);
+            patt2D.setRotDeg(rot);
+            patt2D.setExZones(exzones);
+            
+            int count = 0;
+            in.read(header);
+
+            // Haurem de fer dues passades, una per determinar el maxI, minI i
+            // factor d'escala i l'altre per
+            // llegir totes les intensitats i aplicar el factor d'escala per
+            // encabir-ho a short.
+            for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+                for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+                                                             // (X)
+                    in.read(buff);
+                    int valorLlegit = FileUtils.B2toInt(buff);
+                    count = count + 1;
+                    // nomes considerem valors superiors a zero pel minI
+                    if (valorLlegit >= 0) {  //fem >= o > directament sense considerar els zeros??!
+                        if (valorLlegit > patt2D.getMaxI()) {
+                            patt2D.setMaxI(valorLlegit);
+                        }
+                        if (valorLlegit < patt2D.getMinI()) {
+                            patt2D.setMinI(valorLlegit);
+                        }
+                    }
+                }
+            }
+            in.close();
+            
+            // calculem el factor d'escala (valor maxim entre quocient i 1, mai
+            // escalem per sobre)
+            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.satur65, 1.000f));
+            
+            in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
+                                                                       // buffer
+                                                                       // lectura
+            in.read(header);
+
+            // ara aplico factor escala i guardo on i com toca
+            for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+                for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+                                                             // (X)
+                    in.read(buff);
+                    patt2D.setInten(j, i, (int) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                 }
             }
             // corregim maxI i minI
@@ -702,7 +863,7 @@ public final class ImgFileUtils {
         //operacions generals despres d'obrir
         patt2D.calcMeanI();
         patt2D.setImgfile(d2File);
-        ImgFileUtils.readEXZfile(patt2D);
+        ImgFileUtils.readEXZ(patt2D,null);
 
         //debug:
         VavaLogger.LOG.info("meanI= "+patt2D.getMeanI());
@@ -723,7 +884,7 @@ public final class ImgFileUtils {
             scD2file.nextLine();
             int count = 0;
 
-            patt2D = new Pattern2D(dimX, dimY, -1.0f, -1.0f, 0, 999999999, -1.0f, false);
+            patt2D = new Pattern2D(dimX, dimY, -1.0f, -1.0f, 0, 999999999, -1.0f, true);
 
             // el short arriba a 32,767... per tant maxI/scale=32767
             // si s'ha especificat al fitxer un factor d'escala l'utilitzem, ja
@@ -749,7 +910,7 @@ public final class ImgFileUtils {
                 }
             }
             // calculem el factor d'escala
-            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+            patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.satur65, 1.000f));
 
             scD2file = new Scanner(d2File);
             scD2file.next();// x
@@ -765,7 +926,7 @@ public final class ImgFileUtils {
                                                              // (X)
                     String r = scD2file.next();
                     int in = new java.math.BigDecimal(r).intValue();
-                    patt2D.setIntenB2(j, i, (short) (in / patt2D.getScale()));
+                    patt2D.setInten(j, i, (int) (in / patt2D.getScale()));
                 }
             }
             // corregim maxI i minI
@@ -793,7 +954,7 @@ public final class ImgFileUtils {
      *      abans de guardar el bin ja n'hi ha prou.
      *      No estaria de mes per� fer un m�tode que recalcul�s l'escala. (a Pattern2D)
      */
-    public static File saveBIN(File d2File, Pattern2D patt2D) {
+    public static File writeBIN(File d2File, Pattern2D patt2D) {
         // Forcem extensio bin
         d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".bin"));
 
@@ -814,12 +975,23 @@ public final class ImgFileUtils {
             output.write(bb.array());
             bb.clear();
 
-            bb = ByteBuffer.allocate(4);
-            bb.order(ByteOrder.LITTLE_ENDIAN);
-            bb.putFloat(patt2D.getScale());
-            output.write(bb.array());
-            bb.clear();
-
+            //AQUI HEM DE COMPROVAR L'ESCALA EN CAS QUE HAGUEM DE PASSAR DE INT A SHORT
+            if(patt2D.isB4inten()){
+                float scI2 = patt2D.calcScaleI2();
+                bb = ByteBuffer.allocate(4);
+                bb.order(ByteOrder.LITTLE_ENDIAN);
+                bb.putFloat(scI2);
+                output.write(bb.array());
+                bb.clear();  
+                
+            }else{
+                bb = ByteBuffer.allocate(4);
+                bb.order(ByteOrder.LITTLE_ENDIAN);
+                bb.putFloat(patt2D.getScale());
+                output.write(bb.array());
+                bb.clear();    
+            }
+            
             bb = ByteBuffer.allocate(4);
             bb.order(ByteOrder.LITTLE_ENDIAN);
             bb.putFloat(patt2D.getCentrX());
@@ -866,10 +1038,10 @@ public final class ImgFileUtils {
                     if (patt2D.isInExZone(j, i)) {
                         bb.putShort((short) -1);
                     } else {
-                        if((patt2D.getY0toMask()==1)&&(patt2D.getIntenB2(j, i)==0)){
+                        if((patt2D.getY0toMask()==1)&&(patt2D.getInten(j, i)==0)){
                             bb.putShort((short) -1);
                         }else{
-                            bb.putShort(patt2D.getIntenB2(j, i));
+                            bb.putShort((short)patt2D.getInten(j, i));
                         }
                     }
                     output.write(bb.array());
@@ -886,6 +1058,189 @@ public final class ImgFileUtils {
         return d2File;
     }
 
+    //DATA UNSIGNED SHORT
+    public static File writeEDF(File d2File, Pattern2D patt2D){
+        // Forcem extnsio edf
+        d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".edf"));
+        
+        int binSize = patt2D.getDimX()*patt2D.getDimY()*2; //considerant 2 bytes per pixel
+        
+        try{
+            
+            //ESCRIBIM PRIMER LA PART ASCII
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(d2File)));
+            // ESCRIBIM AL FITXER:
+            output.println("{");
+            output.println("HeaderID = EH:000001:000000:000000 ;");
+            output.println("ByteOrder = LowByteFirst ;");
+            output.println("DataType = UnsignedShort ;");
+            output.println("Size = "+binSize+" ;");
+            output.println("Dim_1 = "+patt2D.getDimX()+" ;");
+            output.println("Dim_2 = "+patt2D.getDimY()+" ;");
+            output.println("beam_center_x = "+FileUtils.dfX_2.format(patt2D.getCentrX())+" ;");
+            output.println("beam_center_y = "+FileUtils.dfX_2.format(patt2D.getCentrY())+" ;");
+            output.println("pixelsize_x = "+FileUtils.dfX_2.format(patt2D.getPixSx()*1000)+" ;");
+            output.println("pixelsize_y = "+FileUtils.dfX_2.format(patt2D.getPixSy()*1000)+" ;");
+            output.println("ref_distance = "+FileUtils.dfX_2.format(patt2D.getDistMD())+" ;");
+            output.println("ref_wave = "+FileUtils.dfX_4.format(patt2D.getWavel())+" ;");
+            output.println("}");
+            output.close();
+            
+            //ara mirem quants bytes hem escrit...
+            int headerbytes = (int)d2File.length();
+            VavaLogger.LOG.config("Write EDF headerbytes="+headerbytes);
+            
+            OutputStream os = new BufferedOutputStream(new FileOutputStream(d2File,true));
+//            byte[] buff = new byte[2];
+            
+            //escribim imatge tal cual
+            for (int i = 0; i < patt2D.getDimY(); i++) {
+                for (int j = 0; j < patt2D.getDimX(); j++) {
+                    ByteBuffer bb = ByteBuffer.allocate(2);
+                    bb.order(ByteOrder.LITTLE_ENDIAN);
+                    if (patt2D.getInten(j, i)>0){
+                        bb.putChar((char) patt2D.getInten(j, i));    
+                    }else{
+                        bb.putChar((char) 0);
+                    }
+                    os.write(bb.array());
+                    bb.clear();
+                }
+            }
+            
+            os.close();
+            
+        }catch(Exception e){
+            e.printStackTrace();
+            return null;
+        }
+        return d2File;
+        
+    }
+    
+    //DATA UNSIGNED SHORT
+    public static File writeIMG(File d2File, Pattern2D patt2D){
+        // Forcem extnsio edf
+        d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".img"));
+        int headerBytes = 512;
+        try{
+            
+            //ESCRIBIM PRIMER LA PART ASCII
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(d2File)));
+            // ESCRIBIM AL FITXER:
+            output.println("{");
+            output.println("HEADER_BYTES= "+headerBytes+";");
+            output.println("TYPE=unsigned_short ;");
+            output.println("BYTE_ORDER=little_endian;");
+            output.println("SIZE1="+patt2D.getDimX()+";");
+            output.println("SIZE2="+patt2D.getDimY()+";");
+            output.println("DISTANCE= "+FileUtils.dfX_3.format(patt2D.getDistMD())+" ;");
+            output.println("PIXEL_SIZE= "+FileUtils.dfX_6.format(patt2D.getPixSx())+" ;");
+            output.println("WAVELENGTH="+FileUtils.dfX_6.format(patt2D.getWavel())+";");
+            output.println("BEAM_CENTER_X="+FileUtils.dfX_2.format(patt2D.getCentrX()*patt2D.getPixSx())+";");
+            output.println("BEAM_CENTER_Y="+FileUtils.dfX_2.format(patt2D.getCentrY()*patt2D.getPixSy())+";");
+            output.println("}");
+            output.close();
+            
+            //ara mirem quants bytes hem escrit...
+            int writtenHeaderBytes = (int)d2File.length();
+            VavaLogger.LOG.config("Write IMG headerbytes="+writtenHeaderBytes);
+            
+            OutputStream os = new BufferedOutputStream(new FileOutputStream(d2File,true));
+            
+            //cal escriure fins a 512
+            os.write(new byte[headerBytes - writtenHeaderBytes]);
+
+            //ara ja escribim imatge tal cual
+            for (int i = 0; i < patt2D.getDimY(); i++) {
+                for (int j = 0; j < patt2D.getDimX(); j++) {
+                    ByteBuffer bb = ByteBuffer.allocate(2);
+                    bb.order(ByteOrder.LITTLE_ENDIAN);
+                    bb.putChar((char) patt2D.getInten(j, i));
+                    os.write(bb.array());
+                    bb.clear();
+                }
+            }
+            
+            os.close();
+            
+        }catch(Exception e){
+            e.printStackTrace();
+            return null;
+        }
+        return d2File;
+    }
+    
+    //DATA UNSIGNED SHORT AMB CAPÇALERA QUE CONTE EXZ, FORMAT PROPI DEL PROGRAMA
+    public static File writeD2D(File d2File, Pattern2D patt2D){
+        // Forcem extnsio edf
+        d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".d2d"));
+        
+        int binSize = patt2D.getDimX()*patt2D.getDimY()*2; //considerant 2 bytes per pixel
+        
+        try{
+            
+            //ESCRIBIM PRIMER LA PART ASCII
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(d2File)));
+            // ESCRIBIM AL FITXER:
+            output.println("{");
+            output.println("ByteOrder = LowByteFirst ;");
+            output.println("DataType = UnsignedShort ;");
+            output.println("Size = "+binSize+" ;");
+            output.println("Dim_1 = "+patt2D.getDimX()+" ;");
+            output.println("Dim_2 = "+patt2D.getDimY()+" ;");
+            output.println("Beam_center_x = "+FileUtils.dfX_2.format(patt2D.getCentrX())+" ;");
+            output.println("Beam_center_y = "+FileUtils.dfX_2.format(patt2D.getCentrY())+" ;");
+            output.println("Pixelsize_x = "+FileUtils.dfX_2.format(patt2D.getPixSx()*1000)+" ;");
+            output.println("Pixelsize_y = "+FileUtils.dfX_2.format(patt2D.getPixSy()*1000)+" ;");
+            output.println("Ref_distance = "+FileUtils.dfX_2.format(patt2D.getDistMD())+" ;");
+            output.println("Ref_wave = "+FileUtils.dfX_4.format(patt2D.getWavel())+" ;");
+            output.println("Det_tiltDeg = "+FileUtils.dfX_3.format(patt2D.getTiltDeg())+" ;");
+            output.println("Det_rotDeg = "+FileUtils.dfX_3.format(patt2D.getRotDeg())+" ;");
+            output.println("EXZMargin="+ patt2D.getMargin());
+            output.println("EXZThreshold="+ patt2D.getY0toMask());
+            int polcount = 1;
+            Iterator<PolyExZone> it = patt2D.getExZones().iterator();
+            while (it.hasNext()) {
+                PolyExZone p = it.next();
+                StringBuilder sb = new StringBuilder();
+                for (int i=0;i<p.npoints;i++){
+                    sb.append(p.getXYvertex(i)).append(" ");
+                }
+                output.println("EXZpol"+polcount+"=" + sb.toString().trim());
+                polcount = polcount +1;
+            }
+            output.println("}");
+            output.close();
+            
+            //ara mirem quants bytes hem escrit...
+            int headerbytes = (int)d2File.length();
+            VavaLogger.LOG.config("Write D2D headerbytes="+headerbytes);
+            
+            OutputStream os = new BufferedOutputStream(new FileOutputStream(d2File,true));
+//            byte[] buff = new byte[2];
+            
+            //escribim imatge tal cual
+            for (int i = 0; i < patt2D.getDimY(); i++) {
+                for (int j = 0; j < patt2D.getDimX(); j++) {
+                    ByteBuffer bb = ByteBuffer.allocate(2);
+                    bb.order(ByteOrder.LITTLE_ENDIAN);
+                    bb.putChar((char) patt2D.getInten(j, i));
+                    os.write(bb.array());
+                    bb.clear();
+                }
+            }
+            
+            os.close();
+            
+        }catch(Exception e){
+            e.printStackTrace();
+            return null;
+        }
+        return d2File;
+        
+    }
+    
     public static File savePNG(File f, BufferedImage i) {
         // forcem extensio PNG
         f = new File(FileUtils.getFNameNoExt(f).concat(".png"));
@@ -996,7 +1351,7 @@ public final class ImgFileUtils {
 
                   // calculem el factor d'escala (valor maxim entre quocient i 1, mai
                   // escalem per sobre)
-                  patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.shortsize, 1.000f));
+                  patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)MainFrame.satur32, 1.000f));
 
                   in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                              // buffer
@@ -1009,10 +1364,10 @@ public final class ImgFileUtils {
                                                                    // (X)
                           in.read(buff);
                           if(patt2D.isInExZone(j, i)){
-                              patt2D.setIntenB2(j, i, (short)-1);
+                              patt2D.setInten(j, i, -1);
                               continue;
                           }
-                          patt2D.setIntenB2(j, i, (short) (FileUtils.B2toInt(buff) / patt2D.getScale()));
+                          patt2D.setInten(j, i, (int) (FileUtils.B2toInt(buff) / patt2D.getScale()));
                       }
                   }
                   // corregim maxI i minI
@@ -1033,14 +1388,72 @@ public final class ImgFileUtils {
           
     }
     
-    public static boolean readEXZfile(Pattern2D patt2D) {
-    	File dataFile = patt2D.getImgfile();
-        File exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".exz"));
-        if (!exfile.exists()) {
-            exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
-            if (!exfile.exists())
-                return false;
+    public static File writeEXZ(File exfile, Pattern2D patt2D) {
+        //forcem extensio EXZ
+        exfile = new File(FileUtils.getFNameNoExt(exfile).concat(".EXZ"));
+        
+        if(exfile.exists()){
+            //avisem que es sobreescriur�
+            Object[] options = {"Yes","No"};
+            int n = JOptionPane.showOptionDialog(null,
+                    "EXZ file will be overwritten. Continue?",
+                    "File exists",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null, //do not use a custom Icon
+                    options, //the titles of buttons
+                    options[1]); //default button title
+            if (n!=0){return null;} // si s'ha cancelat o tancat la finestra no es segueix salvant 
         }
+        // creem un printwriter amb el fitxer file (el que estem escribint)
+        try {
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(exfile)));
+            // ESCRIBIM AL FITXER:
+            output.println("! Excluded zones file for: " + patt2D.getImgfileString());
+            output.println("EXZmargin="+ patt2D.getMargin());
+            output.println("EXZthreshold="+ patt2D.getY0toMask());
+            int polcount = 1;
+            Iterator<PolyExZone> it = patt2D.getExZones().iterator();
+            while (it.hasNext()) {
+                PolyExZone p = it.next();
+                StringBuilder sb = new StringBuilder();
+                for (int i=0;i<p.npoints;i++){
+                    sb.append(p.getXYvertex(i)).append(" ");
+                }
+                output.println("EXZpol"+polcount+"=" + sb.toString().trim());
+                polcount = polcount +1;
+            }
+            
+            //COMENTARIS INFO
+            output.println("!");
+            output.println("! EXZmargin     Margin of the image in pixels (if any)");
+            output.println("! EXZthreshold  Pixels with Y<threshold will be excluded");
+            output.println("! EXZpol#       Sequence of pixels (X1 Y1 X2 Y2 X3 Y3...) defining a polygonal shape to be");
+            output.println("!               considered as excluded zone for the image");
+            
+            output.close();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return exfile;
+    }
+    
+    //if exffile==null es mira el nomb del patt2d
+    public static boolean readEXZ(Pattern2D patt2D, File exfile) {
+    	File dataFile = patt2D.getImgfile();
+    	if (exfile == null){
+            exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".exz"));
+            if (!exfile.exists()) {
+                exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".EXZ"));
+                if (!exfile.exists())
+                    return false;
+            }
+    	}
+        if (!exfile.exists())
+            return false;
+        
         // aqui hauriem de tenir exfile ben assignada, la llegim
         String line;
         try {
@@ -1062,32 +1475,24 @@ public final class ImgFileUtils {
                 
                 int iigual=line.indexOf("=")+1;
                 
-                if(line.trim().startsWith("MARGIN")){
+                if(line.trim().startsWith("EXZmarg")){
                     patt2D.setMargin(Integer.parseInt(line.substring(iigual, line.trim().length()).trim()));
                     continue;
                 }
-                if(line.trim().startsWith("Y0TOMASK")){
-                    int ytm = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
-                    if(ytm==1){
-                        patt2D.setY0toMask(1);
-                    }else{
-                        patt2D.setY0toMask(0);
-                    }
+                if(line.trim().startsWith("EXZthres")){
+                    int yth = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
+                    patt2D.setY0toMask(yth);
                     continue;
                 }
-                if(line.trim().startsWith("NEXZONES")){
-                    int nexz = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
-                    //ara llegim les zones
-                    for (int i = 0; i < nexz; i++) {
-                        line = scExFile.nextLine();
-                        //tolerem una linia de comentari
-                        if(line.trim().startsWith("!"))line = scExFile.nextLine();
-                        String[] zona = line.trim().split(" ");
-                        patt2D.addExZone(new ExZone(Integer.parseInt(zona[0]),
-                                Integer.parseInt(zona[1]),Integer.parseInt(zona[2]),Integer.parseInt(zona[3]),
-                                Integer.parseInt(zona[4]),Integer.parseInt(zona[5]),Integer.parseInt(zona[6]),
-                                Integer.parseInt(zona[7])));
+                if(line.trim().startsWith("EXZpol")){
+                    String linia = line.substring(iigual, line.trim().length()).trim();
+                    String[] values = linia.split("\\s+");
+                    PolyExZone z = new PolyExZone(false);
+                    for (int i = 0; i < values.length; i=i+2) {
+                        //parelles x1 y1 x2 y2 .... que son els vertexs
+                        z.addPoint(Integer.parseInt(values[i]), Integer.parseInt(values[i+1]));
                     }
+                    patt2D.addExZone(z);
                     continue;
                 }
             }
@@ -1097,6 +1502,190 @@ public final class ImgFileUtils {
         }
         return true;
     }
+    
+    
+    public static File openXDS(File xdsFile) {
+        // list of: x,y,z,Intensity,(iseg),h,k,l
+        // (z is the image number where the centroid of the reflection is... it is FLOAT, does not correspond to exact an image)
+        try {
+            OrientSolucio.setNumSolucions(1); // num de solucions
+            OrientSolucio.setHasFc(0); // 0 sense Fc, 1 amb Fc
+            OrientSolucio.setGrainIdent(0);
+
+            MainFrame.getPatt2D().getSolucions().add(new OrientSolucio(0)); // afegim una solucio
+            MainFrame.getPatt2D().getSolucions().get(0).setGrainNr(0);
+            MainFrame.getPatt2D().getSolucions().get(0).setValorFrot(0.0f); // valor funcio rotacio
+
+            int npunts = 0;
+            
+            Scanner scSolfile = new Scanner(xdsFile);
+            while(scSolfile.hasNextLine()){
+                String line = scSolfile.nextLine();
+                if (line.isEmpty()) continue;
+                npunts = npunts + 1;
+                VavaLogger.LOG.info("xdsfileline= "+line);
+                String lineS[] = line.trim().split("\\s+");
+                MainFrame.getPatt2D()
+                        .getSolucions()
+                        .get(0)
+                        .addSolPoint(Float.parseFloat(lineS[0]), Float.parseFloat(lineS[1]),
+                                Integer.parseInt(lineS[4]), Integer.parseInt(lineS[5]),
+                                Integer.parseInt(lineS[6]), 1.0f,
+                                Float.parseFloat(lineS[2]));
+                
+
+            }
+            scSolfile.close();
+            MainFrame.getPatt2D().getSolucions().get(0).setNumReflexions(npunts);
+            
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return xdsFile;
+    }
+    
+    public static File openSol(File solFile) {
+
+        String line;
+        boolean endSol = false;
+
+        try {
+            Scanner scSolfile = new Scanner(solFile);
+            scSolfile.nextLine(); // number of solutions
+            OrientSolucio.setNumSolucions(scSolfile.nextInt()); // num de solucions
+            scSolfile.nextLine();
+            scSolfile.nextLine(); // structure factor calculation
+            OrientSolucio.setHasFc(scSolfile.nextInt()); // 0 sense Fc, 1 amb Fc
+            scSolfile.nextLine();
+            scSolfile.nextLine(); // grain identificator
+            OrientSolucio.setGrainIdent(scSolfile.nextInt());
+            scSolfile.nextLine();
+            scSolfile.nextLine(); // grain nr (cap�alera) comen�a el primer gra
+
+            /*
+             * En el cas que grain identificator sigui 0, hi ha #NumSolucions mostrant nom�s la solucio amb major Frot
+             * (CENTRE). En cas que sigui 1, hi ha X solucions properes a la del gra seleccionat (indicat per grain
+             * identificator). Les solucions estan etiquetades per la cap�alera ORIENT excepte la de major valor de Frot
+             * que �s CENTRE.
+             */
+
+            if (OrientSolucio.getGrainIdent() == 0) {
+                for (int i = 0; i < OrientSolucio.getNumSolucions(); i++) {
+                    MainFrame.getPatt2D().getSolucions().add(new OrientSolucio(i)); // afegim una solucio
+                    int npunts = 0;
+                    endSol = false;
+                    MainFrame.getPatt2D().getSolucions().get(i).setGrainNr(scSolfile.nextInt());
+                    line = scSolfile.nextLine();
+                    VavaLogger.LOG.info(scSolfile.nextLine());// CENTRE
+//                    scSolfile.nextLine();// CENTRE
+                    MainFrame.getPatt2D().getSolucions().get(i).setNumReflexions(scSolfile.nextInt());
+                    line = scSolfile.nextLine();
+                    MainFrame.getPatt2D().getSolucions().get(i).setValorFrot(Float.parseFloat(line)); // valor funcio rotacio
+//                    VavaLogger.LOG.info(scSolfile.nextLine());
+                    VavaLogger.LOG.info(MainFrame.getPatt2D().getSolucions().get(i).getNumReflexions()+" "+MainFrame.getPatt2D().getSolucions().get(i).getValorFrot());
+                    VavaLogger.LOG.info(scSolfile.nextLine());// matriu Rot
+                    VavaLogger.LOG.info(scSolfile.nextLine());// matriu Rot
+                    VavaLogger.LOG.info(scSolfile.nextLine());// matriu Rot
+//                    scSolfile.nextLine();// matriu Rot
+//                    scSolfile.nextLine();// matriu Rot
+//                    scSolfile.nextLine();// matriu Rot
+                    // ara comencen les reflexions
+                    while (!endSol) {
+                        if (!scSolfile.hasNextLine()) {
+                            endSol = true;
+                            continue;
+                        }
+                        line = scSolfile.nextLine();
+                        VavaLogger.LOG.info("bona "+line);
+                        if (line.trim().isEmpty())
+                            continue;
+                        if (line.trim().startsWith("GRAIN")) {
+                            endSol = true;
+                            continue;
+                        }
+                        npunts = npunts + 1;
+                        String[] lineS = line.trim().split("\\s+");
+                        MainFrame.getPatt2D()
+                                .getSolucions()
+                                .get(i)
+                                .addSolPoint(Float.parseFloat(lineS[1]), Float.parseFloat(lineS[2]),
+                                        Integer.parseInt(lineS[3]), Integer.parseInt(lineS[4]),
+                                        Integer.parseInt(lineS[5]), Float.parseFloat(lineS[6]),
+                                        Float.parseFloat(lineS[7]));
+                    }
+                    MainFrame.getPatt2D().getSolucions().get(i).setNumReflexions(npunts);
+                }
+
+            } else { // cas d'un sol gra
+
+                int grainNr;
+                for (int j = 0; j < OrientSolucio.getNumSolucions(); j++) {
+                    grainNr = scSolfile.nextInt();
+                    line = scSolfile.nextLine();
+                    if (grainNr != OrientSolucio.getGrainIdent()) {
+                        // no es el gra del que trobem orientacions properes, llegim seguent cap�alera i el saltem
+                        if (scSolfile.hasNextLine()) {
+                            scSolfile.nextLine();
+                        } // cap�alera GRAIN NR.
+                        continue;
+                    }
+                    // es el gra correcte
+                    scSolfile.nextLine();// ORIENT o CENTRE (cap�alera)
+                    int i = 0;
+                    boolean endGrain = false;
+                    while (!endGrain) {
+                        MainFrame.getPatt2D().getSolucions().add(new OrientSolucio(i)); // afegim una solucio
+                        MainFrame.getPatt2D().getSolucions().get(i).setGrainNr(grainNr);
+                        line = scSolfile.nextLine();
+                        String[] lineS = line.trim().split("\\s+");
+                        // valor funcio rotacio. S'haura de canviar si es passa de int a float en futurs fitxers sol
+                        MainFrame.getPatt2D().getSolucions().get(i).setValorFrot(Integer.parseInt(lineS[0]));
+                        scSolfile.nextLine();// matriu Rot
+                        scSolfile.nextLine();// matriu Rot
+                        scSolfile.nextLine();// matriu Rot
+                        // ara comencen les reflexions
+                        endSol = false;
+                        int npunts = 0;
+                        while (!endSol) {
+                            if (!scSolfile.hasNextLine()) {
+                                endGrain = true;
+                                endSol = true;
+                                continue;
+                            }
+                            line = scSolfile.nextLine();
+                            if (line.trim().isEmpty())
+                                continue;
+                            if (line.trim().startsWith("ORIENT") || line.trim().startsWith("CENTRE")) {
+                                endSol = true;
+                                continue;
+                            }
+                            if (line.trim().startsWith("GRAIN")) {
+                                endGrain = true;
+                                endSol = true;
+                                continue;
+                            }
+                            npunts = npunts + 1;
+                            lineS = line.trim().split("\\s+");
+                            MainFrame.getPatt2D()
+                                    .getSolucions()
+                                    .get(i)
+                                    .addSolPoint(Float.parseFloat(lineS[1]), Float.parseFloat(lineS[2]),
+                                            Integer.parseInt(lineS[3]), Integer.parseInt(lineS[4]),
+                                            Integer.parseInt(lineS[5]), Float.parseFloat(lineS[6]),
+                                            Float.parseFloat(lineS[7]));
+                        }
+                        MainFrame.getPatt2D().getSolucions().get(i).setNumReflexions(npunts);
+                        i++;
+                    }
+                }
+            }
+            scSolfile.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return solFile;
+    }    
+    
     
 //    public void reopenIMG(File d2dfile, Pattern2D patt2D){
 //        //TODO
