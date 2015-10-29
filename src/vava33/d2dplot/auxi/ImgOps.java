@@ -1,25 +1,33 @@
-package vava33.plot2d.auxi;
+package vava33.d2dplot.auxi;
 
+import java.awt.Toolkit;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
 
+import javax.swing.JDialog;
 import javax.swing.JProgressBar;
-
-import com.vava33.jutils.LogJTextArea;
-
-import vava33.plot2d.auxi.VavaLogger;
+import javax.swing.ProgressMonitor;
+import javax.swing.SwingWorker;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.plot2d.auxi.Pattern1D.PointPatt1D;
+import vava33.d2dplot.D2Dplot_global;
+import vava33.d2dplot.MainFrame;
+import vava33.d2dplot.auxi.PDDatabase.searchDBWorker;
+import vava33.d2dplot.auxi.Pattern1D.PointPatt1D;
+
+import com.vava33.jutils.LogJTextArea;
+import com.vava33.jutils.VavaLogger;
 
 /*
  * Operacions sobre imatges (sostracci� fons, correccions, etc...)
@@ -27,10 +35,11 @@ import vava33.plot2d.auxi.Pattern1D.PointPatt1D;
 public final class ImgOps {
 	
 	private static int bkgIter;
-	
+    private static VavaLogger log = D2Dplot_global.log;
+
 	public static Pattern2D firstBkgPass(Pattern2D dataIn){
 		
-		Pattern2D dataOut = new Pattern2D(dataIn);
+		Pattern2D dataOut = new Pattern2D(dataIn,false);
 		bkgIter=0; //inicialitzem iter
 		int Imin=Integer.MAX_VALUE;
 		int Imean=0;
@@ -71,7 +80,7 @@ public final class ImgOps {
 //			txtOut.addtxt(false, true, "");
 //		}
 		bkgIter=bkgIter+1;
-		Pattern2D dataOut = new Pattern2D(dataIn);
+		Pattern2D dataOut = new Pattern2D(dataIn,false);
 		for(int i=0; i<dataOut.getDimY();i++){
 			for(int j=0; j<dataOut.getDimX();j++){
 	            //comprovem si el punt es una mascara, i si es aixi el saltem donant-li
@@ -160,7 +169,7 @@ public final class ImgOps {
 	}
 	
 	public static Pattern2D subtractBKG(Pattern2D dataIn, Pattern2D dataToSubtract){
-		Pattern2D dataSub = new Pattern2D(dataIn);
+		Pattern2D dataSub = new Pattern2D(dataIn,false);
 		dataSub.setMaxI(0);
 		dataSub.setMinI(9999999);
 		for(int i=0; i<dataSub.getDimY();i++){
@@ -185,7 +194,7 @@ public final class ImgOps {
 	
 	//return [0] dataSubtracted and [1] dataMask
 	public static Pattern2D[] subtractBKG_v2(Pattern2D dataIn, Pattern2D dataToSubtract,float factor,LogJTextArea out){
-		Pattern2D[] dataSub = {new Pattern2D(dataIn),new Pattern2D(dataIn)};
+		Pattern2D[] dataSub = {new Pattern2D(dataIn,false),new Pattern2D(dataIn,false)};
 		dataSub[0].setMaxI(0);
 		dataSub[1].setMaxI(0);
 		dataSub[0].setMinI(9999999);
@@ -248,8 +257,9 @@ public final class ImgOps {
 		int pos;
 		
 		//primer integrem la imatge
-		Pattern1D intrad = intRad(glass, t2ini, t2fin, stepsize, false);
-		
+//		Pattern1D intrad = intRad(glass, t2ini, t2fin, stepsize, false);
+		Pattern1D intrad = radialIntegration(glass, t2ini, t2fin, stepsize, -1,  -1, true, false, false);
+
 		//per cada pixel mirarem la intensitat mitjana a l'anell que es troba i si aquesta intensitat es
         //mes gran que ymean+2*desv el considerem pic espuri
 		for(int i=0; i<glass.getDimY();i++){
@@ -257,7 +267,7 @@ public final class ImgOps {
 				//s'haurien d'haver aplicat les zones excloses al vidre
 				if(glass.isInExZone(j, i))continue;
 				//2Theta pixel imatge per determinar amplada i angle
-				t2p = glass.calc2T(j, i, true);
+				t2p = (float) glass.calc2T(j, i, true);
 				//ara hem de mirar a quina posicio del vector desv es troba aquesta 2t
 				pos = FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize);
 	            //ara hem de decidir si es pic espuri o no
@@ -304,14 +314,14 @@ public final class ImgOps {
 //   			txtOut.addtxt(false, true, "");
 //   		}
    		bkgIter=bkgIter+1;
-   		Pattern2D dataOut = new Pattern2D(dataIn);
+   		Pattern2D dataOut = new Pattern2D(dataIn,false);
    		
 //        !primer fem la integracio radial de la iteracio anterior
 //        !calcul del 2T maxim (pixel extrem: 0,0 per exemple)
 //        !calcul angle 2teta en graus:
-   		float t2fin = dataIn.calc2T(0, 0, true);
-   		Pattern1D intrad = intRad(dataIn,0.0f, t2fin, stepsize, false); //realment aqui en el promig hauriem de NO considerar pics
-   		
+   		float t2fin = (float) dataIn.calc2T(0, 0, true);
+   		Pattern1D intrad = radialIntegration(dataIn,0.0f, t2fin, stepsize, -1, -1, true, false, false); //realment aqui en el promig hauriem de NO considerar pics
+
    		float t2p,ysum,npix;
    		int pos;
    		//dataOut sera el promig de la integracio radial de dataIn
@@ -321,7 +331,7 @@ public final class ImgOps {
    					dataOut.setInten(j, i, dataIn.getInten(j, i));
    					continue;
    				}
-   				t2p = dataOut.calc2T(j, i, true);
+   				t2p = (float) dataOut.calc2T(j, i, true);
    				//pos al vector
 				pos = FastMath.round(t2p/stepsize)-FastMath.round(0.0f/stepsize);
 	            //ara hem de decidir si es pic espuri o no
@@ -370,7 +380,7 @@ public final class ImgOps {
 //   			txtOut.addtxt(false, true, "");
 //   		}
    		bkgIter=bkgIter+1;
-   		Pattern2D dataOut = new Pattern2D(dataIn);
+   		Pattern2D dataOut = new Pattern2D(dataIn,false);
    		
    		//ara a cada pixel de la imatge calcularem el promig dels del voltant de l'arc
    		for(int i=0; i<dataOut.getDimY();i++){
@@ -385,7 +395,7 @@ public final class ImgOps {
    				float[] fact = dataIn.getFactAngleAmplada(j, i);
    				float obertura = oberturaArc * fact[0];
    				float amplada = ampladaArc * fact[1];
-   				Patt2Dzone arc = Yarc2(dataIn, j, i, amplada, obertura, false, 0, false);
+   				Patt2Dzone arc = YarcTilt(dataIn, j, i, amplada, obertura, false, 0, false);
    				
 //   	        assignem al pixel la intensitat mitjana (fitxer de fons que despres restarem)
 //   	        nomes si la intensitat anterior es superior
@@ -449,7 +459,7 @@ public final class ImgOps {
     	boolean horver = (fhorver == 1) ? true:false;
     	
 //   	bkgIter=bkgIter+1;
-   		Pattern2D dataOut = new Pattern2D(dataIn);
+   		Pattern2D dataOut = new Pattern2D(dataIn,false);
    		
    		int v0,v1,v2,v3; //valor pixel,valor flip hor, valor flip vert, valor fliphor-flipvert
    		int newj,newi;
@@ -483,7 +493,7 @@ public final class ImgOps {
    	   				float[] fact = dataIn.getFactAngleAmplada(j, i);
    	   				obertura = oberturaArc * fact[0];
    	   				amplada = ampladaArc * fact[1];
-   					zone = Yarc2(dataIn, j, i, amplada, obertura, true, 0, false);
+   					zone = YarcTilt(dataIn, j, i, amplada, obertura, true, 0, false);
    					v0 = FastMath.round(zone.getYmean());
 //   					txtOut.ln("pix"+j+","+i);
    				}else{
@@ -499,15 +509,15 @@ public final class ImgOps {
    				if (minarc){
    					//prova amb integracio arc
    					if(hor){
-   						zone = Yarc2(dataIn, newj, i, amplada, obertura, true, 0, false);
+   						zone = YarcTilt(dataIn, newj, i, amplada, obertura, true, 0, false);
    						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    					if(ver){
-   						zone = Yarc2(dataIn, j, newi, amplada, obertura, true, 0, false);
+   						zone = YarcTilt(dataIn, j, newi, amplada, obertura, true, 0, false);
    						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    					if(horver){
-   						zone = Yarc2(dataIn,newj, newi, amplada, obertura, true, 0, false);
+   						zone = YarcTilt(dataIn,newj, newi, amplada, obertura, true, 0, false);
    						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    				}else{
@@ -559,8 +569,9 @@ public final class ImgOps {
 		return dataOut; 
     }
     
+    //iosc es l'eix de tilt, 1=horitzontal, 2=vertical
 	public static Pattern2D corrLP(Pattern2D dataIn,int iPol, int iLor, int iosc, boolean debug){
-		Pattern2D dataOut = new Pattern2D(dataIn);
+		Pattern2D dataOut = new Pattern2D(dataIn,false);
 		Pattern2D dataI4temp = new Pattern2D(dataIn.getDimX(),dataIn.getDimY());
 		int maxVal=0;
 		int minVal=99999999;
@@ -624,7 +635,7 @@ public final class ImgOps {
 
                 dataI4temp.setInten(j, i, FastMath.round((dataIn.getInten(j, i)*rloren)/pol));
                 //mirem si superem els limits (per escalar despres)
-                if (dataI4temp.getIntenB4(j, i)>maxVal) maxVal=dataI4temp.getIntenB4(j, i);
+                if (dataI4temp.getInten(j, i)>maxVal) maxVal=dataI4temp.getInten(j, i);
 			}
 		}
 		
@@ -640,12 +651,16 @@ public final class ImgOps {
 					dataOut.setInten(j, i, dataIn.getInten(j, i));
 					continue;
 				}
-				dataOut.setInten(j, i, FastMath.round((float)dataI4temp.getIntenB4(j, i)*fscale));
+				dataOut.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)*fscale));
 			}
 		}
 		
 		return dataOut;
 	}
+	
+    //iosc es l'eix de tilt, 1=horitzontal, 2=vertical
+	//ilor oscil=1 powder=2, 
+	//ipol syn=1 lab=2
 	
     //valors ilor ipol
 //	ilor=chckbxLorOscil.isSelected()?1:0;
@@ -733,7 +748,7 @@ public final class ImgOps {
 //        float azim = (float) FastMath.acos((vecCPx*0+vecCPy*-1)/(vecCPmod*modVer));
 
         float azim = dataIn.getAzimAngle(pX,pY,false);
-        float tthRad = dataIn.calc2T(pX, pY, false);
+        float tthRad = (float) dataIn.calc2T(pX, pY, false);
         
         //angle incident effectiu:
         float tiltRad = (float) FastMath.toRadians(dataIn.getTiltDeg());
@@ -773,1139 +788,518 @@ public final class ImgOps {
 	public static void setBkgIter(int bkgIter) {
 		ImgOps.bkgIter = bkgIter;
 	}
-	
-	//canvi sep15 treballem amb Ints
-	public static Pattern2D sumImages(File[] files){
-		
-		Pattern2D patt = ImgFileUtils.openPatternFile(files[0]);
-		int dimY = patt.getDimY();
-		int dimX = patt.getDimX();
-		
-		Pattern2D pattsum = new Pattern2D(patt); //copiem dades instr de les originals
-		pattsum.setB4inten(true);//ens assegurem que treballem amb I4
-		Pattern2D dataI4temp = new Pattern2D(dimX,dimY,true);
-		//inicialitzem a zero les dades SUMA
-		for(int i=0; i<dimY;i++){
-			for(int j=0; j<dimX;j++){
-				dataI4temp.setInten(j, i, 0);
-			}
-		}
-		
-		int maxVal=0;
-		
-		//sumem
-		for(int k=0;k<files.length;k++){
-			//obrim el pattern i sumem
-			patt = ImgFileUtils.openPatternFile(files[k]);
-			for(int i=0; i<dimY;i++){
-				for(int j=0; j<dimX;j++){
-					//zona exclosa saltem
-					if (patt.isInExZone(j, i))continue;
-					int s = dataI4temp.getInten(j, i) + patt.getInten(j, i);
-					dataI4temp.setInten(j, i, s);
-				}
-			}
-		}
 
-		//escala
-		for(int i=0; i<dimY;i++){
-			for(int j=0; j<dimX;j++){
-				//mirem si superem els limits (per escalar despres)
-				if (dataI4temp.getIntenB4(j, i)>maxVal) maxVal=dataI4temp.getIntenB4(j, i);
-			}
-		}
-		
-		//si ens hem passat del maxim calculem el factor d'escala i escalem
-		float fscale=1.0f;
-		VavaLogger.LOG.info("maxVal= "+maxVal+"  satur="+pattsum.getSaturValue());
-		if(maxVal>pattsum.getSaturValue()){
-			fscale = (float)maxVal/(float)(pattsum.getSaturValue()-1); // -1 per assegurar-nos que entra
-		}
-		
-		for(int i=0; i<dimY;i++){
-			for(int j=0; j<dimX;j++){
-				//mascara el deixem tal qual
-//				if(dataIn.isInExZone(j, i)){
-//					dataOut.setInten(j, i, dataIn.getInten(j, i));
-//					continue;
-//				}
-				pattsum.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)*fscale));
-			}
-		}
-		pattsum.setScale(fscale);
-		return pattsum;
+	
+    static ProgressMonitor pm = null;
+    static sumImagesFileWorker sumwk =  null;
+    static Pattern2D pattSum = null;
+
+	
+	//tol2theta = quina tolerancia en 2theta volem integrar, es el rang TOTAL (es fara tol2t/2 en cada direccio)
+	//angle = angle TOTAL d'obertura de l'arc a integrar en GRAUS
+	//consideraElTIlt
+	public static Patt2Dzone YarcTilt(Pattern2D patt2D, int px, int py, float tol2t, float angleDeg, boolean self, int bkgpt, boolean debug){
+	    
+	    //limits tth i azim
+	    EllipsePars elli = getElliPars(patt2D, new Point2D.Float(px,py));
+	    float azimAngle = patt2D.getAzimAngle(px, py, true); //azimut des del zero
+	    float azimMax = azimAngle + angleDeg/2;
+	    float azimMin = azimAngle - angleDeg/2;
+	    if (azimMax<azimMin){
+	        //vol dir que passem pel zero
+	        azimMax = azimMax + 360;
+	    }
+//	    float pixelTolerance = tol2t/(patt2D.getMinStepsize());
+	    float pixelTolerance = tol2t/0.02f;
+	    ArrayList<Point2D.Float> pixelsArc = elli.getEllipsePoints(azimMin, azimMax, 1);
+	    float t2p = (float) patt2D.calc2T(px, py, true);
+	    float t2max = (float) FastMath.min(t2p + tol2t/2.,patt2D.getMax2TdegCircle());
+	    float t2min = (float) FastMath.max(0.1, t2p - tol2t/2.);
+        log.writeNameNumPairs("FINE", true, "t2p,t2max,t2min,pixelTolerance,patt2D.getMinStepsize()",t2p,t2max,t2min,pixelTolerance,patt2D.getMinStepsize());
+	    log.writeNameNumPairs("FINE", true, "azimAngle,azimMax,azimMin", azimAngle,azimMax,azimMin);
+
+	    //busquem el maxX, minX, maxY, minY de l'arc
+	    float[] xs = new float[pixelsArc.size()];
+//	    double[] xsd = new double[pixelsArc.size()];
+	    float[] ys = new float[pixelsArc.size()];
+	    Iterator<Point2D.Float> itrp = pixelsArc.iterator();
+	    int n = 0;
+	    while (itrp.hasNext()){
+	        Point2D.Float p = itrp.next();
+	        xs[n] = p.x;
+//	        xsd[n] = p.x;
+	        ys[n] = p.y;
+	        n = n+1;
+	    }
+//	    log.writeNameNums("CONFIG", true, "xs", xsd);
+        int maxX = FastMath.round(findMax(xs)+pixelTolerance);
+        int minX = FastMath.round(findMin(xs)-pixelTolerance);
+        int maxY = FastMath.round(findMax(ys)+pixelTolerance);
+        int minY = FastMath.round(findMin(ys)-pixelTolerance);
+	    maxX = FastMath.min(maxX,patt2D.dimX-1);
+	    maxY = FastMath.min(maxY,patt2D.dimY-1);
+        minX = FastMath.max(minX,0);
+        minY = FastMath.max(minY,0);
+        log.writeNameNumPairs("FINE", true, "minX,maxX,minY,maxY", minX,maxX,minY,maxY);
+
+	    //iniciacions valors
+	    int npix=0;
+	    int ysum=0;
+	    int ymax=0;
+        ArrayList<Integer> minint = new ArrayList<Integer>(bkgpt); //vector amb les bkgpt intensitats menors
+        ArrayList<Integer> intensitats = new ArrayList<Integer>(); //vector on guardarem les intensitats per calcular desv.estd
+        float ymean=0;
+        float ybkg=0;
+        float ymeandesv=0;
+        float ybkgdesv=0;
+        float sumdesv=0;
+        int bkgsum=0;
+        for(int i=0;i<bkgpt;i++){
+            minint.add(patt2D.getSaturValue());
+        }
+        
+	    //ara ja tenim el quadrat on hem de buscar
+	    for (int j=minY;j<=maxY;j++){
+	       for (int i=minX;i<=maxX;i++){
+               //si esta fora la imatge o es mascara el saltem
+               if(!patt2D.isInside(i, j))continue;
+               if(patt2D.isInExZone(i, j))continue;
+               //ell mateix?
+               if ((i==px)&&(j==py)&&(!self))continue;	           
+	           
+               //comprovacions
+               t2p = (float)patt2D.calc2T(i, j, true);
+               azimAngle = patt2D.getAzimAngle(i, j, true); //azimut des del zero
+               
+//               log.writeNameNumPairs("CONFIG", true, "t2p,azimAngle", t2p,azimAngle);
+               
+               if((t2p<t2min)||(t2p>t2max))continue;
+               if (azimMax>360){
+                   if((azimAngle<azimMin)&&((azimAngle+360)>azimMax))continue;
+               }else{//cas normal
+                   if((azimAngle>azimMax)||(azimAngle<azimMin))continue;    
+               }
+               
+	              
+               //si hem arribat aqu� es que hem se sumar la intensitat del pixel
+               ysum=ysum+patt2D.getInten(i, j);
+               if(ymax<patt2D.getInten(i, j))ymax=patt2D.getInten(i, j);
+               for(int k=0;k<bkgpt;k++){
+                   //si val zero no considerem (s'hauria de reconsiderar...)
+                   //if(patt2D.getIntenB2(i, j)==0)break;
+                   if(patt2D.getInten(i, j)<minint.get(k)){
+                       minint.set(k, patt2D.getInten(i, j));
+                       break; //sortim del for, ja hem utilitzat la intensitat
+                   }
+               }
+
+               npix=npix+1;
+               intensitats.add(patt2D.getInten(i, j));
+               
+               //debug
+               if(debug)patt2D.setInten(i, j, -1);
+	       }
+	    }
+	    
+	    if(npix>0){
+	        //calcul desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
+	        ymean=(float)(ysum)/(float)(npix);
+	        sumdesv=0;
+	        Iterator<Integer> it = intensitats.iterator();
+	        while (it.hasNext()){
+	            int inten = it.next();
+	            sumdesv=sumdesv + ((float)(inten)-ymean)*((float)(inten)-ymean);
+	        }
+	        if(npix<2)npix=2;
+	        ymeandesv=(float) FastMath.sqrt(sumdesv/(float)(npix-1));
+	        //calcul del valor de fons i la desviacio
+	        bkgsum=0;
+	        int nbkgpt=FastMath.min(bkgpt, npix);
+	        for (int i=0; i<nbkgpt;i++){
+	            bkgsum = bkgsum + minint.get(i);
+	        }
+	        ybkg = (float)(bkgsum)/(float)(nbkgpt);
+	        sumdesv=0;
+	        for (int i=0; i<nbkgpt;i++){
+	            sumdesv = sumdesv + ((float)(minint.get(i))-ybkg)*((float)(minint.get(i))-ybkg);
+	        }
+	        ybkgdesv=(float) FastMath.sqrt(sumdesv/(float)(nbkgpt-1));
+	    }
+	    return new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
 	}
 	
-	
-//  !Aquesta subrutina sumar� les intensitats dels p�xels en una zona en forma d'arc al voltant
-//  !d'un pixel determinat.
-//  ! 1)calculem (utilitzant amplada i angle) la 2Tmin i 2Tmax de l'arc, aix� com els 4 vertexs 
-//  !   de l'arc
-//  ! 2)trobarem el quadrat minim que cont� l'arc
-//  ! 3)per cada pixel del cuadrat:
-//  !   -mirarem si est� entre 2Tmin i 2Tmax
-//  !   -mirarem si l'angle entre el vector reflexio-centre i el vector pixel-centre es menor a 
-//  !    "angle"
-//  !   -si es compleixen les dues condicions anteriors en sumarem la intensitat
-//  !parametres d'entrada:
-//  !  - patt2d: la imatge de treball (CONSIDEREM QUE S'HAN ASSIGNAT EL CENTRE, DISTOD i PIXSIZE)
-//  !  - px, py: Coordenades x,y del p�xel
-//  !  - amplada: amplada de l'arc (gruix)
-//  !  - angle: obertura de l'arc
-//  !  - self: si es considera o no el propi pixel
-//  !  - bkgpt: num de punts de menor intensitat a considerar per calcular el fons
-//     - debug: per "pintar" de -1 l'arc, si no es per comprovacions ha de valer false
-//  !parametres de sortida: objecte patt2dzone
-//  !  - ysum: intensitat suma de la zona
-//  !  - npix: nombre de pixels que han contribuit a la suma
-//  !  - ymean: intensitat mitjana de la zona
-//  !  - ymeandesv: desviacio estandard de la mitjana (ysum/npix)
-//  !  - ymax: intensitat maxima del pixel
-//  !  - ybkg: intensitat del fons (mitjana dels 20 punts de menor intensitat)
-//  !  - ybkgdesv: desviacio de la intensitat del fons (entre els 20 punts)
-  public static Patt2Dzone Yarc(Pattern2D patt2D, int px, int py, float amplada, float angle, boolean self, int bkgpt, boolean debug){
-      
-//    vars calculs extraccio (quadrat,etc..)
-      float RcX,RcY,RcXmax,RcYmax,RcXmin,RcYmin;
-      float RcXcw,RcYcw,RcXcwMax,RcYcwMax,RcXcwMin,RcYcwMin;
-      float RcXacw,RcYacw,RcXacwMax,RcYacwMax,RcXacwMin,RcYacwMin;
-      float vSupX,vSupY,vInfX,vInfY;
-      float t2min, t2max,x2,y2,radi,t2p;
-      float vPCx,vPCy;
-      int bkgsum;
-      float pesc, modvPC, modvRc, angleB;
-      ArrayList<Integer> intensitats = new ArrayList<Integer>(); //vector on guardarem les intensitats per calcular desv.estd
-      float xmean,sumdesv;
-      ArrayList<Integer> minint = new ArrayList<Integer>(bkgpt); //vector amb les bkgpt intensitats menors
-      
-      //debug time
-//      long startTime = System.currentTimeMillis();
-      
-      int npix=0;
-      int ysum=0;
-      int ymax=0;
-      float ymean=0;
-      float ybkg=0;
-      float ymeandesv=0;
-      float ybkgdesv=0;
-      for(int i=0;i<bkgpt;i++){
-          minint.add(patt2D.getSaturValue());
-      }
-      float angleRad = (float) FastMath.toRadians(angle);
-      VavaLogger.LOG.info("Angle (deg | rad) = "+angle+" | "+angleRad);
-      
-      //calcul vector centre-pixelReflexio (Rc) amb l'origen al centre de la imatge (per fer rotacions)
-      RcX=px-patt2D.getCentrX();
-      RcY=patt2D.getCentrY()-py;
-      VavaLogger.LOG.info("Rc = "+RcX+" "+RcY);
-      //Amplada de l'arc (es podria fer RcX-Amplada*nxmx i RcY-Amp*nymx si la imatge no fos quadrada)
-      //l'amplada es en "pixels"
-      float modR = (float) FastMath.sqrt(RcX*RcX+RcY*RcY); //modul, per calcular l'unitari i els vectors d'amplada de l'arc
-      VavaLogger.LOG.info("modR = "+modR);
-      float RcUx = RcX/modR;
-      float RcUy = RcY/modR;
-      RcXmax=RcUx*(modR+amplada/2);
-      RcYmax=RcUy*(modR+amplada/2);
-      RcXmin=RcUx*(modR-amplada/2);
-      RcYmin=RcUy*(modR-amplada/2);
-      VavaLogger.LOG.info("RcMax;RcMin = "+RcXmax+" "+RcYmax+"; "+RcXmin+" "+RcYmin);
-      
-      //ara fem rotar el vector Rc +angle/2 i -angle/2 per trobar els limits de l'arc, trobem els vectors
-      //RcCWMax i Min (clockwise) i RcACWMax i min (anticlockwise) i tindrem els vertexs de l'arc
-      float cosAng=(float) FastMath.cos(angleRad/2);
-      float sinAng=(float) FastMath.sin(angleRad/2);
-      RcXcw=(float) (RcX*cosAng+RcY*sinAng);
-      RcYcw=(float) (-RcX*sinAng+RcY*cosAng);
-      VavaLogger.LOG.info("RcCW = "+RcXcw+" "+RcYcw);
-      //amplada
-      float RcUXcw = RcXcw/modR;
-      float RcUYcw = RcYcw/modR;
-      RcXcwMax=RcUXcw*(modR+amplada/2);
-      RcYcwMax=RcUYcw*(modR+amplada/2);
-      RcXcwMin=RcUXcw*(modR-amplada/2);
-      RcYcwMin=RcUYcw*(modR-amplada/2);
-      
-      RcXacw=(float) (RcX*cosAng-RcY*sinAng);
-      RcYacw=(float) (RcX*sinAng+RcY*cosAng);
-      VavaLogger.LOG.info("RcACW = "+RcXacw+" "+RcYacw);
-      //amplada
-      float RcUXacw = RcXacw/modR;
-      float RcUYacw = RcYacw/modR;
-      RcXacwMax=RcUXacw*(modR+amplada/2);
-      RcYacwMax=RcUYacw*(modR+amplada/2);
-      RcXacwMin=RcUXacw*(modR-amplada/2);
-      RcYacwMin=RcUYacw*(modR-amplada/2);
+	//ATENCIO AQUI ES CALCULA "IN SITU" LA 2THETA DELS PIXELS (repetit de patt2D.calc2T) TODO: VIGILAR SI ES FAN CANVIS, en aquest es pot decidir si fer servir o no tilt.
+	//sino sempre es pot fer servir la variant slower, que fa servir Pattern2D
+	public static Pattern1D radialIntegration(Pattern2D patt2D,float t2ini, float t2fin, float step, float cakeIn, float cakeOut, boolean useTilt, boolean corrLP, boolean corrIAng){
+	    //comprovacions previes
+	    if (step < 0) {step = patt2D.getMinStepsize();}
+	    if (cakeIn < 0){cakeIn = 0.0f;}
+	    if (cakeOut < 0){cakeOut = 360.f;}
+	    boolean fullCake = false;
+	    if (cakeIn==0.0 && cakeOut==360.0){
+	        fullCake = true;
+	    }
+	    //cas que cakeOut sigui < cakeIn
+	    //	      if (cakeOut < cakeIn){
+	    //	          cakeOut = cakeOut + 360.f;
+	    //	      }
 
-      VavaLogger.LOG.info("RcCWmax = "+RcXcwMax+" "+RcYcwMax);
-      VavaLogger.LOG.info("RcCWmin = "+RcXcwMin+" "+RcYcwMin);
-      VavaLogger.LOG.info("RcACWmax = "+RcXacwMax+" "+RcYacwMax);
-      VavaLogger.LOG.info("RcACWmin = "+RcXacwMin+" "+RcYacwMin);
-      
-      
-      //ara ja tenim els vertexs, per definir el quadrat mirem el superior esquerra i l'inferior dret,
-      vSupX=ImgOps.findMin(RcXcwMax,RcXcwMin,RcXacwMax,RcXacwMin);
-      vSupY=ImgOps.findMax(RcYcwMax,RcYcwMin,RcYacwMax,RcYacwMin);
-      vInfX=ImgOps.findMax(RcXcwMax,RcXcwMin,RcXacwMax,RcXacwMin);
-      vInfY=ImgOps.findMin(RcYcwMax,RcYcwMin,RcYacwMax,RcYacwMin);
-      VavaLogger.LOG.info("Vsup;Vinf(centre00) = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
-      
-      //Aquests valors definiran el quadrat m�nim sempre i quant s'hagi creuat algun eix.
-      //MIREM si hem creuat algun eix (vertical o horitzontal) per tal d'evitar definir un
-      //quadrat insuficient (i en conseq��ncia actualitzem el vertex)
-      if(RcXacw<0&&RcXcw>0){
-          //estem creuant la vertical per l'hemisferi superior
-          //caldr� considerar com a vSupY el vector sobre aquesta vertical (0,y)
-          //amb y=(modR+amplada/2)
-          vSupY=(modR+amplada/2);
-      }
-      if(RcXacw>0&&RcXcw<0){
-          //estem creuant la vertical per l'hemisferi inferior
-          //caldr� considerar com a vInfY el vector sobre aquesta vertical (0,-y)
-          //amb y=(modR+amplada/2)
-          vInfY=-(modR+amplada/2);
-      }
-      if(RcYacw<0&&RcYcw>0){
-          //estem creuant la horitzontal per l'hemisferi esquerra
-          //caldr� considerar com a vSupX el vector sobre aquesta horitzontal (-x,0)
-          //amb x=(modR+amplada/2)
-          vSupX=-(modR+amplada/2);
-      }
-      if(RcYacw>0&&RcYcw<0){
-          //estem creuant la horitzontal per l'hemisferi dret
-          //caldr� considerar com a vInfX el vector sobre aquesta horitzontal (x,0)
-          //amb x=(modR+amplada/2)
-          vInfX=(modR+amplada/2);
-      }
-      //si l'angle es mes gran de 180 pot ser que toqui 3 hemisferis, agafem tot el quadrat
-      if(angle>180){
-          vSupY=(modR+amplada/2);
-          vInfY=-(modR+amplada/2);
-          vSupX=-(modR+amplada/2);
-          vInfX=(modR+amplada/2);
-      }
-      
-      VavaLogger.LOG.info("Vsup;Vinf(centre00corr) = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
-      
-      //i li sumem el centre per tenir els pixels en la imatge real
-      //(tornem a referenciar l'origen (0,0) al vertex superior? esquerra)
-      vSupX=vSupX+patt2D.getCentrX();
-      vSupY=patt2D.getCentrY()-vSupY;
-      vInfX=vInfX+patt2D.getCentrX();
-      vInfY=patt2D.getCentrY()-vInfY;
-      VavaLogger.LOG.info("Vsup;Vinf = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
-      
-      //calculem els angles t2min i t2max de l'arc (sepMD pixL en micres=> radi micres)
-      x2 = (RcXmax*patt2D.getPixSx())*(RcXmax*patt2D.getPixSx());
-      y2 = (RcYmax*patt2D.getPixSy())*(RcYmax*patt2D.getPixSy());
-      radi = (float) FastMath.sqrt(x2+y2);
-      t2max=(float) FastMath.atan(radi/(patt2D.getDistMD()));
-      
-      x2 = (RcXmin*patt2D.getPixSx())*(RcXmin*patt2D.getPixSx());
-      y2 = (RcYmin*patt2D.getPixSy())*(RcYmin*patt2D.getPixSy());
-      radi = (float) FastMath.sqrt(x2+y2);
-      t2min= (float) FastMath.atan(radi/(patt2D.getDistMD()));
+	    log.info("step ="+step+" t2ini="+t2ini+" t2fin="+t2fin);
+	    Pattern1D out = new Pattern1D(t2ini,t2fin,step);
 
-      //debug time
-//      long checkpoint1  = System.currentTimeMillis();
-//      float check1time = (checkpoint1 - startTime);
-      
-//      !Ara ja toca la part:
-//      !3)per cada pixel del cuadrat:
-//      !   -mirarem si est� entre 2Tmin i 2Tmax
-//      !   -mirarem si l'angle entre el vector reflexio-centre i el vector pixel-centre es menor a "angle"
-//      !   -si es compleixen les dues condicions anteriors en sumarem la intensitat
-      int ivSupY = FastMath.round(vSupY);
-      int ivInfY = FastMath.round(vInfY);
-      int ivSupX = FastMath.round(vSupX);
-      int ivInfX = FastMath.round(vInfX);
-      for (int j=ivSupY;j<=ivInfY;j++){
-          for (int i=ivSupX;i<=ivInfX;i++){
-              //si esta fora la imatge o es mascara el saltem
-              if(!patt2D.isInside(i, j))continue;
-              if(patt2D.isInExZone(i, j))continue;
-              //ell mateix?
-              if ((i==px)&&(j==py)&&(!self))continue;
-              
-              //calculem el vector pixel-centre (corregit d'origen, centre 0,0 i necessari pels calculs seguents)
-              vPCx=i-patt2D.getCentrX();
-              vPCy=patt2D.getCentrY()-j;
-                      
-              //mirem si esta entre 2tmin i 2tmax, sino saltem (cal calcular t2p)
-              x2 = (vPCx*patt2D.getPixSx())*(vPCx*patt2D.getPixSx());
-              y2 = (vPCy*patt2D.getPixSy())*(vPCy*patt2D.getPixSy());
-              radi = (float) FastMath.sqrt(x2+y2);
-              t2p = (float) FastMath.atan(radi/(patt2D.getDistMD()));
-              if((t2p<t2min)||(t2p>t2max))continue;
-              
-              //angle entre vPC i Rc (prod. escalar)
-              pesc = vPCx*RcX + vPCy*RcY;
-              modvRc = (float) FastMath.sqrt(RcX*RcX+RcY*RcY);
-              modvPC = (float) FastMath.sqrt(vPCx*vPCx+vPCy*vPCy);
-              if((pesc/(modvRc*modvPC))>1){
-                angleB=(float) FastMath.acos(1.0);
-              }else{
-                angleB=(float) FastMath.acos(pesc/(modvRc*modvPC));
-              }
-              //si angleB es major a angle -> saltem
-//              if(angleB>angle)continue;  OLD
-              if(FastMath.toDegrees(angleB)>(angle/2))continue;
-              
-              //si hem arribat aqu� es que hem se sumar la intensitat del pixel
-              ysum=ysum+patt2D.getInten(i, j);
-              if(ymax<patt2D.getInten(i, j))ymax=patt2D.getInten(i, j);
-              for(int k=0;k<bkgpt;k++){
-                  //si val zero no considerem (s'hauria de reconsiderar...)
-                  //if(patt2D.getIntenB2(i, j)==0)break;
-                  if(patt2D.getInten(i, j)<minint.get(k)){
-                      minint.set(k, patt2D.getInten(i, j));
-                      break; //sortim del for, ja hem utilitzat la intensitat
-                  }
-              }
+	    //	      int pos = 0; //posicio al vector del pattern 1d comença a zero
+	    //	      int npoints = FastMath.round((t2fin-t2ini)/step)+1; //+1 perque volem incloure t2ini i t2fin
 
-              npix=npix+1;
-              intensitats.add(patt2D.getInten(i, j));
-              
-              //debug
-              if(debug)patt2D.setInten(i, j, -1);
-          }
-      }
-      
-      if(npix>0){
-          //calcul desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
-          ymean=(float)(ysum)/(float)(npix);
-          sumdesv=0;
-          Iterator<Integer> it = intensitats.iterator();
-          while (it.hasNext()){
-              int inten = it.next();
-              sumdesv=sumdesv + ((float)(inten)-ymean)*((float)(inten)-ymean);
-          }
-          if(npix<2)npix=2;
-          ymeandesv=(float) FastMath.sqrt(sumdesv/(float)(npix-1));
-          //calcul del valor de fons i la desviacio
-          bkgsum=0;
-          int nbkgpt=FastMath.min(bkgpt, npix);
-          for (int i=0; i<nbkgpt;i++){
-              bkgsum = bkgsum + minint.get(i);
-          }
-          ybkg = (float)(bkgsum)/(float)(nbkgpt);
-          sumdesv=0;
-          for (int i=0; i<nbkgpt;i++){
-              sumdesv = sumdesv + ((float)(minint.get(i))-ybkg)*((float)(minint.get(i))-ybkg);
-          }
-          ybkgdesv=(float) FastMath.sqrt(sumdesv/(float)(nbkgpt-1));
-          //systemout? per debug
-      }
-      
-//      long endTime  = System.currentTimeMillis();
-//      float totalTime = (endTime - startTime);
-//      
-//      VavaLogger.LOG.info("Yarc took "+totalTime+"ms "+"(checkpoint at "+check1time+"ms, npix= "+npix+", zona="+ivSupX+","+ivSupY+";"+ivInfX+","+ivInfY+")");
-//      
-      return new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
-  }
-	
-  
-  //fix yarc, que perdia pixels de fora el quadrat si l'arc era ample o estava a l'eix vertical/horitzontal
-  //es pot fer manual pero es una matada:
-//  //ara hem de mirar si hem creuat algun eix (vertical o horitzontal) per tal d'evitar definir un
-//  //quadrat insuficient
-//  if(RcXacw<0&&RcXcw>0){
-//    //estem creuant la vertical per l'hemisferi superior
-//    //caldr� considerar com a vSupY el vector sobre aquesta vertical (0,y)
-//    
-//    
-//  }
-//  if(RcXacw>0&&RcXcw<0){
-//    //estem creuant la vertical per l'hemisferi inferior
-//    //caldr� considerar com a vInfY el vector sobre aquesta vertical (0,-y)
-//  }
-//  
-  
-  private static Ellipse2D.Float getEllipseFromCenter(float x, float y, float width, float height)
-  {
-      float newX = x - width / 2.0f;
-      float newY = y - height / 2.0f;
+	    //calculs previs "constants"
+	    double tiltRad = 0;
+	    double rotRad = 0;
+	    if (useTilt){
+	        tiltRad = FastMath.toRadians(patt2D.getTiltDeg());
+	        rotRad = FastMath.toRadians(patt2D.getRotDeg());
+	    }
+	    double cosTilt = FastMath.cos(tiltRad);
+	    double distMDpix = patt2D.getDistMD()/patt2D.getPixSx();
+	    double dist = distMDpix/cosTilt; //in pixels
 
-      Ellipse2D.Float ellipse = new Ellipse2D.Float(newX, newY, width, height);
+	    //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
+	    for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+	        for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+	            //mask o zero el descartem
+	            if(patt2D.isInExZone(j, i))continue;
 
-      return ellipse;
-  }
-  
-  //ho provare de fer amb ellipse2D de java
-  public static Patt2Dzone Yarc2(Pattern2D patt2D, int px, int py, float amplada, float angle, boolean self, int bkgpt, boolean debug){
-      
-      //debug time
-//      long startTime = System.currentTimeMillis();
-      
-//    vars calculs extraccio (quadrat,etc..)
-      float RcX,RcY,RcXmax,RcYmax,RcXmin,RcYmin;
-      float vSupX,vSupY,vInfX,vInfY;
-      float t2min, t2max,x2,y2,radi,t2p;
-      float vPCx,vPCy;
-      int bkgsum;
-      float pesc, modvPC, modvRc, angleB;
-      ArrayList<Integer> intensitats = new ArrayList<Integer>(); //vector on guardarem les intensitats per calcular desv.estd
-      float sumdesv;
-      ArrayList<Integer> minint = new ArrayList<Integer>(bkgpt); //vector amb les bkgpt intensitats menors
-      
-      int npix=0;
-      int ysum=0;
-      int ymax=0;
-      float ymean=0;
-      float ybkg=0;
-      float ymeandesv=0;
-      float ybkgdesv=0;
-      for(int i=0;i<bkgpt;i++){
-          minint.add(patt2D.getSaturValue());
-      }
-      
-      //calcul vector centre-pixelReflexio (Rc) amb l'origen al centre de la imatge (per fer rotacions)
-      RcX=px-patt2D.getCentrX();
-      RcY=patt2D.getCentrY()-py;
-//      VavaLogger.LOG.info("Rc = "+RcX+" "+RcY);
-      float modR = (float) FastMath.sqrt(RcX*RcX+RcY*RcY); //modul, per calcular l'unitari i els vectors d'amplada de l'arc
-      float RcUx = RcX/modR;
-      float RcUy = RcY/modR;
-      RcXmax=RcUx*(modR+amplada/2);
-      RcYmax=RcUy*(modR+amplada/2);
-      RcXmin=RcUx*(modR-amplada/2);
-      RcYmin=RcUy*(modR-amplada/2);
-      
-      //Amplada de l'arc 
-      float radiExt = (float) FastMath.sqrt(RcXmax*RcXmax+RcYmax*RcYmax);
-      float radiInt = (float) FastMath.sqrt(RcXmin*RcXmin+RcYmin*RcYmin);
-//      VavaLogger.LOG.info("radiExt;radiInt = "+radiExt+" "+radiInt);
+	            //vector centre-pixel
+	            float vPCx=j-patt2D.getCentrX();
+	            float vPCy=patt2D.getCentrY()-i;
 
-      //ara podem calcular les ellipses exterior i interior (considerem CERCLES)
-      Ellipse2D.Float elext = getEllipseFromCenter(patt2D.getCentrX(), patt2D.getCentrY(), radiExt*2, radiExt*2);
-      Ellipse2D.Float elint = getEllipseFromCenter(patt2D.getCentrX(), patt2D.getCentrY(), radiInt*2, radiInt*2);
-//      Ellipse2D.Float elext = this.getEllipseFromCenter(0, 0, radiExt*2, radiExt*2);
-//      Ellipse2D.Float elint = this.getEllipseFromCenter(0, 0, radiInt*2, radiInt*2);
-      
-//      //ara fem rotar el vector Rc - angle/2 per trobar el vector per calcular l'angle on ha de comen�ar l'arc
-//      RcXacw=(float) (RcX*FastMath.cos(angle)-RcY*FastMath.sin(angle));
-//      RcYacw=(float) (RcX*FastMath.sin(angle)+RcY*FastMath.cos(angle));
-//      //VavaLogger.LOG.info("RcACW = "+RcXacw+" "+RcYacw);
+	            //HEM DE MIRAR SI EL VECTOR ESTA DINTRE EL CAKE
+	            if (!fullCake){
+	                float azim = patt2D.getAzimAngle(j, i, true);
+	                //	                  log.debug("x,y,azim="+j+","+i+","+azim);
+	                //debug
+	                if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()-100)log.debug("x,y,azim="+j+","+i+","+azim);
+	                if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()+100)log.debug("x,y,azim="+j+","+i+","+azim);
+	                if(j==patt2D.getCentrXI()+100 && i==patt2D.getCentrYI())log.debug("x,y,azim="+j+","+i+","+azim);
+	                if(j==patt2D.getCentrXI()-100 && i==patt2D.getCentrYI())log.debug("x,y,azim="+j+","+i+","+azim);
 
-      //calculem l'angle entre el vector (1,0) i Rc (ARC2D agafa angle 0 a l'eix X positiu i dibuixa ACW.)
-      //prod escalar
-      pesc = RcX * 1 + RcY * 0;
-      float arcAngle = (float) FastMath.toDegrees(FastMath.acos(pesc/(modR)));
-      //hem de determinar l'hemisferi
-      if(RcY<0){
-          arcAngle = 360 - arcAngle;  
-      }
-//      VavaLogger.LOG.info("pesc;modR;arcAngle = "+pesc+"; "+modR+"; "+arcAngle);
-      
-//      VavaLogger.LOG.info("elext bounds = "+elext.getBounds2D().toString());
-      
-      //ara construirem l'arc desitjat i en mirarem els limits del quadrat delimitador
-//      Arc2D.Float arcExt = new Arc2D.Float(elext.getBounds2D(), arcAngle, (float) FastMath.toDegrees(angle), Arc2D.OPEN);
-      Arc2D.Float arcExt = new Arc2D.Float(elext.getBounds2D(), arcAngle-(angle/2), angle, Arc2D.OPEN);
-      Arc2D.Float arcInt = new Arc2D.Float(elint.getBounds2D(), arcAngle-(angle/2), angle, Arc2D.OPEN);
-      Rectangle2D.Float rextern = (java.awt.geom.Rectangle2D.Float) arcExt.getBounds2D();
-      Rectangle2D.Float rintern = (java.awt.geom.Rectangle2D.Float) arcInt.getBounds2D();
-      
-//      VavaLogger.LOG.info("arcext bounds = "+arcExt.getBounds2D().toString());
-//      VavaLogger.LOG.info("angle = "+angle);
-      
-//      vSupX = (float) FastMath.min(rextern.getMinX(), rintern.getMinX());
-//      vSupY = (float) FastMath.max(rextern.getMaxY(), rintern.getMaxY());
-//      vInfX = (float) FastMath.max(rextern.getMaxX(), rintern.getMaxX());
-//      vInfY = (float) FastMath.min(rextern.getMinY(), rintern.getMinY());
-      //COORD IMATGE
-      vSupX = (float) FastMath.min(rextern.getMinX(), rintern.getMinX());
-      vSupY = (float) FastMath.min(rextern.getMinY(), rintern.getMinY());
-      vInfX = (float) FastMath.max(rextern.getMaxX(), rintern.getMaxX());
-      vInfY = (float) FastMath.max(rextern.getMaxY(), rintern.getMaxY());
-//      VavaLogger.LOG.info("Vsup;Vinf = "+vSupX+" "+vSupY+"; "+vInfX+" "+vInfY);
+	                if (cakeOut<cakeIn){
+	                    //va al reves
+	                    if ((azim < cakeIn) && (azim > cakeOut))continue; 
+	                }else{
+	                    if ((azim < cakeIn) || (azim > cakeOut))continue;    
+	                }
+	            }
 
-//     
-//      vSupX=ImgOps.findMin(RcXcwMax,RcXcwMin,RcXacwMax,RcXacwMin);
-//      vSupY=ImgOps.findMax(RcYcwMax,RcYcwMin,RcYacwMax,RcYacwMin);
-//      vInfX=ImgOps.findMax(RcXcwMax,RcXcwMin,RcXacwMax,RcXacwMin);
-//      vInfY=ImgOps.findMin(RcYcwMax,RcYcwMin,RcYacwMax,RcYacwMin);
+	            //calcul de t2p repetit de Pattern2D.calc2T
+	            double[] vec = new double[3];
+	            vec[0]=vPCx;
+	            vec[1]=vPCy;
+	            vec[2]=0.0;
+	            RealMatrix vx = new Array2DRowRealMatrix(vec).transpose();
+	            RealMatrix rotM = ImgOps.rotMatrix(rotRad, "Z");
+	            RealMatrix tiltM = ImgOps.rotMatrix(tiltRad, "X");
 
-      //tornem a referenciar l'origen (0,0) al vertex superior? esquerra
-//      vSupX=vSupX+this.getCentrX();
-//      vSupY=this.getCentrY()-vSupY;
-//      vInfX=vInfX+this.getCentrX();
-//      vInfY=this.getCentrY()-vInfY;
-      //NO CAL, HEM TREBALLAT AMB ELLIPSES AMB COORD D'IMATGE
-      
-      //calculem els angles t2min i t2max de l'arc (sepMD pixL en micres=> radi micres)
-      x2 = (RcXmax*patt2D.getPixSx())*(RcXmax*patt2D.getPixSx());
-      y2 = (RcYmax*patt2D.getPixSy())*(RcYmax*patt2D.getPixSy());
-      radi = (float) FastMath.sqrt(x2+y2);
-      t2max=(float) FastMath.atan(radi/(patt2D.getDistMD()));
-      
-      x2 = (RcXmin*patt2D.getPixSx())*(RcXmin*patt2D.getPixSx());
-      y2 = (RcYmin*patt2D.getPixSy())*(RcYmin*patt2D.getPixSy());
-      radi = (float) FastMath.sqrt(x2+y2);
-      t2min= (float) FastMath.atan(radi/(patt2D.getDistMD()));
+	            RealMatrix X = vx.multiply(rotM);
+	            RealMatrix Z = X.multiply(tiltM);
+	            double z = Z.getEntry(0, 2);
 
-//      !Ara ja toca la part:
-//      !3)per cada pixel del cuadrat:
-//      !   -mirarem si est� entre 2Tmin i 2Tmax
-//      !   -mirarem si l'angle entre el vector reflexio-centre i el vector pixel-centre es menor a "angle"
-//      !   -si es compleixen les dues condicions anteriors en sumarem la intensitat
-      int ivSupY = FastMath.round(vSupY);
-      int ivInfY = FastMath.round(vInfY);
-      int ivSupX = FastMath.round(vSupX);
-      int ivInfX = FastMath.round(vInfX);
-      
-      //debug
-//    long checkpoint1  = System.currentTimeMillis();
-//    float check1time = (checkpoint1 - startTime);
-      
-      for (int j=ivSupY;j<=ivInfY;j++){
-          for (int i=ivSupX;i<=ivInfX;i++){
-              //si esta fora la imatge o es mascara el saltem
-              if(!patt2D.isInside(i, j))continue;
-              if(patt2D.isInExZone(i, j))continue;
-              //ell mateix?
-              if ((i==px)&&(j==py)&&(!self))continue;
-              
-              //calculem el vector pixel-centre (corregit d'origen, centre 0,0 i necessari pels calculs seguents)
-              vPCx=i-patt2D.getCentrX();
-              vPCy=patt2D.getCentrY()-j;
-                      
-              //mirem si esta entre 2tmin i 2tmax, sino saltem (cal calcular t2p)
-              x2 = (vPCx*patt2D.getPixSx())*(vPCx*patt2D.getPixSx());
-              y2 = (vPCy*patt2D.getPixSy())*(vPCy*patt2D.getPixSy());
-              radi = (float) FastMath.sqrt(x2+y2);
-              t2p = (float) FastMath.atan(radi/(patt2D.getDistMD()));
-              if((t2p<t2min)||(t2p>t2max))continue;
-              
-              //angle entre vPC i Rc (prod. escalar)
-              pesc = vPCx*RcX + vPCy*RcY;
-              modvRc = (float) FastMath.sqrt(RcX*RcX+RcY*RcY);
-              modvPC = (float) FastMath.sqrt(vPCx*vPCx+vPCy*vPCy);
-              if((pesc/(modvRc*modvPC))>1){
-                angleB=(float) FastMath.acos(1.0);
-              }else{
-                angleB=(float) FastMath.acos(pesc/(modvRc*modvPC));
-              }
-              //si angleB es major a angle -> saltem
-              if(FastMath.toDegrees(angleB)>(angle/2))continue;
-              
-              //si hem arribat aqu� es que hem se sumar la intensitat del pixel
-              ysum=ysum+patt2D.getInten(i, j);
-              if(ymax<patt2D.getInten(i, j))ymax=patt2D.getInten(i, j);
-              for(int k=0;k<bkgpt;k++){
-                  //si val zero no considerem (s'hauria de reconsiderar...)
-                  //if(patt2D.getIntenB2(i, j)==0)break;
-                  if(patt2D.getInten(i, j)<minint.get(k)){
-                      minint.set(k, patt2D.getInten(i, j));
-                      break; //sortim del for, ja hem utilitzat la intensitat
-                  }
-              }
+	            double t2p = FastMath.atan(FastMath.sqrt((vPCx*vPCx)+(vPCy*vPCy)-(z*z))/dist-z);
+	            double DX = dist-z;
+	            double DY = FastMath.sqrt(vPCx*vPCx+vPCy*vPCy-z*z);
+	            t2p = FastMath.atan2(DY,DX);
+	            t2p = FastMath.toDegrees(t2p);
 
-              npix=npix+1;
-              intensitats.add(patt2D.getInten(i, j));
-              
-              //debug
-              if(debug)patt2D.setInten(i, j, -1);
-          }
-      }
-      
-      if(npix>0){
-          //calcul desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
-          ymean=(float)(ysum)/(float)(npix);
-          sumdesv=0;
-          Iterator<Integer> it = intensitats.iterator();
-          while (it.hasNext()){
-              int inten = it.next();
-              sumdesv=sumdesv + ((float)(inten)-ymean)*((float)(inten)-ymean);
-          }
-          if(npix<2)npix=2;
-          ymeandesv=(float) FastMath.sqrt(sumdesv/(float)(npix-1));
-          //calcul del valor de fons i la desviacio
-          bkgsum=0;
-          int nbkgpt=FastMath.min(bkgpt, npix);
-          for (int i=0; i<nbkgpt;i++){
-              bkgsum = bkgsum + minint.get(i);
-          }
-          ybkg = (float)(bkgsum)/(float)(nbkgpt);
-          sumdesv=0;
-          for (int i=0; i<nbkgpt;i++){
-              sumdesv = sumdesv + ((float)(minint.get(i))-ybkg)*((float)(minint.get(i))-ybkg);
-          }
-          ybkgdesv=(float) FastMath.sqrt(sumdesv/(float)(nbkgpt-1));
-          //systemout? per debug
-      }
+	            if(t2p<t2ini||t2p>t2fin)continue;
 
-//    long endTime   = System.currentTimeMillis();
-//    float totalTime = (endTime - startTime);
-//    
-//    VavaLogger.LOG.info("Yarc took "+totalTime+"ms "+"(checkpoint at "+check1time+"ms, npix= "+npix+", zona="+ivSupX+","+ivSupY+";"+ivInfX+","+ivInfY+")");
+	            //position to the vector
+	            int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
+	            float factN=1;
+	            float pond=1;
+	            float facLor = 1;
+	            float facPol = 1;
+	            float facIAng = 1;
+	            //!!CANVIAR PER PODER APLICAR LES DUES!!
+	            if (corrLP) {
+	                float[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, 2, false);
+	                facLor = facLP[1];
+	                facPol = facLP[2];
+	            }
+	            if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
+	            float inten = pond * patt2D.getInten(j,i) * patt2D.getScale() * (1.0f/factN) * facLor * facPol * facIAng;
+	            out.sumPoint(p, FastMath.round(inten), 1);
+	        }
+	    }
 
-      return new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
-          
-  }
-  
-  
-//  !Aquesta subrutina fa la integraci� radial de la imatge
-//  !parametres d'entrada:
-//  !  - patt2d: la imatge de treball (CONSIDEREM QUE S'HAN ASSIGNAT EL CENTRE, DISTOD i PIXSIZE)
-//  !  - t2ini, t2fin
-//  !  - stepsize: pas del "diagrama" a generar == gruix dels anells
-//  !parametres de sortida:
-//  !  - ysum: vector d'intensitats
-//  !  - npix: vector de numero de pixels que han contribuit a cada punt
-//  !  - desv: vector de desviacions estandard de ysum en cada punt
-  public static Pattern1D intRad(Pattern2D patt2D, float t2ini, float t2fin, float stepsize, boolean factorN){
-      Pattern1D out = new Pattern1D(t2ini,t2fin,stepsize);
-      float xmean,sumdesv,vPCx,vPCy,x2,y2,radi,t2p;
-      int npoints,p;
-      float factN=1.0f;
-      
-      npoints = FastMath.round((t2fin-t2ini)/stepsize)+1; //+1 perque volem incloure t2ini i t2fin
-      
-      for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-          for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-              //mask o zero el descartem
-              if(patt2D.isInExZone(j, i))continue;
-              //mirem la 2T del pixel en la imatge per determinar amplada i angle
-              //1)vector centre pixel:
-              vPCx=j-patt2D.getCentrX();
-              vPCy=patt2D.getCentrY()-i;
-              //2)calcul angle 2teta en graus
-              x2 = (vPCx*patt2D.getPixSx())*(vPCx*patt2D.getPixSx());
-              y2 = (vPCy*patt2D.getPixSy())*(vPCy*patt2D.getPixSy());
-              radi = (float) FastMath.sqrt(x2+y2);
-              t2p=(float) FastMath.toDegrees(FastMath.atan(radi/(patt2D.getDistMD())));
-              if(t2p<t2ini||t2p>t2fin)continue;
-              //mirem a quina posicio del vector (diagrama pols) ha d'anar
-              p=FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize);
-              if(factorN){
-                  factN= (float) (((2*FastMath.PI*(patt2D.getDistMD()))/(patt2D.getPixSx()*patt2D.getPixSy()))  * FastMath.tan(FastMath.toRadians(t2p)));                   
-              }
-              //debug
-//            VavaLogger.LOG.info(FastMath.round(patt2D.getIntenB2(j,i)*patt2D.getScale()*(1.0f/factN)));
-              //i sumem
-              out.sumPoint(p, FastMath.round(patt2D.getInten(j,i)*patt2D.getScale()*(1.0f/factN)), 1);
-          }
-      }
-      
-      //ara ja hauriem de tenir al vector el diagrama de pols.
-      
-      //tornem a fer una passada per calcular la desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
-      for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-          for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-              //mask o zero el descartem
-              if(patt2D.isInExZone(j, i))continue;
-              //mirem la 2T del pixel en la imatge per determinar amplada i angle
-              //1)vector centre pixel:
-              vPCx=j-patt2D.getCentrX();
-              vPCy=patt2D.getCentrY()-i;
-              //2)calcul angle 2teta en graus
-              x2 = (vPCx*patt2D.getPixSx())*(vPCx*patt2D.getPixSx());
-              y2 = (vPCy*patt2D.getPixSy())*(vPCy*patt2D.getPixSy());
-              radi = (float) FastMath.sqrt(x2+y2);
-              t2p=(float) FastMath.toDegrees(FastMath.atan(radi/(patt2D.getDistMD())));
-              if(t2p<t2ini||t2p>t2fin)continue;
-              //mirem a quina posicio del vector (diagrama pols) ha d'anar
-              p=FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize);
-              //i ara acumulem la desv
-              xmean=(float)(out.getPoint(p).getCounts())/(float)(out.getPoint(p).getNpix());
-              float des = (patt2D.getInten(j, i)*patt2D.getScale()-xmean)*(patt2D.getInten(j, i)*patt2D.getScale()-xmean);
-              out.getPoint(p).addDesv(des);
-          }
-      }
-      //Calcul final desviacio
-      Iterator<PointPatt1D> it = out.getPoints().iterator();
-      while(it.hasNext()){
-          PointPatt1D punt = it.next();
-          if (punt.getNpix()<2){
-              punt.setDesv(0);
-              continue;
-          }
-          float des = (float) FastMath.sqrt(punt.getDesv()/(float)(punt.getNpix()-1));
-          punt.setDesv(des);
-      }
-      
-      return out;
-  }
-  
-  //Aquest pondero segons lo lluny que estigui del centre 2Theta
-  public static Pattern1D intRadPond(Pattern2D patt2D, float t2ini, float t2fin, float stepsize, boolean factorN){
-      Pattern1D out = new Pattern1D(t2ini,t2fin,stepsize);
-      float xmean,sumdesv,vPCx,vPCy,x2,y2,radi,t2p;
-      int npoints,p;
-      float factN=1.0f;
-      
-      npoints = FastMath.round((t2fin-t2ini)/stepsize)+1; //+1 perque volem incloure t2ini i t2fin
-      
-      for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-          for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-              //mask o zero el descartem
-              if(patt2D.isInExZone(j, i))continue;
-              //mirem la 2T del pixel en la imatge per determinar amplada i angle
-              //1)vector centre pixel:
-              vPCx=j-patt2D.getCentrX();
-              vPCy=patt2D.getCentrY()-i;
-              //2)calcul angle 2teta en graus
-              x2 = (vPCx*patt2D.getPixSx())*(vPCx*patt2D.getPixSx());
-              y2 = (vPCy*patt2D.getPixSy())*(vPCy*patt2D.getPixSy());
-              radi = (float) FastMath.sqrt(x2+y2);
-              t2p=(float) FastMath.toDegrees(FastMath.atan(radi/(patt2D.getDistMD())));
-              if(t2p<t2ini||t2p>t2fin)continue;
-              //mirem a quina posicio del vector (diagrama pols) ha d'anar
-              p=FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize);
-              //ponderacio segons lo allunyat que estigui del centre de la posició
-              float diff = FastMath.abs(((t2p/stepsize)-(t2ini/stepsize))-(FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize)));
-//              VavaLogger.LOG.info("diff= "+diff);
-              //dif valdrà entre 0 i 0.5, zero es el mes proper a la posició ideal per tant fem un factor tal que:
-              float pond = 1.f - diff;
-//              VavaLogger.LOG.info("pond= "+pond);
-              if(factorN){
-                  factN= (float) (((2*FastMath.PI*(patt2D.getDistMD()))/(patt2D.getPixSx()*patt2D.getPixSy()))  * FastMath.tan(FastMath.toRadians(t2p)));                   
-              }
-              //debug
-//            VavaLogger.LOG.info(FastMath.round(patt2D.getIntenB2(j,i)*patt2D.getScale()*(1.0f/factN)));
-              //i sumem
-              out.sumPoint(p, FastMath.round(pond*patt2D.getInten(j,i)*patt2D.getScale()*(1.0f/factN)), 1);
-          }
-      }
-      
-      //ara ja hauriem de tenir al vector el diagrama de pols.
-      
-      //tornem a fer una passada per calcular la desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
-      for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-          for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-              //mask o zero el descartem
-              if(patt2D.isInExZone(j, i))continue;
-              //mirem la 2T del pixel en la imatge per determinar amplada i angle
-              //1)vector centre pixel:
-              vPCx=j-patt2D.getCentrX();
-              vPCy=patt2D.getCentrY()-i;
-              //2)calcul angle 2teta en graus
-              x2 = (vPCx*patt2D.getPixSx())*(vPCx*patt2D.getPixSx());
-              y2 = (vPCy*patt2D.getPixSy())*(vPCy*patt2D.getPixSy());
-              radi = (float) FastMath.sqrt(x2+y2);
-              t2p=(float) FastMath.toDegrees(FastMath.atan(radi/(patt2D.getDistMD())));
-              if(t2p<t2ini||t2p>t2fin)continue;
-              //mirem a quina posicio del vector (diagrama pols) ha d'anar
-              p=FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize);
-              //i ara acumulem la desv
-              xmean=(float)(out.getPoint(p).getCounts())/(float)(out.getPoint(p).getNpix());
-              float des = (patt2D.getInten(j, i)*patt2D.getScale()-xmean)*(patt2D.getInten(j, i)*patt2D.getScale()-xmean);
-              out.getPoint(p).addDesv(des);
-          }
-      }
-      //Calcul final desviacio
-      Iterator<PointPatt1D> it = out.getPoints().iterator();
-      while(it.hasNext()){
-          PointPatt1D punt = it.next();
-          if (punt.getNpix()<2){
-              punt.setDesv(0);
-              continue;
-          }
-          float des = (float) FastMath.sqrt(punt.getDesv()/(float)(punt.getNpix()-1));
-          punt.setDesv(des);
-      }
-      
-      return out;
-  }
-  
-  //TODO: Aquest el farem anar ampliant un cercle i mirant el pixel m�s proper
-//  public Pattern1D intRad2(float t2ini, float t2fin, float stepsize, boolean factorN){
-//    
-//  }
-  
-  
-  //Aquest pondero segons lo lluny que estigui del centre 2Theta
-  public static Pattern1D intRadCircles(Pattern2D patt2D, float t2ini, float t2fin, float step, float cakeIn, float cakeOut){
-      
-//      float step = (float) FastMath.toDegrees(FastMath.atan(this.getPixSx()/this.getDistMD()));
-      //todo=hauriem d'agafar el pitjor dels casos d'step (el mes allunyat) per l'allocate 
-      if (step < 0) {
-          step = (float) FastMath.toDegrees(FastMath.atan(patt2D.getPixSx()/patt2D.getDistMD()));
-      }
-      
-      if (cakeIn < 0){
-          cakeIn = 0.0f;
-      }
-      if (cakeOut < 0){
-          cakeOut = 360.f;
-      }
-      
-//      step = (float)Math.round(step * 1000) / 1000.f;
-//      step = 0.0214999f;
-      
-      VavaLogger.LOG.info("step ="+step+" t2ini="+t2ini+" t2fin="+t2fin);
-      Pattern1D out = new Pattern1D(t2ini,t2fin,step);
-      
-      //step i t2 per pixel es el mateix
-      
-      //vector vertical considerant centre 0,0 seran (0,n*step)
-      float ypx = 0;
-      float xpx = 0;
-      float t2ang = t2ini;
-       //posicio al vector del pattern 1d comença a zero
-      int pos = 0;
+	    //ara ja hauriem de tenir al vector el diagrama de pols.
 
-      float psx2 = patt2D.getPixSx()*patt2D.getPixSx();
-      float psy2 = patt2D.getPixSy()*patt2D.getPixSy();
-      float halfpixdiag = (float) FastMath.sqrt(psx2/2+psx2/2); //mm
-      VavaLogger.LOG.info("halfpixdiag="+halfpixdiag);
-      
-      while (t2ang < t2fin){
-//          float ycomp = patt2D.getCentrY() - (npunt*step + t2punt);
-          t2ang = pos*step + t2ini; //angle que estem
-          //correspondencia en pixels?
-          ypx = (float) ((patt2D.getDistMD() * FastMath.tan(FastMath.toRadians(t2ang))) / patt2D.getPixSx());
-///            ypx = (pos*step + t2ini)/step; //correspondencia en pixels -- no funciona per la ortogonalitat del det
-          xpx = 0;
-          
-//          VavaLogger.LOG.info("pos="+pos+" ypx="+ypx+" xpx="+xpx+" t2ang="+t2ang);
-          //vector vertical (0,ycomp)
-          
-          float ang = cakeIn;
-          //TODO: incrementar l'increment de rotacio amb l'angle
-          //float dang = (float) FastMath.toRadians(0.03f); //delta Angle azimut
-          //dang sera el valor just per anar al pixel del costat, que segons la 2theta que estiguem es diferen
-          //farem que sigui la meitat de la diagonal d'un pixel (calculat fora el while)
-          float dang = (float) FastMath.atan(halfpixdiag/(ypx * patt2D.getPixSy())); //mm
-          VavaLogger.LOG.info("pos="+pos+" ypx="+ypx+" xpx="+xpx+" t2ang="+t2ang+" dang="+dang);
+	    //tornem a fer una passada per calcular la desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
+	    for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+	        for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+	            //mask o zero el descartem
+	            if(patt2D.isInExZone(j, i))continue;
+	            //vector centre-pixel
+	            float vPCx=j-patt2D.getCentrX();
+	            float vPCy=patt2D.getCentrY()-i;
+	            //mirem la 2T del pixel en la imatge
+	            double[] vec = new double[3];
+	            vec[0]=vPCx;
+	            vec[1]=vPCy;
+	            vec[2]=0.0;
+	            RealMatrix vx = new Array2DRowRealMatrix(vec).transpose();
+	            RealMatrix rotM = ImgOps.rotMatrix(rotRad, "Z");
+	            RealMatrix tiltM = ImgOps.rotMatrix(tiltRad, "X");
 
-          //pixel corresponent a l'angle inicial (important en cas que sigui diferent de zero)
-          xpx = (float) (xpx * FastMath.cos(dang) - ypx * FastMath.sin(dang));
-          ypx = (float) (xpx * FastMath.sin(dang) + ypx * FastMath.cos(dang));
-          
-          while (ang < cakeOut){
-              //VavaLogger.LOG.info("rotangle="+ang+" ypx="+ypx+" xpx="+xpx);
+	            RealMatrix X = vx.multiply(rotM);
+	            RealMatrix Z = X.multiply(tiltM);
+	            double z = Z.getEntry(0, 2);
 
-              //sumem intensitat al pattern del pixel mes proper i girem
-              float y_row = patt2D.getCentrY() - ypx;
-              float x_col = xpx + patt2D.getCentrX();
-              
-              int inten = patt2D.getInten(FastMath.round(x_col),FastMath.round(y_row));
-              out.sumPoint(pos, inten, 1);
-              
-              //apliquem rotacio DANG a xcomp, ycomp
-              xpx = (float) (xpx * FastMath.cos(dang) - ypx * FastMath.sin(dang));
-              ypx = (float) (xpx * FastMath.sin(dang) + ypx * FastMath.cos(dang));
+	            double t2p = FastMath.atan(FastMath.sqrt((vPCx*vPCx)+(vPCy*vPCy)-(z*z))/dist-z);
+	            double DX = dist-z;
+	            double DY = FastMath.sqrt(vPCx*vPCx+vPCy*vPCy-z*z);
+	            t2p = FastMath.atan2(DY,DX);
+	            t2p = FastMath.toDegrees(t2p);
+	            if(t2p<t2ini||t2p>t2fin)continue;
+	            //mirem a quina posicio del vector (diagrama pols) ha d'anar
+	            int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
+	            //i ara acumulem la desv
+	            float xmean=(float)(out.getPoint(p).getCounts())/(float)(out.getPoint(p).getNpix());
+	            float des = (patt2D.getInten(j, i)*patt2D.getScale()-xmean)*(patt2D.getInten(j, i)*patt2D.getScale()-xmean);
+	            out.getPoint(p).addDesv(des);
+	        }
+	    }
 
-              ang = (float) (ang + FastMath.toDegrees(dang));
-          }
-          pos = pos + 1;
-      }
-      
-      //Calcul desviacio (simple)
-      Iterator<PointPatt1D> it = out.getPoints().iterator();
-      while(it.hasNext()){
-          PointPatt1D punt = it.next();
-          if (punt.getNpix()<2){
-              punt.setDesv(0);
-              continue;
-          }
-          float des = (float) FastMath.sqrt(punt.getCounts());
-          punt.setDesv(des);
-      }
-      
-      return out;
-      
-  }
-  
-  public static Pattern1D intRadEllipse(Pattern2D patt2D, float t2ini, float t2fin, float step, float rmin, float rmax, float angrot, float cakeIn, float cakeOut){
-      return ImgOps.intRadEllipse(patt2D, t2ini, t2fin, step, rmin, rmax, angrot, cakeIn, cakeOut, 0.006734814466938165f, -0.003927179165583287f);
-  }
-  
-  //Considerant una ellipse en comptes d'un cercle
-  public static Pattern1D intRadEllipse(Pattern2D patt2D, float t2ini, float t2fin, float step, float rmin, float rmax, float angrot, float cakeIn, float cakeOut,float vecX, float vecY){
+	    //Calcul final desviacio
+	    Iterator<PointPatt1D> it = out.getPoints().iterator();
+	    while(it.hasNext()){
+	        PointPatt1D punt = it.next();
+	        if (punt.getNpix()<2){
+	            punt.setDesv(0);
+	            continue;
+	        }
+	        float des = (float) FastMath.sqrt(punt.getDesv()/(float)(punt.getNpix()-1));
+	        punt.setDesv(des);
+	    }
 
-    //comprovacions previes
-    if (step < 0) {step = patt2D.getMinStepsize();}
-    if (cakeIn < 0){cakeIn = 0.0f;}
-    if (cakeOut < 0){cakeOut = 360.f;}
-    
-    VavaLogger.LOG.info("step ="+step+" t2ini="+t2ini+" t2fin="+t2fin);
-    Pattern1D out = new Pattern1D(t2ini,t2fin,step);
-    
-    int pos = 0; //posicio al vector del pattern 1d comença a zero
+	    return out;
+	}
 
-    float psx2 = patt2D.getPixSx()*patt2D.getPixSx();
-    float psy2 = patt2D.getPixSy()*patt2D.getPixSy();
-    float halfpixdiag = (float) FastMath.sqrt(psx2/2+psy2/2); //mm
-    VavaLogger.LOG.info("halfpixdiag="+halfpixdiag);
-    
-    //posicionem l'angle inicial d'integracio a l'eix Y cap amunt (prenem com a zero angle i integrarem clockwise)
-    //es el conveni que agafo, cal corregir el de l'ellipse
-    float zeroPos = (float) (-angrot -(Math.PI/2));
-    //float drawFin = (float) (drawIni + FastMath.toRadians(90));
-    
-    float t2ang = t2ini;
+	public static Pattern1D radialIntegrationSlower(Pattern2D patt2D,float t2ini, float t2fin, float step, float cakeIn, float cakeOut, boolean corrLP, boolean corrIAng){
+	    //comprovacions previes
+	    if (step < 0) {step = patt2D.getMinStepsize();}
+	    if (cakeIn < 0){cakeIn = 0.0f;}
+	    if (cakeOut < 0){cakeOut = 360.f;}
+	    boolean fullCake = false;
+	    if (cakeIn==0.0 && cakeOut==360.0){
+	        fullCake = true;
+	    }
+	    //cas que cakeOut sigui < cakeIn
+	    //      if (cakeOut < cakeIn){
+	    //          cakeOut = cakeOut + 360.f;
+	    //      }
 
-    //mirem relacio entre rmax i rmin amb un rpromig (que farem servir per determinar 2theta)
-    float rpromig = (rmax + rmin)/2.f;
-    float facRmax = rmax/rpromig;
-    float facRmin = rmin/rpromig;
-    
-    //integrem
-    while (t2ang < t2fin){
-        t2ang = pos*step + t2ini; //angle 2theta que estem
-        
-        //corregim el "zero" segons cakein
-        float ang = zeroPos + cakeIn;
-        
-        //ara hem d'editar rmax i rmin conforme l'angle 2theta en que estem, farem que sigui el "promig"
-        rpromig = (float) (patt2D.distMD * FastMath.atan(FastMath.toRadians(t2ang)) / patt2D.getPixSx());
-        float rmaxt2 = rpromig * facRmax;
-        float rmint2 = rpromig * facRmin;
+	    log.info("step ="+step+" t2ini="+t2ini+" t2fin="+t2fin);
+	    Pattern1D out = new Pattern1D(t2ini,t2fin,step);
 
-        float cx = patt2D.getCentrX() + rpromig*vecX;
-        float cy = patt2D.getCentrX() + rpromig*vecX;
-        
-        //mirem a quin pixel es correspon considerant l'angle inicial (equacio ellipse) ("zero" en cas de 0-360)
-//        float xpx = (float) (patt2D.getCentrX() + rmaxt2*Math.cos(ang)*Math.cos(angrot) - rmint2*Math.sin(ang)*Math.sin(angrot));
-//        float ypx = (float) (patt2D.getCentrY() + rmaxt2*Math.cos(ang)*Math.sin(angrot) + rmint2*Math.sin(ang)*Math.cos(angrot));
-        float xpx = (float) (cx + rmaxt2*Math.cos(ang)*Math.cos(angrot) - rmint2*Math.sin(ang)*Math.sin(angrot));
-        float ypx = (float) (cy + rmaxt2*Math.cos(ang)*Math.sin(angrot) + rmint2*Math.sin(ang)*Math.cos(angrot));
-        
-        //increment en l'azimut (integracio) segons el 2theta que estem
-        float dang = (float) FastMath.atan(halfpixdiag/(ypx * patt2D.getPixSy())); //mm
-
-        VavaLogger.LOG.info("pos="+pos+" ypx="+ypx+" xpx="+xpx+" t2ang="+t2ang+" dang="+dang+" rmaxt2="+rmaxt2+" rmint2="+rmint2);
+	    //      int pos = 0; //posicio al vector del pattern 1d comença a zero
+	    //      int npoints = FastMath.round((t2fin-t2ini)/step)+1; //+1 perque volem incloure t2ini i t2fin
 
 
-        while (ang < cakeOut){
-            //sumem intensitat al pattern del pixel mes proper i girem
-//            float y_row = patt2D.getCentrY() - ypx;
-//            float x_col = xpx + patt2D.getCentrX();
-            
-            float y_row = ypx;
-            float x_col = xpx;
-            
-            if (!patt2D.isInside(FastMath.round(x_col),FastMath.round(y_row)))break;
-            
-            int inten = patt2D.getInten(FastMath.round(x_col),FastMath.round(y_row));
-            out.sumPoint(pos, inten, 1);
-            
-            //incrementem ang i "apliquem" rotacio
-            ang = (float) (ang + FastMath.toDegrees(dang));
-            xpx = (float) (patt2D.getCentrX() + rmaxt2*Math.cos(ang)*Math.cos(angrot) - rmint2*Math.sin(ang)*Math.sin(angrot));
-            ypx = (float) (patt2D.getCentrY() + rmaxt2*Math.cos(ang)*Math.sin(angrot) + rmint2*Math.sin(ang)*Math.cos(angrot));
+	    //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
+	    for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+	        for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+	            //mask o zero el descartem
+	            if(patt2D.isInExZone(j, i))continue;
+
+	            //HEM DE MIRAR SI EL VECTOR ESTA DINTRE EL CAKE
+	            if (!fullCake){
+	                float azim = patt2D.getAzimAngle(j, i, true);
+	                //                  log.debug("x,y,azim="+j+","+i+","+azim);
+	                //debug
+	                if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()-100)log.debug("x,y,azim="+j+","+i+","+azim);
+	                if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()+100)log.debug("x,y,azim="+j+","+i+","+azim);
+	                if(j==patt2D.getCentrXI()+100 && i==patt2D.getCentrYI())log.debug("x,y,azim="+j+","+i+","+azim);
+	                if(j==patt2D.getCentrXI()-100 && i==patt2D.getCentrYI())log.debug("x,y,azim="+j+","+i+","+azim);
+
+	                if (cakeOut<cakeIn){
+	                    //va al reves
+	                    if ((azim < cakeIn) && (azim > cakeOut))continue; 
+	                }else{
+	                    if ((azim < cakeIn) || (azim > cakeOut))continue;    
+	                }
+	            }
+	            //2theta del pixel en la imatge
+	            double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+
+	            if(t2p<t2ini||t2p>t2fin)continue;
+
+	            //              if ((i==300)||(i==600)||(i==900)||(i==1200)||(i==1500)||(i==1800)){
+	            //                  log.debug("t2p="+t2p);    
+	            //              }
+	            //              if ((j==300)||(j==600)||(j==900)||(j==1200)||(j==1500)||(j==1800)){
+	            //                  log.debug("t2p="+t2p);    
+	            //              }
+
+	            //position to the vector
+	            int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
+	            float factN=1;
+	            float pond=1;
+	            float facLor = 1;
+	            float facPol = 1;
+	            float facIAng = 1;
+	            //!!CANVIAR PER PODER APLICAR LES DUES!!
+	            if (corrLP) {
+	                float[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, 2, false);
+	                facLor = facLP[1];
+	                facPol = facLP[2];
+	            }
+	            if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
+	            float inten = pond * patt2D.getInten(j,i) * patt2D.getScale() * (1.0f/factN) * facLor * facPol * facIAng;
+	            out.sumPoint(p, FastMath.round(inten), 1);
+	        }
+	    }
+
+	    //ara ja hauriem de tenir al vector el diagrama de pols.
+
+	    //tornem a fer una passada per calcular la desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
+	    for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+	        for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+	            //mask o zero el descartem
+	            if(patt2D.isInExZone(j, i))continue;
+	            double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+	            if(t2p<t2ini||t2p>t2fin)continue;
+	            //mirem a quina posicio del vector (diagrama pols) ha d'anar
+	            int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
+	            //i ara acumulem la desv
+	            float xmean=(float)(out.getPoint(p).getCounts())/(float)(out.getPoint(p).getNpix());
+	            float des = (patt2D.getInten(j, i)*patt2D.getScale()-xmean)*(patt2D.getInten(j, i)*patt2D.getScale()-xmean);
+	            out.getPoint(p).addDesv(des);
+	        }
+	    }
+
+	    //Calcul final desviacio
+	    Iterator<PointPatt1D> it = out.getPoints().iterator();
+	    while(it.hasNext()){
+	        PointPatt1D punt = it.next();
+	        if (punt.getNpix()<2){
+	            punt.setDesv(0);
+	            continue;
+	        }
+	        float des = (float) FastMath.sqrt(punt.getDesv()/(float)(punt.getNpix()-1));
+	        punt.setDesv(des);
+	    }
+
+	    return out;
+	}
+
+	//Retorna el promig d'intensitat d'un anell centrat en t2 i considerant una amplada tol2t
+	//considera tilt/rot
+	public static float radialIntegrationSingle2th(Pattern2D patt2D, float t2,float tol2tdeg,boolean corrLP, boolean corrIAng){
+	    if (tol2tdeg < 0) { //default value
+	        tol2tdeg = 0.1f;
+	    }
+	    float step = patt2D.getMinStepsize();
+	    float sum = 0; //valor de intensitat suma
+	    int npix = 0;
+
+	    if (step>tol2tdeg){return -1;}
+	    float t2ini = t2 - tol2tdeg;
+	    float t2fin = t2 + tol2tdeg;
+
+	    //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
+	    for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+	        for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+	            //mask o zero el descartem
+	            if(patt2D.isInExZone(j, i))continue;
+	            double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+	            if(t2p<t2ini||t2p>t2fin)continue;
+	            float facLor = 1;
+	            float facPol = 1;
+	            float facIAng = 1;
+	            if (corrLP) {
+	                float[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, 2, false);
+	                facLor = facLP[1];
+	                facPol = facLP[2];
+	            }
+	            if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
+	            float inten = patt2D.getInten(j,i) * patt2D.getScale() * facLor * facPol * facIAng;
+	            sum = sum + inten;
+	            npix = npix +1;
+	        }
+	    }
+	    //normalitzem pel nombre de pixels
+	    sum = sum / npix;
+	    return sum;
+	}
+
+	//Retorna els promitjos d'intensitat d'anells centrats en diverses t2[] i considerant una amplada tol2t
+    //considera tilt/rot. Aixo es per evitar fer moltes passades si es volen varies t2.
+    public static float[] radialIntegrationVarious2th(Pattern2D patt2D, float[] t2,float tol2tdeg,boolean corrLP, boolean corrIAng,searchDBWorker sw){
+        if (tol2tdeg < 0) { //default value
+            tol2tdeg = 0.1f;
         }
-        pos = pos + 1;
-    }
-    
-    //Calcul desviacio (simple)
-    Iterator<PointPatt1D> it = out.getPoints().iterator();
-    while(it.hasNext()){
-        PointPatt1D punt = it.next();
-        if (punt.getNpix()<2){
-            punt.setDesv(0);
-            continue;
+        float step = patt2D.getMinStepsize();
+        if (step>tol2tdeg){return null;}
+        
+        float[] sum = new float[t2.length]; //valor de intensitat suma
+        int[] npix = new int[t2.length];
+        float[] t2ini = new float[t2.length];
+        float[] t2fin = new float[t2.length];
+        
+        //establim 2tini/fin i inicialitzem sum, npix
+        for (int i=0;i<t2.length;i++){
+            t2ini[i] = t2[i] - tol2tdeg;
+            t2fin[i] = t2[i] + tol2tdeg;
+            sum[i]=0;
+            npix[i]=0;
         }
-        float des = (float) FastMath.sqrt(punt.getCounts());
-        punt.setDesv(des);
+
+        //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
+        for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+            for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+                //mask o zero el descartem
+                if(patt2D.isInExZone(j, i))continue;
+                double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+                
+                //mirem si està dins d'algun rang dels buscats
+                int npeak = -1;
+                for (int k=0; k<t2.length; k++){
+                    if(t2p>t2ini[k]&&t2p<t2fin[k]){
+                        npeak = k;                    
+                    }
+                }
+                if (npeak<0)continue; //no esta a cap rang
+                
+                float facLor = 1;
+                float facPol = 1;
+                float facIAng = 1;
+                if (corrLP) {
+                    float[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, 2, false);
+                    facLor = facLP[1];
+                    facPol = facLP[2];
+                }
+                if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
+                float inten = patt2D.getInten(j,i) * patt2D.getScale() * facLor * facPol * facIAng;
+                sum[npeak] = sum[npeak] + inten;
+                npix[npeak] = npix[npeak] +1;
+                
+                //en cas que hi hagi un progres
+                if (sw!=null){
+                    if ((i % 100) == 0){
+                        float percent = ((float)i/(float)patt2D.getDimY())*100.f;
+                        sw.mySetProgress((int) percent);
+                        log.debug(String.valueOf(percent));
+                    }                    
+                }
+            }
+        }
+        //normalitzem pel nombre de pixels
+        for (int i=0;i<t2.length;i++){
+            sum[i] = sum[i] / npix[i];
+        }
+        return sum;
     }
-    
-    return out;
-  }
-  
-  
-  public static Pattern1D intRadTilt(Pattern2D patt2D,float t2ini, float t2fin, float step, float cakeIn, float cakeOut, boolean useTilt, boolean corrLP, boolean corrIAng){
-      //comprovacions previes
-      if (step < 0) {step = patt2D.getMinStepsize();}
-      if (cakeIn < 0){cakeIn = 0.0f;}
-      if (cakeOut < 0){cakeOut = 360.f;}
-      boolean fullCake = false;
-      if (cakeIn==0.0 && cakeOut==360.0){
-          fullCake = true;
-      }
-      //cas que cakeOut sigui < cakeIn
-//      if (cakeOut < cakeIn){
-//          cakeOut = cakeOut + 360.f;
-//      }
-      
-      VavaLogger.LOG.info("step ="+step+" t2ini="+t2ini+" t2fin="+t2fin);
-      Pattern1D out = new Pattern1D(t2ini,t2fin,step);
-      
-//      int pos = 0; //posicio al vector del pattern 1d comença a zero
-//      int npoints = FastMath.round((t2fin-t2ini)/step)+1; //+1 perque volem incloure t2ini i t2fin
-      
-      //calculs previs "constants"
-      double tiltRad = 0;
-      double rotRad = 0;
-      if (useTilt){
-          tiltRad = FastMath.toRadians(patt2D.getTiltDeg());
-          rotRad = FastMath.toRadians(patt2D.getRotDeg());
-      }
-      double cos2tilt = FastMath.cos(tiltRad)*FastMath.cos(tiltRad);
-      double sintilt = FastMath.sin(tiltRad);
-      double cosrot = FastMath.cos(rotRad);
-      double sinrot = FastMath.sin(rotRad);
-      
-      //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
-      for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-          for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-              //mask o zero el descartem
-              if(patt2D.isInExZone(j, i))continue;
-              
-              //vector centre-pixel
-              float vPCx=j-patt2D.getCentrX();
-              float vPCy=patt2D.getCentrY()-i;
-              
-              //HEM DE MIRAR SI EL VECTOR ESTA DINTRE EL CAKE
-              if (!fullCake){
-                  float azim = patt2D.getAzimAngle(j, i, true);
-//                  VavaLogger.LOG.info("x,y,azim="+j+","+i+","+azim);
-                  //debug
-                  if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()-100)VavaLogger.LOG.info("x,y,azim="+j+","+i+","+azim);
-                  if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()+100)VavaLogger.LOG.info("x,y,azim="+j+","+i+","+azim);
-                  if(j==patt2D.getCentrXI()+100 && i==patt2D.getCentrYI())VavaLogger.LOG.info("x,y,azim="+j+","+i+","+azim);
-                  if(j==patt2D.getCentrXI()-100 && i==patt2D.getCentrYI())VavaLogger.LOG.info("x,y,azim="+j+","+i+","+azim);
-                  
-                  if (cakeOut<cakeIn){
-                      //va al reves
-                      if ((azim < cakeIn) && (azim > cakeOut))continue; 
-                  }else{
-                      if ((azim < cakeIn) || (azim > cakeOut))continue;    
-                  }
-              }
-              
-              //mirem la 2T del pixel en la imatge
-//              double suma1 = ((j*cosrot + i*sinrot)*(j*cosrot + i*sinrot))+(-j*sinrot + i*cosrot);
-//              double num = cos2tilt*(suma1*suma1);
-//              double den = (patt2D.getDistMD()/patt2D.getPixSx()) + sintilt*(j*cosrot+i*sinrot);
-//              double t2p = FastMath.atan(FastMath.sqrt(num/(den*den)));
-
-//              double suma1 = ((vPCx*cosrot + vPCy*sinrot)*(vPCx*cosrot + vPCy*sinrot))+((-vPCx*sinrot + vPCy*cosrot)*(-vPCx*sinrot + vPCy*cosrot));
-//              double num = cos2tilt*(suma1);
-//              double den = (patt2D.getDistMD()/patt2D.getPixSx()) + sintilt*(vPCx*cosrot+vPCy*sinrot);
-//              double t2p = FastMath.toDegrees(FastMath.atan(FastMath.sqrt(num/(den*den))));
-              
-              double t2p = patt2D.calcT2new(new Point2D.Float(j,i), true);
-              
-              if(t2p<t2ini||t2p>t2fin)continue;
-//              if ((i==300)||(i==600)||(i==900)||(i==1200)||(i==1500)||(i==1800)){
-//                  VavaLogger.LOG.info("t2p="+t2p);    
-//              }
-//              if ((j==300)||(j==600)||(j==900)||(j==1200)||(j==1500)||(j==1800)){
-//                  VavaLogger.LOG.info("t2p="+t2p);    
-//              }
-              
-              //position to the vector
-              int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
-              float factN=1;
-              float pond=1;
-              float facLor = 1;
-              float facPol = 1;
-              float facIAng = 1;
-              //!!CANVIAR PER PODER APLICAR LES DUES!!
-              if (corrLP) {
-                  float[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, -1, false);
-                  facLor = facLP[1];
-                  facPol = facLP[2];
-              }
-              if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
-              float inten = pond * patt2D.getInten(j,i) * patt2D.getScale() * (1.0f/factN) * facLor * facPol * facIAng;
-              out.sumPoint(p, FastMath.round(inten), 1);
-          }
-      }
-         
-      //ara ja hauriem de tenir al vector el diagrama de pols.
-      
-      //tornem a fer una passada per calcular la desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
-      for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-          for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-              //mask o zero el descartem
-              if(patt2D.isInExZone(j, i))continue;
-              //vector centre-pixel
-              float vPCx=j-patt2D.getCentrX();
-              float vPCy=patt2D.getCentrY()-i;
-              //mirem la 2T del pixel en la imatge
-              double suma1 = ((vPCx*cosrot + vPCy*sinrot)*(vPCx*cosrot + vPCy*sinrot))+((-vPCx*sinrot + vPCy*cosrot)*(-vPCx*sinrot + vPCy*cosrot));
-              double num = cos2tilt*(suma1);
-              double den = (patt2D.getDistMD()/patt2D.getPixSx()) + sintilt*(vPCx*cosrot+vPCy*sinrot);
-              double t2p = FastMath.toDegrees(FastMath.atan(FastMath.sqrt(num/(den*den))));
-              if(t2p<t2ini||t2p>t2fin)continue;
-              //mirem a quina posicio del vector (diagrama pols) ha d'anar
-              int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
-              //i ara acumulem la desv
-              float xmean=(float)(out.getPoint(p).getCounts())/(float)(out.getPoint(p).getNpix());
-              float des = (patt2D.getInten(j, i)*patt2D.getScale()-xmean)*(patt2D.getInten(j, i)*patt2D.getScale()-xmean);
-              out.getPoint(p).addDesv(des);
-          }
-      }
-      
-      //Calcul final desviacio
-      Iterator<PointPatt1D> it = out.getPoints().iterator();
-      while(it.hasNext()){
-          PointPatt1D punt = it.next();
-          if (punt.getNpix()<2){
-              punt.setDesv(0);
-              continue;
-          }
-          float des = (float) FastMath.sqrt(punt.getDesv()/(float)(punt.getNpix()-1));
-          punt.setDesv(des);
-      }
-      
-      return out;
-  }
-  
-  
-  //Retorna el promig d'intensitat d'un anell centrat en t2 i considerant una amplada tol2t
-  public static float intRadCircle(Pattern2D patt2D, float t2,float tol2t){
-      
-      if (tol2t < 0) { //default value
-          tol2t = 0.1f;
-      }
-      float step = (float) FastMath.toDegrees(FastMath.atan(patt2D.getPixSx()/patt2D.getDistMD()));
-
-      if (step>tol2t){return -1;}
-      
-      //vector vertical considerant centre 0,0 seran (0,n*step)
-      float ypx = 0;
-      float xpx = 0;
-      float t2ini = t2-tol2t;
-      float t2fin = t2+tol2t;
-      float t2ang = t2ini;
-      long sum = 0; //valor de intensitat suma
-      int npix = 0;
-      //TODO: incrementar l'increment de rotacio amb l'angle
-      while (t2ang <= t2fin){
-
-          t2ang = t2ang + step; //angle que estem
-          //correspondencia en pixels?
-          ypx = (float) ((patt2D.getDistMD() * FastMath.tan(FastMath.toRadians(t2ang))) / patt2D.getPixSx());
-          xpx = 0;
-          
-          VavaLogger.LOG.info("ypx="+ypx+" xpx="+xpx+" t2ang="+t2ang+" npix="+npix);
-          //vector vertical (0,ycomp)
-          
-          float ang = 0.f;
-          float dang = (float) FastMath.toRadians(0.03f); //delta Angle azimut
-          
-          while (ang < 360){
-              //VavaLogger.LOG.info("rotangle="+ang+" ypx="+ypx+" xpx="+xpx);
-
-              //sumem intensitat al pattern del pixel mes proper i girem
-              float y_row = patt2D.getCentrY() - ypx;
-              float x_col = xpx + patt2D.getCentrX();
-              
-              int inten = patt2D.getInten(FastMath.round(x_col),FastMath.round(y_row));
-              sum = sum + inten;
-              npix = npix +1;
-              
-              //apliquem rotacio DANG a xcomp, ycomp
-              xpx = (float) (xpx * FastMath.cos(dang) - ypx * FastMath.sin(dang));
-              ypx = (float) (xpx * FastMath.sin(dang) + ypx * FastMath.cos(dang));
-
-              ang = (float) (ang + FastMath.toDegrees(dang));
-          }
-      }
-      
-      //normalitzem pel nombre de pixels
-      sum = sum / npix;
-      return sum;
-      
-  }
 	
     //string is X, Y or Z
+    //retorna la matriu de rotacio respecte un eix donat
 	public static RealMatrix rotMatrix(double angleRad, String axis){
 	    
 	    double[][] mat = new double[3][3];
@@ -1951,7 +1345,135 @@ public final class ImgOps {
 	    RealMatrix m = new Array2DRowRealMatrix(mat);
 	    
 	    return m;
-	    
-	}
-}
 
+	}
+	
+    //from pixel or twoteta calculate the ellipse considering pattern calibratino
+    public static EllipsePars getElliPars(Pattern2D patt2D, Point2D.Float pixel){
+        double twothRad = patt2D.calc2T(pixel, false);
+        return getElliPars(patt2D,twothRad);
+    }
+    
+    //from pixel or twoteta calculate the ellipse considering pattern calibratino
+    public static EllipsePars getElliPars(Pattern2D patt2D, double twothRad){
+        //      double phiRad = patt2D.getAzimAngle(FastMath.round(pixel.x), FastMath.round(pixel.y), false);
+        double phiRad = FastMath.toRadians(patt2D.getRotDeg());
+
+        double tantth = FastMath.tan(twothRad);
+        double sintth = FastMath.sin(twothRad);
+        double costth = FastMath.cos(twothRad);
+        double tiltrad = FastMath.toRadians(patt2D.getTiltDeg());
+        double tanTilt = FastMath.tan(tiltrad);
+        double sinTilt = FastMath.sin(tiltrad);
+        double cosTilt = FastMath.cos(tiltrad);
+        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
+        double tmes = FastMath.tan((twothRad+tiltrad)/2);
+        double distPix = patt2D.getDistMD()/patt2D.getPixSx();
+
+        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
+        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
+
+        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
+        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
+
+        double rMaj = (vmes+vmenys)/2;
+        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
+        double zdis = (fmes-fmenys)/2;
+
+        double ellicentX = patt2D.getCentrX()+zdis * FastMath.sin(phiRad);
+        double ellicentY = patt2D.getCentrY()-zdis * FastMath.cos(phiRad);
+
+        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,phiRad);
+    }
+    
+    public static class sumImagesFileWorker extends SwingWorker<Integer,Integer> {
+
+        private File[] files;
+        private boolean stop;
+        Pattern2D pattsum;
+        LogJTextArea taOut;
+
+        public sumImagesFileWorker(File[] files, LogJTextArea textAreaOut){//, Pattern2D patt) {
+            this.files = files;
+            this.stop = false;
+            this.taOut = textAreaOut;
+//            this.pattsum = patt;
+        }
+
+        public Pattern2D getpattSum(){
+            return pattsum;
+        }
+        
+        @Override
+        protected Integer doInBackground() throws Exception {
+            
+            int totalfiles = files.length -1;
+            
+            Pattern2D patt = ImgFileUtils.readPatternFile(files[0]);
+            int dimY = patt.getDimY();
+            int dimX = patt.getDimX();
+            
+            pattsum = new Pattern2D(patt,false); //copiem dades instr de les originals
+            pattsum.setB4inten(true);//ens assegurem que treballem amb I4
+            Pattern2D dataI4temp = new Pattern2D(dimX,dimY,true);
+            //inicialitzem a zero les dades SUMA
+            for(int i=0; i<dimY;i++){
+                for(int j=0; j<dimX;j++){
+                    dataI4temp.setInten(j, i, 0);
+                }
+            }
+            
+            int maxVal=0;
+            
+            //sumem
+            for(int k=0;k<files.length;k++){
+                //obrim el pattern i sumem
+                patt = ImgFileUtils.readPatternFile(files[k]);
+                if (patt == null){
+                    if (taOut!=null)taOut.stat("Error reading "+files[k].getName()+" ... skipping");
+                    log.info("could not read "+files[k].getName()+" ... skiping");
+                    continue;
+                }
+                for(int i=0; i<dimY;i++){
+                    for(int j=0; j<dimX;j++){
+                        //zona exclosa saltem
+                        if (patt.isInExZone(j, i))continue;
+                        int s = dataI4temp.getInten(j, i) + patt.getInten(j, i);
+                        dataI4temp.setInten(j, i, s);
+                    }
+                }
+                float percent = ((float)k/(float)totalfiles)*100.f;
+                setProgress((int) percent);
+                log.debug(String.valueOf(percent));
+                if (taOut!=null)taOut.stat("File added: "+files[k].getName());
+                if (stop) break;
+            }
+
+            //escala
+            for(int i=0; i<dimY;i++){
+                for(int j=0; j<dimX;j++){
+                    //mirem si superem els limits (per escalar despres)
+                    if (dataI4temp.getInten(j, i)>maxVal) maxVal=dataI4temp.getInten(j, i);
+                }
+            }
+            
+            //si ens hem passat del maxim calculem el factor d'escala i escalem
+            float fscale=1.0f;
+            log.debug("maxVal= "+maxVal+"  satur="+pattsum.getSaturValue());
+            if(maxVal>pattsum.getSaturValue()){
+                fscale = (float)maxVal/(float)(pattsum.getSaturValue()-1); // -1 per assegurar-nos que entra
+            }
+            
+            for(int i=0; i<dimY;i++){
+                for(int j=0; j<dimX;j++){
+                    pattsum.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)*fscale));
+                }
+            }
+            this.setProgress(100);
+            pattsum.setScale(fscale);
+            return 0;            
+
+        }
+    }
+    
+}

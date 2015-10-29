@@ -1,4 +1,4 @@
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -36,11 +36,11 @@ import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
+import com.vava33.jutils.VavaLogger;
 
-import vava33.plot2d.auxi.CircleFitter;
-import vava33.plot2d.auxi.EllipsePars;
-import vava33.plot2d.auxi.Pattern2D;
-import vava33.plot2d.auxi.VavaLogger;
+import vava33.d2dplot.auxi.CircleFitter;
+import vava33.d2dplot.auxi.EllipsePars;
+import vava33.d2dplot.auxi.Pattern2D;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JToggleButton;
@@ -88,6 +88,8 @@ public class Calib_dialog extends JDialog {
     private final static int DEF_findElliPointsArcSizemm = 1;
     private final static int DEF_factESDIntensityThreshold = 4;
     
+    private static VavaLogger log = D2Dplot_global.log;
+    private Param_dialog paramDialog;
     private JButton btnImageParameters;
     
     public ArrayList<Line2D.Float> cerques;
@@ -432,7 +434,12 @@ public class Calib_dialog extends JDialog {
     }
     
     protected void do_btnImageParameters_actionPerformed(ActionEvent arg0) {
-        MainFrame.showSetParameters();
+        if (patt2D != null) {
+            if (paramDialog == null){
+                paramDialog = new Param_dialog(patt2D);
+            }
+            paramDialog.setVisible(true);
+        }
     }
     
     protected void do_btnAutoCalibration_itemStateChanged(ItemEvent e) {
@@ -441,7 +448,7 @@ public class Calib_dialog extends JDialog {
             //comprovem que hi hagin els valors de pixsize i wavelength
             if((!patt2D.checkIfWavel() || !patt2D.checkIfPixSize())){
                 tAOut.afegirText(true, true, "Please provide pixel size and wavelength");
-                MainFrame.showSetParameters();
+                btnImageParameters.doClick();
                 this.btnAutoCalibration.setSelected(false);
                 return;
             }
@@ -462,32 +469,32 @@ public class Calib_dialog extends JDialog {
             }catch(Exception ex){
                 findElliPointsTolPix = DEF_findElliPointsTolPix;
                 findElliPointsMinPixLine = findElliPointsTolPix;
-                VavaLogger.LOG.config("using default value for findElliPointsTolPix");
+                log.config("using default value for findElliPointsTolPix");
             }
             try{
                 findElliPointsArcSizemm = Integer.parseInt(txtArcsize.getText());   
             }catch(Exception ex){
                 findElliPointsArcSizemm = DEF_findElliPointsArcSizemm;
-                VavaLogger.LOG.config("using default value for findElliPointsArcSizemm");
+                log.config("using default value for findElliPointsArcSizemm");
             }
             try{
                 factESDIntensityThreshold = Integer.parseInt(txtEsdfact.getText());   
             }catch(Exception ex){
                 factESDIntensityThreshold = DEF_factESDIntensityThreshold;
-                VavaLogger.LOG.config("using default value for factESDIntensityThreshold");
+                log.config("using default value for factESDIntensityThreshold");
             }
             try{
                 String ommitstr = txtOmmitrings.getText().trim().replace(',', ' ');
-                VavaLogger.LOG.config(ommitstr);
+                log.config(ommitstr);
                 String[] ommitlist = ommitstr.trim().split("\\s+");
                 ommitRings = new ArrayList<Integer>();
                 for (int i=0; i< ommitlist.length;i++){
                     ommitRings.add(Integer.parseInt(ommitlist[i]));
-                    VavaLogger.LOG.config(Integer.toString(ommitRings.get(i)));    
+                    log.config(Integer.toString(ommitRings.get(i)));    
                 }
             }catch(Exception ex){
                 ommitRings = new ArrayList<Integer>();
-                VavaLogger.LOG.config("using default value for ommitRings");
+                log.config("using default value for ommitRings");
             }        
             
             //busquem ellipses
@@ -540,7 +547,7 @@ public class Calib_dialog extends JDialog {
         try{
             slope = sr.getSlope();
             intercept = sr.getIntercept();
-            VavaLogger.writeNameNumPairs("CONFIG",true,"slope intercept", slope, intercept);            
+            log.writeNameNumPairs("CONFIG",true,"slope intercept", slope, intercept);            
         }catch(Exception ex){
             ex.printStackTrace();
             return;
@@ -557,7 +564,7 @@ public class Calib_dialog extends JDialog {
         double mod1 = FastMath.sqrt(vx*vx + vy*vy);
         double mod2 = FastMath.sqrt(1);
         double angle = FastMath.acos((vx*0+vy*-1)/(mod1*mod2));
-        VavaLogger.writeNameNumPairs("CONFIG",true,"ANGLE=", FastMath.toDegrees(angle));
+        log.writeNameNumPairs("CONFIG",true,"ANGLE=", FastMath.toDegrees(angle));
         
         ArrayList<Double> distsMD = new ArrayList<Double>();
         ArrayList<Double> tilts = new ArrayList<Double>();
@@ -596,19 +603,19 @@ public class Calib_dialog extends JDialog {
             double centmx = e.getXcen()+zdism*FastMath.sin(e.getAngrot());
             double centmy = e.getYcen()-zdism*FastMath.cos(e.getAngrot());
             
-            VavaLogger.LOG.config("---- RING nr."+i);
-            VavaLogger.writeNameNumPairs("CONFIG",true,"tilt tiltdeg distMD zdisp zdism", tilt, FastMath.toDegrees(tilt), distMD, zdisp, zdism);
-            VavaLogger.writeNameNumPairs("CONFIG",true,"centpx centpy centmx centmy", centpx, centpy, centmx, centmy);
-            VavaLogger.writeNameNumPairs("CONFIG",true,"tiltalt tiltAltDeg", tilt_alt, FastMath.toDegrees(tilt_alt));
+            log.config("---- RING nr."+i);
+            log.writeNameNumPairs("CONFIG",true,"tilt tiltdeg distMD zdisp zdism", tilt, FastMath.toDegrees(tilt), distMD, zdisp, zdism);
+            log.writeNameNumPairs("CONFIG",true,"centpx centpy centmx centmy", centpx, centpy, centmx, centmy);
+            log.writeNameNumPairs("CONFIG",true,"tiltalt tiltAltDeg", tilt_alt, FastMath.toDegrees(tilt_alt));
             
             //he canviat cos i sin degut a la meva convencio de rotacio des de la vertical
             centpx = e.getXcen()+zdisp*FastMath.cos(angle);
             centpy = e.getYcen()-zdisp*FastMath.sin(angle);
             centmx = e.getXcen()+zdism*FastMath.cos(angle);
             centmy = e.getYcen()-zdism*FastMath.sin(angle);
-            VavaLogger.LOG.config("COMONANGLE");
-            VavaLogger.writeNameNumPairs("CONFIG",true,"centpx centpy centmx centmy", centpx, centpy, centmx, centmy);
-            VavaLogger.LOG.config("----------------");
+            log.config("COMONANGLE");
+            log.writeNameNumPairs("CONFIG",true,"centpx centpy centmx centmy", centpx, centpy, centmx, centmy);
+            log.config("----------------");
             
             distsMD.add(distMD*patt2D.getPixSx());
             tilts.add(tilt);
@@ -624,7 +631,7 @@ public class Calib_dialog extends JDialog {
         double meanCXp=0;
         double meanCYp=0;
         for (int i=0;i<distsMD.size();i++){
-            VavaLogger.writeNameNumPairs("config", true, "MD CXM CYM CXP CXP Tilt )", distsMD.get(i),centersMinus.get(i).x,centersMinus.get(i).y,centersPlus.get(i).x,centersPlus.get(i).y,FastMath.toDegrees(tilts.get(i)));
+            log.writeNameNumPairs("config", true, "MD CXM CYM CXP CXP Tilt )", distsMD.get(i),centersMinus.get(i).x,centersMinus.get(i).y,centersPlus.get(i).x,centersPlus.get(i).y,FastMath.toDegrees(tilts.get(i)));
             meanMD=meanMD+distsMD.get(i);
             meanTilt=meanTilt+tilts.get(i);
             meanCXm=meanCXm+centersMinus.get(i).x;
@@ -644,8 +651,8 @@ public class Calib_dialog extends JDialog {
         double bestCX=0;
         double bestCY=0;
         
-        VavaLogger.LOG.info("Rot (º)="+FastMath.toDegrees(angle));
-        VavaLogger.LOG.info("tilt (º)="+FastMath.toDegrees(meanTilt));
+        log.info("Rot (º)="+FastMath.toDegrees(angle));
+        log.info("tilt (º)="+FastMath.toDegrees(meanTilt));
         //TODO: CHOOSE THE BEST CENTER
         //as initial guess I will chose the closest to the first ellipse center
         EllipsePars e = this.getEllipseForLaB6ring(1);
@@ -660,10 +667,10 @@ public class Calib_dialog extends JDialog {
             bestCX=meanCXp;
             bestCY=meanCYp;
         }
-        VavaLogger.LOG.config("Center option 1 (pX pY)="+meanCXm+" "+meanCYm);
-        VavaLogger.LOG.config("Center option 2 (pX pY)="+meanCXp+" "+meanCYp);
-        VavaLogger.LOG.info("Center (pX pY)="+bestCX+" "+bestCY);
-        VavaLogger.LOG.info("DistMD (mm)="+meanMD);
+        log.config("Center option 1 (pX pY)="+meanCXm+" "+meanCYm);
+        log.config("Center option 2 (pX pY)="+meanCXp+" "+meanCYp);
+        log.info("Center (pX pY)="+bestCX+" "+bestCY);
+        log.info("DistMD (mm)="+meanMD);
         
         this.setRefCX((float) bestCX);
         this.setRefCY((float) bestCY);
@@ -690,7 +697,7 @@ public class Calib_dialog extends JDialog {
             pointsRing1circle.toArray(d);
             this.fitCircle(d);
             if (this.getCircleRadius()<=0){
-                VavaLogger.LOG.info("Error in circle fit");
+                log.info("Error in circle fit");
                 return;
             }
             
@@ -710,7 +717,7 @@ public class Calib_dialog extends JDialog {
                 p.printElliPars();
                 solutions.add(p);                
             }else{
-                VavaLogger.LOG.info("Impossible to fit ellipse number 1. Please check.");
+                log.info("Impossible to fit ellipse number 1. Please check.");
                 return;
             }
 
@@ -719,7 +726,7 @@ public class Calib_dialog extends JDialog {
             int fitCount = 1; //number of rings fitted
             for (int i=2;i<LaB6_d.length;i++){
                 
-                VavaLogger.LOG.config("ring no."+i);
+                log.config("ring no."+i);
                 
                 if (ommitRings.contains(i))continue;
                 
@@ -735,7 +742,7 @@ public class Calib_dialog extends JDialog {
                 float factRmax = r1/((r1+r2)/2);
                 float factRmin = r2/((r1+r2)/2);
                 
-                VavaLogger.writeNameNumPairs("CONFIG",true,"r1 r2 MD1 twoth radipix", r1,r2,estMD*patt2D.getPixSx(),FastMath.toDegrees(twoth),radiPix);
+                log.writeNameNumPairs("CONFIG",true,"r1 r2 MD1 twoth radipix", r1,r2,estMD*patt2D.getPixSx(),FastMath.toDegrees(twoth),radiPix);
                 
                 EllipsePars p1 = new EllipsePars(radiPix*factRmax, radiPix*factRmin, p0.getXcen(), p0.getYcen(), p0.getAngrot());
                 EllipsePars pN = new EllipsePars();
@@ -753,7 +760,7 @@ public class Calib_dialog extends JDialog {
 //                    estMD = (float) ((pN.getRmin()*pN.getRmin())/(FastMath.tan(twoth)*pN.getRmax()));
                     estMD = estimMDdist(pN,i);
                 }else{
-                    VavaLogger.LOG.info("Could not fit ring nr. "+i);
+                    log.info("Could not fit ring nr. "+i);
                 }
             }
         }
@@ -772,7 +779,7 @@ public class Calib_dialog extends JDialog {
         //ANGULAR STEP in order to have an arc of aprox 1mm
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
-        VavaLogger.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
+        log.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
         
         for (float a = 0f; a<2*FastMath.PI; a = a + angstep){
             float xmaxI=0;
@@ -798,7 +805,7 @@ public class Calib_dialog extends JDialog {
             if (maxI > threshold){
                 ringPoints.add(new Point2D.Float(xmaxI,ymaxI));    
             }else{
-//                VavaLogger.writeNameNums("config", true, "under threshold (maxI meanI npix threshold)",maxI,meanI,npix,threshold);
+//                log.writeNameNums("config", true, "under threshold (maxI meanI npix threshold)",maxI,meanI,npix,threshold);
             }
         }
         return ringPoints;
@@ -826,7 +833,7 @@ public class Calib_dialog extends JDialog {
         //ANGULAR STEP in order to have an arc of aprox 1mm
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
-        VavaLogger.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
+        log.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
         
 //        float angstep = (float) FastMath.toRadians(360f / 180f);
         
@@ -857,7 +864,7 @@ public class Calib_dialog extends JDialog {
                 npix = npix + 1;
             }
             if (npix < findElliPointsMinPixLine) {
-                VavaLogger.LOG.fine("not enougth pixels in a line to find the peak");
+                log.config("not enougth pixels in a line to find the peak");
                 continue; //minim pixels que s'han analitzat
             }
             meanI = meanI/npix;
@@ -866,7 +873,7 @@ public class Calib_dialog extends JDialog {
             if (maxI > threshold){
                 ringPoints.add(new Point2D.Float(xmaxI,ymaxI));    
             }else{
-                VavaLogger.writeNameNums("fine", true, "under threshold (maxI meanI npix threshold)",maxI,meanI,npix,threshold);
+                log.writeNameNums("fine", true, "under threshold (maxI meanI npix threshold)",maxI,meanI,npix,threshold);
             }
         }
         return ringPoints;
@@ -877,19 +884,19 @@ public class Calib_dialog extends JDialog {
         try{
           CircleFitter fitter = new CircleFitter();
           fitter.initialize(points);
-//          VavaLogger.LOG.info("initial circle: "
+//          log.info("initial circle: "
 //                             + format.format(fitter.getCenter().x)
 //                             + " "     + format.format(fitter.getCenter().y)
 //                             + " "     + format.format(fitter.getRadius()));
           // minimize the residuals
           int iter = fitter.minimize(100, 0.1f, 1.0e-12f);
-//          VavaLogger.LOG.info("converged after " + iter + " iterations");
-          VavaLogger.writeNameNums("config",true,"Circle fit (x y radi): ",fitter.getCenter().x,fitter.getCenter().y,fitter.getRadius());
+//          log.info("converged after " + iter + " iterations");
+          log.writeNameNums("config",true,"Circle fit (x y radi): ",fitter.getCenter().x,fitter.getCenter().y,fitter.getRadius());
           this.setCircleCenter(fitter.getCenter());
           this.setCircleRadius(fitter.getRadius());
           
         } catch (Exception e) {
-          VavaLogger.LOG.config(e.getMessage());
+          log.config(e.getMessage());
           return;
         }
         
@@ -993,3 +1000,12 @@ public class Calib_dialog extends JDialog {
     }
    
 }
+
+//agafem wavelength escrita, sino del patt2d --- CANVIAT PER AGAFAR SEMPRE LA DEL PATT2D
+//float wave = patt2D.getWavel();
+//try{
+//    wave = Float.parseFloat(txtWave.getText());
+//}catch(Exception e){
+//    log.info("using wavelength from patt2d");
+//    wave = patt2D.getWavel();
+//}

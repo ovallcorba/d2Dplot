@@ -1,8 +1,9 @@
-package vava33.plot2d.auxi;
+package vava33.d2dplot.auxi;
+
+import org.apache.commons.math3.util.FastMath;
 
 public class PDReflection {
 
-    
         private int h;
         private int k;
         private int l;
@@ -46,5 +47,9 @@ public class PDReflection {
         }
         public void setInten(float inten) {
             this.inten = inten;
-        }    
+        }
+        
+        public float getT2(float wavelength, boolean degrees){
+            return (float) (2 * FastMath.toDegrees(FastMath.asin(wavelength / (2*this.getDsp())))); //RADIANTS?
+        }
 }

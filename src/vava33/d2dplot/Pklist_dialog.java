@@ -1,4 +1,4 @@
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -24,16 +24,16 @@ import javax.swing.JScrollPane;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 
-import vava33.plot2d.auxi.OrientSolucio;
-import vava33.plot2d.auxi.PuntCercle;
-import vava33.plot2d.auxi.PuntSolucio;
+import vava33.d2dplot.auxi.OrientSolucio;
+import vava33.d2dplot.auxi.PuntCercle;
+import vava33.d2dplot.auxi.PuntSolucio;
 
 import javax.swing.JList;
 
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.jutils.FileUtils;
-import vava33.plot2d.auxi.VavaLogger;
+import com.vava33.jutils.VavaLogger;
 
 import javax.swing.JCheckBox;
 import javax.swing.SwingConstants;
@@ -52,7 +52,6 @@ public class Pklist_dialog extends JDialog {
     private JButton btnUpdate;
     private final JPanel contentPanel = new JPanel();
     private JLabel lblCheckValues;
-    private ImagePanel panelImatge;
     private JLabel lblPeakList;
     private JList list_pk;
     private JButton btnRemovePoint;
@@ -60,14 +59,16 @@ public class Pklist_dialog extends JDialog {
     private JScrollPane scrollPane;
     private JCheckBox cbox_onTop;
     private JButton btnSaveappend;
+    private static VavaLogger log = D2Dplot_global.log;
 
+    private ImagePanel ipanel;
 
     /**
      * Create the dialog.
      */
     public Pklist_dialog(ImagePanel ip) {
         setIconImage(Toolkit.getDefaultToolkit().getImage(Pklist_dialog.class.getResource("/img/Icona.png")));
-        panelImatge = ip;
+        ipanel = ip;
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Selected peak List");
         // setBounds(100, 100, 660, 730);
@@ -198,19 +199,19 @@ public class Pklist_dialog extends JDialog {
             	gbc_btnSaveappend.gridy = 0;
             	buttonPane.add(btnSaveappend, gbc_btnSaveappend);
             }
-            {
-            	btnSaveAs = new JButton("Save as");
-            	btnSaveAs.addActionListener(new ActionListener() {
-            		public void actionPerformed(ActionEvent e) {
-            			do_btnSaveAs_actionPerformed(e);
-            		}
-            	});
-            	GridBagConstraints gbc_btnSaveAs = new GridBagConstraints();
-            	gbc_btnSaveAs.insets = new Insets(0, 0, 0, 5);
-            	gbc_btnSaveAs.gridx = 1;
-            	gbc_btnSaveAs.gridy = 0;
-            	buttonPane.add(btnSaveAs, gbc_btnSaveAs);
-            }
+//            {
+//            	btnSaveAs = new JButton("Save as");
+//            	btnSaveAs.addActionListener(new ActionListener() {
+//            		public void actionPerformed(ActionEvent e) {
+//            			do_btnSaveAs_actionPerformed(e);
+//            		}
+//            	});
+//            	GridBagConstraints gbc_btnSaveAs = new GridBagConstraints();
+//            	gbc_btnSaveAs.insets = new Insets(0, 0, 0, 5);
+//            	gbc_btnSaveAs.gridx = 1;
+//            	gbc_btnSaveAs.gridy = 0;
+//            	buttonPane.add(btnSaveAs, gbc_btnSaveAs);
+//            }
             {
                 lblCheckValues = new JLabel("");
                 lblCheckValues.setForeground(Color.RED);
@@ -233,21 +234,6 @@ public class Pklist_dialog extends JDialog {
         this.loadPeakList();
     }
 
-//    public void addLS() {
-//        this.txt_pklist.append(System.getProperty("line.separator"));
-//        txt_pklist.setCaretPosition(txt_pklist.getDocument().getLength());
-//    }
-//
-//    protected void clearList() {
-//        txt_pklist.setText("");
-//    }
-    
-//    protected void clearList2(){
-//    	DefaultListModel<String> lm = (DefaultListModel<String>) list_pk.getModel();
-//    	lm.clear();
-//    	list_pk.setModel(lm);
-//    }
-
     protected void do_btnUpdate_actionPerformed(ActionEvent arg0) {
         this.loadPeakList();
     }
@@ -255,48 +241,21 @@ public class Pklist_dialog extends JDialog {
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
         this.dispose();
     }
-
+    
     public void loadPeakList() {
 //        DefaultListModel<String> lm = new DefaultListModel<String>();
 //        lm.clear();
         DefaultListModel lm = (DefaultListModel)list_pk.getModel();
-        if (panelImatge.isShowIndexing()){
-        	lm.clear();
-        	//mostrem la llista puntsCercles
-            Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
-            int i = 1;
-            lblPeakList.setText(" Num     pX       pY       2T       I");
-            while (itrP.hasNext()) {
-                PuntCercle pa = itrP.next();
-                String entry = String.format(Locale.ENGLISH, "%4d  %s", i,pa.toString());
-                lm.addElement(entry);
-                i++;
-            }
-        }
-        if (panelImatge.isShowHKLIndexing()){
-        	//aqui no borrem sino que afegim
-        	//mostrem a la llista els punts HKL que s'han modificat les coordenades clic
-    	    Iterator<OrientSolucio> itrOS = MainFrame.getPatt2D().getSolucions().iterator();
-    	    OrientSolucio os = null;
-    	    while (itrOS.hasNext()) {
-    	        os = itrOS.next();
-    	        if (os.isShowSol()) {
-    	        	break;
-    	        }
-    	    }
-    	    if(os==null)return;
-        	Iterator<PuntSolucio> itrPS = os.getSol().iterator();
-            while (itrPS.hasNext()) {
-                PuntSolucio s = itrPS.next();
-                if(s.getCoordXclic()>0){
-                	//mostrem a la llista
-                	String entry = String.format(Locale.ENGLISH, " %s  %8.2f %8.2f  %5d", 
-                			s.getHKLspaces(),s.getCoordXclic(),s.getCoordYclic(),(int)s.getIntenClic());
-                	if(!lm.contains(entry)){
-                		lm.addElement(entry);	
-                	}
-                }
-            }
+        lm.clear();
+        //mostrem la llista puntsCercles
+        Iterator<PuntCercle> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
+        int i = 1;
+        lblPeakList.setText(" Num     pX       pY       2T       I");
+        while (itrP.hasNext()) {
+            PuntCercle pa = itrP.next();
+            String entry = String.format(Locale.ENGLISH, "%4d  %s", i,pa.toString());
+            lm.addElement(entry);
+            i++;
         }
         list_pk.setModel(lm);
     }
@@ -306,220 +265,68 @@ public class Pklist_dialog extends JDialog {
     }
 	protected void do_btnRemoveAll_actionPerformed(ActionEvent arg0) {
 		if(list_pk.getModel().getSize()<=0)return;
-		if (panelImatge.isShowIndexing()){
-			//borrem la llista de PuntsCercles i actualiztem llista
-		    MainFrame.getPatt2D().getPuntsCercles().clear();
-		}
-		if (panelImatge.isShowHKLIndexing()){
-			JOptionPane.showMessageDialog(this, "Peaks will not be deleted from the file, click on \"Save as\" to save the new list");
-			//posem tots els "clic" a -1
-    	    Iterator<OrientSolucio> itrOS = MainFrame.getPatt2D().getSolucions().iterator();
-    	    OrientSolucio os = null;
-    	    while (itrOS.hasNext()) {
-    	        os = itrOS.next();
-    	        if (os.isShowSol()) {
-    	        	break;
-    	        }
-    	    }
-    	    if(os==null)return;
-        	Iterator<PuntSolucio> itrPS = os.getSol().iterator();
-            while (itrPS.hasNext()) {
-                PuntSolucio s = itrPS.next();
-                s.setCoordXclic(-1);
-                s.setCoordYclic(-1);
-                s.setIntenClic(-1);
-            }
-            nextToWrite=0; //corregim laswritten
-            ((DefaultListModel)list_pk.getModel()).clear();
-		}
-		this.loadPeakList();
+        ipanel.getPatt2D().getPuntsCercles().clear();
+        this.loadPeakList();
 	}
 	protected void do_btnRemovePoint_actionPerformed(ActionEvent e) {
 		if(list_pk.getSelectedIndex()<0)return;
-		if (panelImatge.isShowIndexing()){
-			//busquem quin element est� seleccionat i el borrem
-//			String[] sel = list_pk.getSelectedValue().split("\\s+");
-			String[] sel = ((String) list_pk.getModel().getElementAt(list_pk.getSelectedIndex())).trim().split("\\s+");
-			float selx = Float.parseFloat(sel[1]);
-			float sely = Float.parseFloat(sel[2]);
-			float tol = 0.1f;
-            Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
-            while (itrP.hasNext()) {
-                PuntCercle pa = itrP.next();
-                if ((FastMath.abs(pa.getX()-selx)<=tol)&&(FastMath.abs(pa.getY()-sely)<=tol)){
-                	//es el mateix punt, el borrem
-                    MainFrame.getPatt2D().getPuntsCercles().remove(pa);
-                }
-            }
+		//busquem quin element est� seleccionat i el borrem
+		//    String[] sel = list_pk.getSelectedValue().split("\\s+");
+		String[] sel = ((String) list_pk.getModel().getElementAt(list_pk.getSelectedIndex())).trim().split("\\s+");
+		float selx = Float.parseFloat(sel[1]);
+		float sely = Float.parseFloat(sel[2]);
+		float tol = 0.1f;
+		Iterator<PuntCercle> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
+		while (itrP.hasNext()) {
+		    PuntCercle pa = itrP.next();
+		    if ((FastMath.abs(pa.getX()-selx)<=tol)&&(FastMath.abs(pa.getY()-sely)<=tol)){
+		        //es el mateix punt, el borrem
+		        ipanel.getPatt2D().getPuntsCercles().remove(pa);
+		    }
 		}
-		if (panelImatge.isShowHKLIndexing()){
-			JOptionPane.showMessageDialog(this, "Peaks will not be deleted from the file, click on \"Save as\" to save the new list");
-			//posem a l'element seleccionat els "clic" a -1
-    	    Iterator<OrientSolucio> itrOS = MainFrame.getPatt2D().getSolucions().iterator();
-    	    OrientSolucio os = null;
-    	    while (itrOS.hasNext()) {
-    	        os = itrOS.next();
-    	        if (os.isShowSol()) {
-    	        	break;
-    	        }
-    	    }
-    	    if(os==null)return;
-//			String[] sel = list_pk.getSelectedValue().split("\\s+");
-			String[] sel = ((String) list_pk.getModel().getElementAt(list_pk.getSelectedIndex())).trim().split("\\s+");
-			float selx = Float.parseFloat(sel[3]);
-			float sely = Float.parseFloat(sel[4]);
-			float tol = 0.1f;
-        	Iterator<PuntSolucio> itrPS = os.getSol().iterator();
-            while (itrPS.hasNext()) {
-                PuntSolucio s = itrPS.next();
-                if ((FastMath.abs(s.getCoordXclic()-selx)<=tol)&&(FastMath.abs(s.getCoordYclic()-sely)<=tol)){
-                	//es el mateix punt, el borrem
-                    s.setCoordXclic(-1);
-                    s.setCoordYclic(-1);
-                    s.setIntenClic(-1);
-                }
-            }
-            //corregim lastwritten si hem borrat un dels interns
-            if(list_pk.getSelectedIndex()<nextToWrite)nextToWrite=nextToWrite-1;
-            VavaLogger.LOG.info("selIndex="+list_pk.getSelectedIndex());
-            VavaLogger.LOG.info("nextToWrite="+nextToWrite);
-            ((DefaultListModel)list_pk.getModel()).remove(list_pk.getSelectedIndex());
-		}
-		this.loadPeakList(); //recarreguem la llista
+        this.loadPeakList(); //recarreguem la llista
 	}
 	protected void do_chckbxOnTop_itemStateChanged(ItemEvent arg0) {
         this.setAlwaysOnTop(cbox_onTop.isSelected());
 	}
 	
-	File outfile = null;
-	boolean firstWrite = true;
-	int nextToWrite=0;
-	private JButton btnSaveAs;
+//	File outfile = null;
+//	boolean firstWrite = true;
+//	int nextToWrite=0;
+//	private JButton btnSaveAs;
 	
 	protected void do_btnSaveappend_actionPerformed(ActionEvent e) {
 		
-		if (panelImatge.isShowIndexing()){
-			btnSaveappend.setText("Save");
-			//simplement guardem normal
-			File outfileIndex = FileUtils.fchooser(new File(MainFrame.getWorkdir()), null, true);
-			try{
-				PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(outfileIndex, false)));
-				out.println("# "+this.panelImatge.getPatt2D().getImgfile().toString());
-			    //escribim els elements de la llista
-				//primer ordenem la llista !220415
-				ArrayList<PuntCercle> ord = new ArrayList<PuntCercle>();
-				Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
-     		    while (itrP.hasNext()) {
-     		        ord.add(itrP.next());
-     		    }
-				Collections.sort(ord);
-				
-				itrP = ord.iterator();
-				int i = 1;
-	            while (itrP.hasNext()) {
-	                PuntCercle pa = itrP.next();
-	                String entry = String.format(Locale.ENGLISH, "%4d  %s", i,pa.toString());
-                    out.println(entry);
-	                i++;
-	            }
-//			    for(int i=0; i<list_pk.getModel().getSize(); i++){
-//			    	out.println(list_pk.getModel().getElementAt(i));
-//			    }
-			    out.close();
-			}catch(Exception ex){
-				ex.printStackTrace();
-			}
-			return;
-		}
-		
-		//AIXO NOMES ES PER HKLINDEXING:
-		//Aqui s'ha de guardar la llista a un fitxer nou o afegir-lo a algun ja existent
-		//1ra linia amb nom del fitxer imatge
-		boolean append=true;
-		
-		if(outfile==null){
-			//s'ha d'obrir un filechooser, si s'escull un nou es crea i sino es pregunta si
-			//es vol sobreesciure o fer append
-			outfile = FileUtils.fchooserNoAskOverwrite(new File(MainFrame.getWorkdir()), null, true);
-			if (outfile==null)return;
-			if(outfile.exists()){
-				//preguntar si sobreescriure o fer append
-				//Custom button text
-				Object[] options = {"Append",
-				                    "Overwrite"};
-				int n = JOptionPane.showOptionDialog(this,
-				    "File exists. Append to file o overwrite it? ",
-				    "Append or overwrite",
-				    JOptionPane.YES_NO_OPTION,
-				    JOptionPane.QUESTION_MESSAGE,
-				    null,
-				    options,
-				    options[0]);
-				if (n==JOptionPane.CLOSED_OPTION)return; //si s'ha tancat
-				if (n==JOptionPane.YES_OPTION)append=true;
-				if (n==JOptionPane.NO_OPTION)append=false;
-			}else{
-				//el fitxer no existeix s'ha de crear
-				append=false;
-			}
-			
-		}
-		//ja tenim un fitxer obert, fem append
-//		if(!outfile.exists()){return;}
-		
-		//arribats aqu� tenim un fitxer SELECCIONAT en el qu� caldrar fer append o escriure de zero
-		try {
-			PrintWriter out;
-		    if(append) {
-		    	out = new PrintWriter(new BufferedWriter(new FileWriter(outfile, true)));
-		    }else{
-		    	out = new PrintWriter(new BufferedWriter(new FileWriter(outfile, false)));
-		    }
-		    if (firstWrite){
-		    	if(!append){
-		    		//s'esta creant fitxer nou, posem cap�alera
-		    		out.println("# TITOL");
-		    		float distMD=this.panelImatge.getPatt2D().getDistMD();
-		    		float dimX=this.panelImatge.getPatt2D().getDimX();
-		    		float dimY=this.panelImatge.getPatt2D().getDimY();
-		    		float minI=this.panelImatge.getPatt2D().getMinI();
-		    		float maxI=this.panelImatge.getPatt2D().getMaxI();
-		    		float nSatur=this.panelImatge.getPatt2D().getnSatur();
-		    		float scale=this.panelImatge.getPatt2D().getScale();
-		    		float centrX=this.panelImatge.getPatt2D().getCentrX();
-		    		float centrY=this.panelImatge.getPatt2D().getCentrY();
-		    		float pixSx=this.panelImatge.getPatt2D().getPixSx();
-		    		float pixSy=this.panelImatge.getPatt2D().getPixSy();
-		    		float wavel=this.panelImatge.getPatt2D().getWavel();
-		            String info = "#  NX(cols)= " + dimX + " NY(rows)= " + dimY + "\n" + 
-		                    "#  minI=" + minI + " maxI=" + maxI + "  (Scale factor= " + FileUtils.dfX_3.format(1/scale) +"; Saturated= "+nSatur+")\n" + 
-		                    "#  Xcent=" + FileUtils.dfX_3.format(centrX) + " Ycent=" + FileUtils.dfX_3.format(centrY) + "\n" + 
-		                    "#  Distance Sample-Detector (mm)=" + FileUtils.dfX_3.format(distMD) + "\n" +
-		                    "#  Wavelength (A)=" + FileUtils.dfX_5.format(wavel) + "\n" + 
-		                    "#  Pixel Size X Y (mm)= " + FileUtils.dfX_4.format(pixSx) + " " + FileUtils.dfX_4.format(pixSy);
-		    		out.println(info);
-		    		out.println("#");
-		    	}
-		    	out.println("# "+this.panelImatge.getPatt2D().getImgfile().toString());	
-		    	firstWrite=false;
-		    }
-		    //escribim els elements de la llista
-		    for(int i=nextToWrite; i<list_pk.getModel().getSize(); i++){
-		    	out.println(list_pk.getModel().getElementAt(i));
-		    }
-		    nextToWrite=list_pk.getModel().getSize();
-		    VavaLogger.LOG.info("nextToWrite="+nextToWrite);
-		    out.close();
-		    btnSaveappend.setText("Append");
-		} catch (IOException ex) {
-		    ex.printStackTrace();
-		}
-	}
-	protected void do_btnSaveAs_actionPerformed(ActionEvent e) {
-		this.firstWrite=true;
-		this.nextToWrite=0;
-		this.outfile=null;
-		this.btnSaveappend.setText("Save");
-		this.btnSaveappend.doClick();
-	}
+//		if (ipanel.isShowIndexing()){
+	    btnSaveappend.setText("Save");
+	    //simplement guardem normal
+	    File outfileIndex = FileUtils.fchooser(new File(MainFrame.getWorkdir()), null, true);
+	    try{
+	        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(outfileIndex, false)));
+	        out.println("# "+this.ipanel.getPatt2D().getImgfile().toString());
+	        //escribim els elements de la llista
+	        //primer ordenem la llista !220415
+	        ArrayList<PuntCercle> ord = new ArrayList<PuntCercle>();
+	        Iterator<PuntCercle> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
+	        while (itrP.hasNext()) {
+	            ord.add(itrP.next());
+	        }
+	        Collections.sort(ord);
+
+	        itrP = ord.iterator();
+	        int i = 1;
+	        while (itrP.hasNext()) {
+	            PuntCercle pa = itrP.next();
+	            String entry = String.format(Locale.ENGLISH, "%4d  %s", i,pa.toString());
+	            out.println(entry);
+	            i++;
+	        }
+	        //			    for(int i=0; i<list_pk.getModel().getSize(); i++){
+	        //			    	out.println(list_pk.getModel().getElementAt(i));
+	        //			    }
+	        out.close();
+	    }catch(Exception ex){
+	        ex.printStackTrace();
+	    }
+	    return;
 }

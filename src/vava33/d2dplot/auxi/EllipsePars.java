@@ -1,4 +1,4 @@
-package vava33.plot2d.auxi;
+package vava33.d2dplot.auxi;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -12,7 +12,11 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.plot2d.auxi.VavaLogger;
+import vava33.d2dplot.D2Dplot_global;
+import vava33.d2dplot.MainFrame;
+
+import com.vava33.jutils.VavaLogger;
+
 
 public class EllipsePars {
     private double a,b,c,d,e,f;
@@ -23,6 +27,7 @@ public class EllipsePars {
     private boolean isFit;
     private int lab6ring;
     private static int ElliFitMinPoints = 15;
+    private static VavaLogger log = D2Dplot_global.log;
 
     public EllipsePars(){
         this.estimPoints = new ArrayList<Point2D.Float>();
@@ -192,7 +197,7 @@ public class EllipsePars {
     public void fitElli(){
         
         if (this.getEstimPoints().size()<ElliFitMinPoints){
-            VavaLogger.LOG.info("no enougth points to fit ellipse");
+            log.info("no enougth points to fit ellipse");
             return;
         }
         
@@ -275,7 +280,7 @@ public class EllipsePars {
             this.setPars(a,b,c,d,e,f);
             
         }catch(Exception e){
-            VavaLogger.LOG.info("Error during ellipse fitting");
+            log.info("Error during ellipse fitting");
         }
 
     }

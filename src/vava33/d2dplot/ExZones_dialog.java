@@ -1,4 +1,4 @@
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -43,9 +43,9 @@ import javax.swing.event.DocumentListener;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 
-import vava33.plot2d.auxi.ImgFileUtils;
-import vava33.plot2d.auxi.PolyExZone;
-import vava33.plot2d.auxi.Pattern2D;
+import vava33.d2dplot.auxi.ImgFileUtils;
+import vava33.d2dplot.auxi.Pattern2D;
+import vava33.d2dplot.auxi.PolyExZone;
 import net.miginfocom.swing.MigLayout;
 
 public class ExZones_dialog extends JDialog {
@@ -72,7 +72,7 @@ public class ExZones_dialog extends JDialog {
     private Pattern2D patt2D;
     private JTextField txtThreshold;
 
-    private boolean setExZones;
+//    private boolean setExZones;
     
     private boolean drawingExZone; //true while drawing
     private boolean editingExZone; //true while editing
@@ -84,10 +84,12 @@ public class ExZones_dialog extends JDialog {
     private JButton btnApply;
     private JButton btnReadExzFile;
     
+    private MainFrame mf;
+    
     /**
      * Create the dialog.
      */
-    public ExZones_dialog() {
+    public ExZones_dialog(MainFrame m) {
         setAlwaysOnTop(true);
         setIconImage(Toolkit.getDefaultToolkit().getImage(ExZones_dialog.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -120,12 +122,12 @@ public class ExZones_dialog extends JDialog {
                 this.splitPane.setLeftComponent(this.panel_left);
                 {
                     this.chckbxExZones = new JCheckBox("Show/Edit Excluded Zones");
-                    this.chckbxExZones.addItemListener(new ItemListener() {
-                        @Override
-                        public void itemStateChanged(ItemEvent arg0) {
-                            do_chckbxCalibrate_itemStateChanged(arg0);
-                        }
-                    });
+//                    this.chckbxExZones.addItemListener(new ItemListener() {
+//                        @Override
+//                        public void itemStateChanged(ItemEvent arg0) {
+//                            do_chckbxCalibrate_itemStateChanged(arg0);
+//                        }
+//                    });
                     panel_left.setLayout(new MigLayout("", "[][][grow]", "[][][][][]"));
                     this.chckbxExZones.setSelected(true);
                     this.panel_left.add(this.chckbxExZones, "cell 0 0 2 1,alignx left,aligny center");
@@ -332,9 +334,9 @@ public class ExZones_dialog extends JDialog {
         }
 
         tAOut.ln("** Excluded zones definition **");
-
-        MainFrame.getOpenedFile();
-        patt2D = MainFrame.getPatt2D();
+        this.mf=m;
+        mf.getOpenedFile();
+        patt2D = mf.getPatt2D();
         lm = new DefaultListModel();
         listZones.setModel(lm);
 
@@ -395,7 +397,7 @@ public class ExZones_dialog extends JDialog {
     protected void do_btnWriteExzFile_actionPerformed(ActionEvent arg0) {
         btnApply.doClick();
         //TODO ADD CURRENTDIRECTORY
-        File exfile = FileUtils.fchooserNoAskOverwrite(null, null, true);
+        File exfile = FileUtils.fchooserSaveNoAsk(new File(D2Dplot_global.workdir), null);
         if (exfile != null){
             ImgFileUtils.writeEXZ(exfile, patt2D);            
         }
@@ -421,9 +423,9 @@ public class ExZones_dialog extends JDialog {
         this.setAlwaysOnTop(cbox_onTop.isSelected());
     }
 
-    protected void do_chckbxCalibrate_itemStateChanged(ItemEvent arg0) {
-        this.setExZones = chckbxExZones.isSelected();
-    }
+//    protected void do_chckbxCalibrate_itemStateChanged(ItemEvent arg0) {
+//        this.setExZones = chckbxExZones.isSelected();
+//    }
 
     protected void do_lbllist_mouseEntered(MouseEvent e) {
         // lbllist.setText("<html><font color='red'>?</font></html>");
@@ -466,7 +468,7 @@ public class ExZones_dialog extends JDialog {
     }
 
     public boolean isSetExZones() {
-        return setExZones;
+        return chckbxExZones.isSelected();
     }
 
 
@@ -522,7 +524,7 @@ public class ExZones_dialog extends JDialog {
             patt2D.setY0toMask(0);
             tAOut.ln("Error reading threshold, it should be an integer number");
         }
-        MainFrame.getPanelImatge().pintaImatge();
+        mf.getPanelImatge().pintaImatge();
     }
     protected void do_btnReadExzFile_actionPerformed(ActionEvent e) {
         //TODO ADD CURRENTDIRECTORY

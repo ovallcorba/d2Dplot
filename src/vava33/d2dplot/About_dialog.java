@@ -1,4 +1,4 @@
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;

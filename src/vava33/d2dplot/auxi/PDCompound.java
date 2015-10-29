@@ -1,8 +1,14 @@
-package vava33.plot2d.auxi;
+package vava33.d2dplot.auxi;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+
+import org.apache.commons.math3.util.FastMath;
+
+import com.vava33.jutils.VavaLogger;
+
+import vava33.d2dplot.D2Dplot_global;
 
 public class PDCompound {
     
@@ -22,6 +28,7 @@ public class PDCompound {
 //    private ArrayList<Float> intensities;
     private ArrayList<PDReflection> peaks;
     
+    private static VavaLogger log = D2Dplot_global.log;
     
     public PDCompound(String name){
         this.compName = new ArrayList<String>();
@@ -71,11 +78,37 @@ public class PDCompound {
     public String toString(){
         //return String.format("%d %s %s", this.getOv_number(), this.getCompName(), this.getFormula());
 //        return String.format("%6d %s [%s]", this.getCnumber(), this.getCompName().get(0), this.getFormula());
+        String altnames = this.getAltNames();
+        if (!altnames.isEmpty()){
+            return String.format("%s [%s] (aka: %s)", this.getCompName().get(0), this.getFormula(), this.getAltNames());    
+        }else{
+            return String.format("%s [%s]", this.getCompName().get(0), this.getFormula());
+        }
+    }
+    
+    public String toStringNameFormula(){
+        //return String.format("%d %s %s", this.getOv_number(), this.getCompName(), this.getFormula());
+//        return String.format("%6d %s [%s]", this.getCnumber(), this.getCompName().get(0), this.getFormula());
         return String.format("%s [%s]", this.getCompName().get(0), this.getFormula());
     }
     
     public String printInfoLine(){
         return String.format("%s: %.4f %.4f %.4f %.3f %.3f %.3f (s.g. %s)", this.getCompName().get(0), this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma(),this.getSpaceGroup());
+    }
+    
+    public String printInfo2Line(){
+        String altnames = this.getAltNames();
+        if (!altnames.isEmpty()){
+            return String.format("-- %s (aka: %s)\n"
+                    + "cell: %.4f %.4f %.4f %.3f %.3f %.3f (s.g. %s)", 
+                    this.getCompName().get(0), this.getAltNames(),
+                    this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma(),this.getSpaceGroup());
+        }else{
+            return String.format("-- %s\n"
+                    + "   cell: %.4f %.4f %.4f %.3f %.3f %.3f (s.g. %s)", 
+                    this.getCompName().get(0),
+                    this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma(),this.getSpaceGroup());
+        }
     }
     
     //TODO: REESTILITZAR
@@ -359,4 +392,31 @@ public class PDCompound {
             return index;
         }
     }
+    
+    //for a given wavelenght calculate the 2Theta of every reflection    
+    public void calcDSPfromHKL(){
+        //constants reticulars recíproques:
+        float al = (float) FastMath.toRadians(this.getAlfa());
+        float be = (float) FastMath.toRadians(this.getBeta());
+        float ga = (float) FastMath.toRadians(this.getGamma());
+        float D2 = (float) (1.f - FastMath.pow(FastMath.cos(al), 2) - 
+                FastMath.pow(FastMath.cos(be), 2) -
+                FastMath.pow(FastMath.cos(ga), 2) +
+                2.f * FastMath.cos(al) * FastMath.cos(be) * FastMath.cos(ga));
+        float CR11 = (float) (FastMath.pow(FastMath.sin(al), 2) / (D2*this.getA()*this.getA()));
+        float CR22 = (float) (FastMath.pow(FastMath.sin(be), 2) / (D2*this.getB()*this.getB()));
+        float CR33 = (float) (FastMath.pow(FastMath.sin(ga), 2) / (D2*this.getC()*this.getC()));
+        float CR12 = (float) ((FastMath.cos(al) * FastMath.cos(be) - FastMath.cos(ga)) / (this.getA()*this.getB()*D2));
+        float CR13 = (float) ((FastMath.cos(al) * FastMath.cos(ga) - FastMath.cos(be)) / (this.getA()*this.getC()*D2));
+        float CR23 = (float) ((FastMath.cos(be) * FastMath.cos(ga) - FastMath.cos(al)) / (this.getB()*this.getC()*D2));
+        
+        Iterator<PDReflection> it = this.getPeaks().iterator();
+        while (it.hasNext()){
+            PDReflection r = it.next();
+            float d2hkl = r.getH()*r.getH()*CR11 + r.getK()*r.getK()*CR22 + r.getL()*r.getL()*CR33 + 2*r.getH()*r.getK()*CR12 + 2*r.getK()*r.getL()*CR23 + 2*r.getH()*r.getL()*CR13;
+            r.setDsp((float) FastMath.sqrt(1.f/d2hkl));
+            log.writeNameNums("CONFIG", true, "h k l dsp", r.getH(),r.getK(),r.getL(),r.getDsp());
+        }
+    }
+
 }

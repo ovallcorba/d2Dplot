@@ -1,5 +1,7 @@
-package vava33.plot2d.auxi;
+package vava33.d2dplot.auxi;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -21,29 +23,72 @@ import javax.swing.SwingWorker;
 //import vava33.plot2d.auxi.PDCompound.DBreflection;
 
 
+
+
+
+
+
+
+
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.plot2d.auxi.VavaLogger;
+import vava33.d2dplot.D2Dplot_global;
+import vava33.d2dplot.MainFrame;
+
+import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.VavaLogger;
+
 
 public final class PDDatabase {
 
-    private static int nCompounds = 0;
-//    private static final String localDB = "/latFiles/codDB.db";
-    private static final String localDB = "default.db";
-    private static ArrayList<PDCompound> compList = new ArrayList<PDCompound>();
-    private static ArrayList<PDSearchResult> searchresults = new ArrayList<PDSearchResult>();
+    //Full DB
+    private static int nCompounds = 0;  //number of compounds in the DB
+    private static final String localDB = "default.db";  // local DB default file
+    private static ArrayList<PDCompound> DBcompList = new ArrayList<PDCompound>();  
+    private static ArrayList<PDSearchResult> DBsearchresults = new ArrayList<PDSearchResult>();
     
+    //quicklist
+    private static final String localQL = "quicklist.db";  // local DB default file
+    private static ArrayList<PDCompound> QLcompList = new ArrayList<PDCompound>();  
     
-    public static void reset(){
-        compList.clear();
+    private static VavaLogger log = D2Dplot_global.log;
+
+//  private static final String localDB = "/latFiles/codDB.db";
+    
+    public static void resetDB(){
+        DBcompList.clear();
         nCompounds = 0;
     }
     
-    public static void addCompound(PDCompound c){
-        compList.add(c);
+    public static void resetQL(boolean updateComboMF){
+        QLcompList.clear();
+        //TODO:ACTUALIZAR COMBO_LAT AQUI??
+        if (updateComboMF){
+            MainFrame.updateQuickList();
+        }
+    }
+    
+    public static void addCompoundDB(PDCompound c){
+        DBcompList.add(c);
         nCompounds = nCompounds + 1;
     }
+    
+    public static void addCompoundQL(PDCompound c, boolean updateComboMF){
+        QLcompList.add(c);
+        //TODO:ACTUALIZAR COMBO_LAT???
+        if (updateComboMF){
+            MainFrame.updateQuickList();
+        }
 
+    }
+
+    public static Iterator<PDCompound> getQuickListIterator(){
+        if (QLcompList==null){
+            QLcompList = new ArrayList<PDCompound>();
+        }
+        return getQLCompList().iterator();
+    }
+    
 //    public static PDCompound get_compound_from_ovNum(int num){
 //        Iterator<PDCompound> it = compList.iterator();
 //        while (it.hasNext()){
@@ -63,12 +108,16 @@ public final class PDDatabase {
         PDDatabase.nCompounds = nCompounds;
     }
 
-    public static ArrayList<PDCompound> getCompList() {
-        return compList;
+    public static ArrayList<PDCompound> getDBCompList() {
+        return DBcompList;
     }
 
-    public static void setCompList(ArrayList<PDCompound> compList) {
-        PDDatabase.compList = compList;
+    public static ArrayList<PDCompound> getQLCompList() {
+        return QLcompList;
+    }
+    
+    public static void setDBCompList(ArrayList<PDCompound> compList) {
+        PDDatabase.DBcompList = compList;
     }
     
     public static int countLines(String filename) throws IOException {
@@ -133,144 +182,94 @@ public final class PDDatabase {
             is.close();
         }
     }
-    
+
     public static String getDefaultDBpath(){
         File f = new File(localDB);
         return f.getAbsolutePath();
     }
     
-    public static ArrayList<PDSearchResult> getSearchresults() {
-        return searchresults;
+    public static String getDefaultQLpath(){
+        File f = new File(localQL);
+        return f.getAbsolutePath();
+    }
+    
+    public static ArrayList<PDSearchResult> getDBSearchresults() {
+        return DBsearchresults;
     }
     
     public static int getFirstEmptyNum(){
         //TODO:IMPLEMENTAR-HO, momentaneament fa aixo:
-        return PDDatabase.getCompList().size()+1;
+        return PDDatabase.getDBCompList().size()+1;
     }
 
-    
-    public static boolean saveDB(File f){
-        // creem un printwriter amb el fitxer file (el que estem escribint)
-        SimpleDateFormat fHora = new SimpleDateFormat("[yyyy-MM-dd 'at' HH:mm]");
-        String dt = fHora.format(new Date());
-                
-        try {
-            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(f)));
-            output.println("# ====================================================================");
-            output.println("#         D2Dplot compound database "+dt);
-            output.println("# ====================================================================");
-            output.println();
-            
-            Iterator<PDCompound> itC = compList.iterator();
-            
-//            int n = 1;
-            while (itC.hasNext()){
-                PDCompound c = itC.next();
-//                output.println(String.format("#COMP: %d %s",c.getCnumber(),c.getCompName().get(0)));
-//                output.println(String.format("#COMP: %d %s",n,c.getCompName().get(0)));
-                output.println(String.format("#COMP: %s",c.getCompName().get(0)));
-                
-                String altnames = c.getAltNames();
-                if (!altnames.isEmpty())output.println(String.format("#NAMEALT: %s",altnames));
-
-//                if (c.getCompName().size()>1){
-//                    StringBuilder sb = new StringBuilder();
-//                    for (int i=1;i<c.getCompName().size();i++){
-//                        sb.append(c.getCompName().get(i));
-//                        sb.append(" ");
-//                    }
-//                    output.println(String.format("#NAMEALT: %s",sb.toString().trim()));
-//                }
-                
-                if (!c.getFormula().isEmpty()){
-                    output.println(String.format("#FORMULA: %s",c.getFormula()));
+    public static void populateQuickList(){
+        
+        //first try to read LAT files in the current folder
+        try{
+            File folder = new File(new File(D2Dplot_global.userDir).getPath());
+            File[] flist = folder.listFiles();
+            for (int i=0; i<flist.length; i++){
+                if (FileUtils.getExtension(flist[i]).equalsIgnoreCase("lat")){
+                    //llegim el lat i l'afegim a la quicklist
+                    String name = FileUtils.getFNameNoExt(flist[i].getName());
+                    PDCompound p = ImgFileUtils.readLAT(name, flist[i]);
+                    if (p!=null){
+                        //calculem els dsp
+                        p.calcDSPfromHKL();
+                        addCompoundQL(p,true);    
+                    }else{
+                        log.info("error reading LAT file to QuickList: "+flist[i]);
+                    }
                 }
-                if (!c.getCellParameters().isEmpty()){
-                    output.println(String.format("#CELL_PARAMETERS: %s",c.getCellParameters()));
-                }
-                if (!c.getSpaceGroup().isEmpty()){
-                    output.println(String.format("#SPACE_GROUP: %s",c.getSpaceGroup()));
-                }
-                if (!c.getReference().isEmpty()){
-                    output.println(String.format("#REF: %s",c.getReference()));    
-                }
-                if (!c.getComment().isEmpty()){
-                    output.println(String.format("#COMMENT: %s",c.getComment()));    
-                }
-                output.println("#LIST: H  K  L  dsp  Int");
-                
-                int refs = c.getPeaks().size();
-                for (int i=0;i<refs;i++){
-                    int h = c.getPeaks().get(i).getH();
-                    int k = c.getPeaks().get(i).getK();
-                    int l = c.getPeaks().get(i).getL();
-                    float dsp = c.getPeaks().get(i).getDsp();
-                    float inten = c.getPeaks().get(i).getInten();
-                    output.println(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));                    
-                }
-                output.println(); //linia en blanc entre compostos
-//                n = n +1;
             }
-            output.close();
         }catch(Exception e){
-            e.printStackTrace();
-            return false;
+            //no passa res si hi ha hagut algun error
+            log.debug(e.toString());
         }
         
-        return true;
-    }
+        //ara llegirem la default QL db
+        openDBfileWorker openDBFwk = new PDDatabase.openDBfileWorker(new File(getDefaultQLpath()),true);
+        openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+              //log.debug("hello from propertyChange");
+              log.debug(evt.getPropertyName());
+              if ("progress" == evt.getPropertyName() ) {
+                  if (evt.getSource() instanceof openDBfileWorker){
+                      openDBfileWorker sw = (openDBfileWorker)evt.getSource();
+                      if (sw.isDone()) {
+                          //s'hauria d'actualitzar el mainframe combo_lat -- o potser ho fem al fer addcompound?
+                          MainFrame.updateQuickList();
+                      }                      
+                  }
+
+              }
+            }
+        });
+        //reset current Database
+        PDDatabase.resetQL(true);
+        //read database file, executing the swingworker task
+        openDBFwk.execute();
+
+    } 
     
-    
+    //Aixo llegira el fitxer per omplir la base de dades o la quicklist
     public static class openDBfileWorker extends SwingWorker<Integer,Integer> {
 
         private File dbfile;
         private boolean stop;
-        private boolean readLocal;
+        private boolean toQuickList;
         
-        public openDBfileWorker(File datafile, boolean readlocal) {
+        public openDBfileWorker(File datafile, boolean useQuickList) {
             this.dbfile = datafile;
             this.stop = false;
-            this.readLocal=readlocal;
+            this.toQuickList=useQuickList;
         }
-        //        
-//        public openDBfileWorker(ZipFile zipdatafile){
-//            this.dbfile=null;
-//            this.zfile=zipdatafile;
-//            this.isZipFile=true;
-//            this.stop = false;
-//        }
-//        
-//        public openDBfileWorker(){
-//            this.stop = false;
-//            this.dbfile = null;
-//            this.zfile = null;
-//            this.isZipFile = false;
-//        }
-//        
-        public void setFileToRead(File datafile){
-            this.dbfile = datafile;
-            this.readLocal=false;
-        }
-        public boolean isReadLocal() {
-            return readLocal;
-        }
-        public void setReadLocal(boolean readLocal) {
-            this.readLocal = readLocal;
-        }
-//        
-//        public void setFileToRead(ZipFile zipdatafile){
-//            this.zfile=zipdatafile;
-//            this.isZipFile=true;
-//        }
         
         @Override
         protected Integer doInBackground() throws Exception {
             //number of lines
             int totalLines = 0;
-            if (this.readLocal){ 
-                dbfile = new File(localDB);
-                System.out.println(localDB);
-            }
             totalLines = countLines(dbfile.toString());                
 
             int lines = 0;
@@ -287,7 +286,7 @@ public final class PDDatabase {
                     if ((lines % 500) == 0){
                         float percent = ((float)lines/(float)totalLines)*100.f;
                         setProgress((int) percent);
-                        VavaLogger.LOG.info(String.valueOf(percent));
+                        log.debug(String.valueOf(percent));
                     }
                     
                     lines = lines + 1;
@@ -308,16 +307,6 @@ public final class PDDatabase {
                         }else{
                           comp = new PDCompound(line.split(":")[1].trim());
                         }
-                        
-//                        String[] cname = line.split("\\s+");
-//                        StringBuilder sb = new StringBuilder();
-//                        for (int i=2;i<cname.length;i++){
-//                            sb.append(cname[i]);
-//                            sb.append(" ");
-//                        }
-//                        
-//                        PDCompound comp = new PDCompound(sb.toString().trim());
-//                        comp.setCnumber(Integer.parseInt(cname[1]));
                         
                         boolean cfinished = false;
                         while (!cfinished){
@@ -375,7 +364,7 @@ public final class PDDatabase {
                                             cfinished = true;
                                             continue;
                                         }
-                                        //VavaLogger.LOG.info(line3);
+                                        //log.debug(line3);
                                         String[] dspline = line3.trim().split("\\s+");
                                         int h = Integer.parseInt(dspline[0]);
                                         int k = Integer.parseInt(dspline[1]);
@@ -428,7 +417,7 @@ public final class PDDatabase {
                                             cfinished = true;
                                             continue;
                                         }
-                                        //VavaLogger.LOG.info(line3);
+                                        //log.debug(line3);
                                         String[] dspline = line3.trim().split("\\s+");
                                         int h = Integer.parseInt(dspline[2]);
                                         int k = Integer.parseInt(dspline[3]);
@@ -443,11 +432,17 @@ public final class PDDatabase {
                             } catch (Exception e) {
                                 // TODO Auto-generated catch block
                                 e.printStackTrace();
-                                VavaLogger.LOG.info("error reading compound: "+comp.getCompName());
+                                log.info("error reading compound: "+comp.getCompName());
                             }                        
                             
                         }
-                        addCompound(comp);
+                        
+                        if (toQuickList){
+                            addCompoundQL(comp,true);
+                        }else{
+                            addCompoundDB(comp);    
+                        }
+                        
                     }
                     
                 }
@@ -465,15 +460,118 @@ public final class PDDatabase {
         }
         
         public String getReadedFile(){
-            if (this.readLocal){
-//                return this.zfile.toString();
-                return localDB;
-            }else{
-                return this.dbfile.toString();
-            }
+            return this.dbfile.toString();
         }
         
     }
+    
+    //Aixo llegira el fitxer per omplir la base de dades o la quicklist
+    public static class saveDBfileWorker extends SwingWorker<Integer,Integer> {
+
+        private File dbfile;
+        private boolean stop;
+        private boolean toQuickList;
+        
+        public saveDBfileWorker(File datafile, boolean useQuickList) {
+            this.dbfile = datafile;
+            this.stop = false;
+            this.toQuickList=useQuickList;
+        }
+        
+        @Override
+        protected Integer doInBackground() throws Exception {
+            
+            try{
+                PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(dbfile)));
+                Iterator<PDCompound> itC = null;
+                int ncomp = 0;
+                int icomp = 0;
+                
+                //passos previs depenents de si QL or DB
+                if (toQuickList){
+                    ncomp = getQLCompList().size();
+                    itC = QLcompList.iterator();
+                }else{
+                    ncomp = getDBCompList().size();
+                    itC = DBcompList.iterator();
+                }
+                
+                SimpleDateFormat fHora = new SimpleDateFormat("[yyyy-MM-dd 'at' HH:mm]");
+                String dt = fHora.format(new Date());
+                
+                output.println("# ====================================================================");
+                output.println("#         D2Dplot compound database "+dt);
+                output.println("# ====================================================================");
+                output.println();
+                
+                while (itC.hasNext()){
+
+                    if (stop) break;
+
+                    if ((icomp % 100) == 0){
+                        float percent = ((float)icomp/(float)ncomp)*100.f;
+                        setProgress((int) percent);
+                        log.debug(String.valueOf(percent));
+                    }
+                    
+                    icomp = icomp + 1;
+                    
+                    PDCompound c = itC.next();
+                    output.println(String.format("#COMP: %s",c.getCompName().get(0)));
+                    
+                    String altnames = c.getAltNames();
+                    if (!altnames.isEmpty())output.println(String.format("#NAMEALT: %s",altnames));
+                    
+                    if (!c.getFormula().isEmpty()){
+                        output.println(String.format("#FORMULA: %s",c.getFormula()));
+                    }
+                    if (!c.getCellParameters().isEmpty()){
+                        output.println(String.format("#CELL_PARAMETERS: %s",c.getCellParameters()));
+                    }
+                    if (!c.getSpaceGroup().isEmpty()){
+                        output.println(String.format("#SPACE_GROUP: %s",c.getSpaceGroup()));
+                    }
+                    if (!c.getReference().isEmpty()){
+                        output.println(String.format("#REF: %s",c.getReference()));    
+                    }
+                    if (!c.getComment().isEmpty()){
+                        output.println(String.format("#COMMENT: %s",c.getComment()));    
+                    }
+                    output.println("#LIST: H  K  L  dsp  Int");
+                    
+                    int refs = c.getPeaks().size();
+                    for (int i=0;i<refs;i++){
+                        int h = c.getPeaks().get(i).getH();
+                        int k = c.getPeaks().get(i).getK();
+                        int l = c.getPeaks().get(i).getL();
+                        float dsp = c.getPeaks().get(i).getDsp();
+                        float inten = c.getPeaks().get(i).getInten();
+                        output.println(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));                    
+                    }
+                    output.println(); //linia en blanc entre compostos
+                }
+                output.close();
+                
+            }catch(Exception e){
+                e.printStackTrace();
+                this.cancel(true);
+                log.info("error writting compound DB: "+dbfile.toString());
+                return 1;
+            }
+            setProgress(100);
+            return 0;
+        }
+        
+        public File getDbfile() {
+            return dbfile;
+        }
+        
+        public String getDbFileString(){
+            return this.dbfile.toString();
+        }
+        
+    }
+    
     
     /*
      * Farem que la intensitat integrada dels pics seleccionats es normalitzi amb el valor màxim dels
@@ -483,53 +581,74 @@ public final class PDDatabase {
     
     public static class searchDBWorker extends SwingWorker<Integer,Integer> {
 
-        private ArrayList<Float> slist;
-        private ArrayList<Float> slistInten;
-        private float maxIslist;
+        private ArrayList<Float> dspList;
+        private ArrayList<Float> intList;
         private boolean stop;
+        private float mindsp;
+        private Pattern2D patt2D;
         
-        public searchDBWorker(ArrayList<Float> searchList, ArrayList<Float> searchlistIntensities) {
-            this.slist = searchList;
-//            slistInten = new ArrayList<Float>();
-            //normalitzem les intensitats a 100   -- de moment ho trec, normalitzarem a cada compost utilitzant un cert nombre de pics ja que el 100% no te perquè estar seleccionat!!
-//            float maxI = Collections.max(searchlistIntensities);
-//            Iterator<Float> itrIn = searchlistIntensities.iterator();
-//            while (itrIn.hasNext()){
-//                float inten = itrIn.next();
-//                inten = (inten/maxI) * 100.f;
-//                slistInten.add(inten);
-//            }
-            this.slistInten = searchlistIntensities;
-            this.maxIslist = Collections.max(searchlistIntensities);
-            searchresults.clear();
+        public searchDBWorker(Pattern2D patt2d, float mindsp) {
+            this.patt2D=patt2d;
+            this.mindsp=mindsp;
+            dspList = new ArrayList<Float>();
+            intList = new ArrayList<Float>();
+            DBsearchresults.clear();
             this.stop = false;
+        }
+        
+        public void mySetProgress(int prog){
+            setProgress(prog);
         }
         
         @Override
         protected Integer doInBackground() throws Exception {
             
-            Iterator<PDCompound> itrComp = compList.iterator();
+            //generem les llistes de dspacing i intensitats a partir dels punts seleccionats a un pattern2D i un mindsp
+            //(ho hem passat aquí perque es costos, sobretot l'extraccio d'intensitats)
+            float[] t2deglist = new float[patt2D.getPuntsCercles().size()];
+            Iterator<PuntCercle> itrPks = patt2D.getPuntsCercles().iterator();
+            int n=0;
+            while (itrPks.hasNext()){
+                PuntCercle pc = itrPks.next();
+                float dsp = (float) patt2D.calcDsp(pc.getT2rad());
+                if (dsp > mindsp){
+                    dspList.add(dsp);
+                    t2deglist[n]=(float) FastMath.toDegrees(pc.getT2rad());
+                    n = n +1;
+                }
+            }
+            float[] circleIntensities = ImgOps.radialIntegrationVarious2th(patt2D, t2deglist, -1, false, false,this);
+            for (int i=0;i<circleIntensities.length;i++){
+                intList.add(circleIntensities[i]);    
+            }
+            
+            float maxIslist = Collections.max(intList);
+            
+            PDSearchResult.setMinDSPin(Collections.min(dspList));
+            PDSearchResult.setnDSPin(dspList.size());
+            
+            Iterator<PDCompound> itrComp = DBcompList.iterator();
             int compIndex = 0;
             while (itrComp.hasNext()){
                 if (stop) break;
                 PDCompound c = itrComp.next();
-                Iterator<Float> itrPks = this.slist.iterator();
+                Iterator<Float> itrDSP = this.dspList.iterator();
                 float diffPositions = 0;
                 float diffIntensities = 0;
                 int npk = 0;
                 
                 //mirem la intensitat màxima dels n primers pics de COMP per normalitzar!
-                float maxI_factorPerNormalitzar = c.getMaxInten(slist.size());
+                float maxI_factorPerNormalitzar = c.getMaxInten(dspList.size());
                 if (maxI_factorPerNormalitzar <= 0){maxI_factorPerNormalitzar=1.0f;}
                 
-                while (itrPks.hasNext()){
-                    float dsp = itrPks.next();  //pic entrat a buscar
+                while (itrDSP.hasNext()){
+                    float dsp = itrDSP.next();  //pic entrat a buscar
                     int index = c.closestPeak(dsp);
                     float diffpk = FastMath.abs(dsp-c.getPeaks().get(index).getDsp());
 //                    diffPositions = diffPositions + diffpk; //es podria fer més estricte
 //                    diffPositions = diffPositions + (1+diffpk)*(1+diffpk); //una especie de quadrat...
                     diffPositions = diffPositions + (diffpk*2.5f); 
-                    float intensity = this.slistInten.get(npk);
+                    float intensity = this.intList.get(npk);
                     //normalitzem la intensitat utilitzant el maxim dels N primers pics.
                     intensity = (intensity/maxIslist) * maxI_factorPerNormalitzar;
                     if (c.getPeaks().get(index).getInten()>=0){ //no tenim en compte les -1 (NaN)
@@ -538,14 +657,20 @@ public final class PDDatabase {
                     npk = npk +1;
                 }
 //                searchresults.add(new PDSearchResult(c,(float)FastMath.sqrt(diffPositions),diffIntensities));
-                searchresults.add(new PDSearchResult(c,diffPositions,diffIntensities));
+                DBsearchresults.add(new PDSearchResult(c,diffPositions,diffIntensities));
                 compIndex = compIndex + 1;
                 
-                if ((compIndex % 500) == 0){
+                if ((compIndex % nCompounds/100) == 0){
                     float percent = ((float)compIndex/(float)nCompounds)*100.f;
                     setProgress((int) percent);
-                    VavaLogger.LOG.info(String.valueOf(percent));
+                    log.debug(String.valueOf(percent));
                 }
+                //sobre el 50%, l'altre 50 es la integracio i passos previs
+//                if ((compIndex % nCompounds/100) == 0){
+//                    float percent = ((float)compIndex/(float)nCompounds)*50.f+50;
+//                    setProgress((int) percent);
+//                    log.debug(String.valueOf(percent));
+//                }
             }
             setProgress(100);
             return 0;

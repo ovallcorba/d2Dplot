@@ -2,7 +2,7 @@
 // si no existeix, cada cop que s'executi d2dsub fer que es comprovi si existeix fitxer EXZ 
 // i sin� crear-lo amb la informaci� introdu�da.
 
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -38,9 +38,9 @@ import javax.swing.WindowConstants;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import vava33.plot2d.auxi.ImgOps;
-import vava33.plot2d.auxi.ImgFileUtils;
-import vava33.plot2d.auxi.Pattern2D;
+import vava33.d2dplot.auxi.ImgFileUtils;
+import vava33.d2dplot.auxi.ImgOps;
+import vava33.d2dplot.auxi.Pattern2D;
 
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
@@ -117,10 +117,12 @@ public class D2Dsub_frame extends JFrame {
     private JButton btnViewbkg;
     private JButton btnSaveResult;
 
+    private Pattern2D initialPattern;
+    private MainFrame mf;
     /**
      * Create the dialog.
      */
-    public D2Dsub_frame() {
+    public D2Dsub_frame(Pattern2D patt, MainFrame m) {
     	addWindowListener(new WindowAdapter() {
     		@Override
     		public void windowClosing(WindowEvent arg0) {
@@ -754,7 +756,8 @@ public class D2Dsub_frame extends JFrame {
             okButton.setActionCommand("OK");
             getRootPane().setDefaultButton(okButton);
         }
-        
+        setMf(m);
+        setInitialPattern(patt);
         this.userInit();
         this.activeOptions();
     }
@@ -769,7 +772,7 @@ public class D2Dsub_frame extends JFrame {
         this.setBounds(x, y, width, height);
         
         //Diagrama inicial
-        setPattBef(MainFrame.getPatt2D());
+        setPattBef(this.getInitialPattern());
 		txtPathBefore.setText(getPattBef().getImgfile().toString());
         
         //mostrem titol i versio D2Dsub
@@ -777,7 +780,23 @@ public class D2Dsub_frame extends JFrame {
         tAOut.ln("Initial file= " + getPattBef().getImgfile().toString());
     }
     
-	public Pattern2D getPattBef() {
+    public Pattern2D getInitialPattern(){
+        return this.initialPattern;
+    }
+    
+    public void setInitialPattern(Pattern2D patt){
+        this.initialPattern=patt;
+    }
+    
+	public MainFrame getMf() {
+        return mf;
+    }
+
+    public void setMf(MainFrame mf) {
+        this.mf = mf;
+    }
+
+    public Pattern2D getPattBef() {
 		return this.pattBef;
 	}
 
@@ -798,7 +817,9 @@ public class D2Dsub_frame extends JFrame {
 	public void setPattAft(Pattern2D pattAft) {
 		this.pattAft = pattAft;
 		//s'ha de mostrar al mainframe i activar reload previous:
-        MainFrame.updatePatt2D(this.pattAft,false);
+		if (getMf()!=null){
+		    this.getMf().updatePatt2D(this.pattAft,false);    
+		}
         this.btnReload.setText("Reload Source");
 	}
 
@@ -836,10 +857,14 @@ public class D2Dsub_frame extends JFrame {
     protected void do_btnReload_actionPerformed(ActionEvent e) {
     	//torna a carregar el pattBefore al mainframe o b� el resultat
     	if(this.btnReload.getText().startsWith("Reload")){
-        	MainFrame.updatePatt2D(this.getPattBef(),false);
+    	    if (this.getMf()!=null){
+    	        this.getMf().updatePatt2D(this.getPattBef(),false);    
+    	    }
         	this.btnReload.setText("Load Result");
     	}else{ //load result
-    	    MainFrame.updatePatt2D(this.getPattAft(),false);
+    	    if (this.getMf()!=null){
+    	        this.getMf().updatePatt2D(this.getPattAft(),false);    
+    	    }
     		this.btnReload.setText("Reload Source");
     	}
     }
@@ -855,7 +880,9 @@ public class D2Dsub_frame extends JFrame {
     	}
     	fsave = ImgFileUtils.writeBIN(fsave, this.getPattAft());
     	this.getPattAft().setImgfile(fsave);
-    	MainFrame.updatePatt2D(fsave);
+        if (this.getMf()!=null){
+            this.getMf().updatePatt2D(fsave);    
+        }
     	tAOut.ln("File saved: "+fsave.toString());
     	return true;
     }
@@ -1003,7 +1030,9 @@ public class D2Dsub_frame extends JFrame {
 	                JOptionPane.YES_NO_OPTION);
 	        if (n == JOptionPane.YES_OPTION) {
 	        	this.setPattBef(this.getPattAft());
-	        	MainFrame.updatePatt2D(this.getPattBef(),false);
+	        	if (this.getMf()!=null){
+	        	    this.getMf().updatePatt2D(this.getPattBef(),false);    
+	        	}
 	        }
 		}
 		
@@ -1134,7 +1163,7 @@ public class D2Dsub_frame extends JFrame {
 				    tAOut.afegirText(true, true,"Glass subtraction... ");
 				    
 				    //preparacio dades
-				    Pattern2D glass = ImgFileUtils.openPatternFile(glassD2File);
+				    Pattern2D glass = ImgFileUtils.readPatternFile(glassD2File);
 				    glass.copyMaskPixelsFromImage(dataWork);
 				    
 				    //escalat del vidre
@@ -1287,11 +1316,15 @@ public class D2Dsub_frame extends JFrame {
 	        	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin)", "bin")};
 	        	File fsave = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
 	        	if (fsave == null){
-	        	    MainFrame.gettAOut().ln("WARNING: Background subtracted data not saved to image file!");
+	        	    if (this.getMf()!=null){
+	        	        this.getMf().gettAOut().ln("WARNING: Background subtracted data not saved to image file!");    
+	        	    }
 	        	}
 	        	ImgFileUtils.writeBIN(fsave, this.getPattAft());
 	        	this.getPattAft().setImgfile(fsave);
-	        	MainFrame.updatePatt2D(fsave);
+	            if (this.getMf()!=null){
+	                this.getMf().updatePatt2D(fsave);    
+	            }
 	        }
 		}
 		this.dispose();

@@ -2,7 +2,7 @@
 // si no existeix, cada cop que s'executi d2dsub fer que es comprovi si existeix fitxer EXZ 
 // i sin� crear-lo amb la informaci� introdu�da.
 
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -42,9 +42,9 @@ import javax.swing.WindowConstants;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import vava33.plot2d.auxi.ImgOps;
-import vava33.plot2d.auxi.ImgFileUtils;
-import vava33.plot2d.auxi.Pattern2D;
+import vava33.d2dplot.auxi.ImgFileUtils;
+import vava33.d2dplot.auxi.ImgOps;
+import vava33.d2dplot.auxi.Pattern2D;
 
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
@@ -54,7 +54,6 @@ import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 
 import javax.swing.JSeparator;
-
 import javax.swing.JList;
 
 public class D2Dsub_batch extends JFrame {
@@ -990,7 +989,7 @@ public class D2Dsub_batch extends JFrame {
 		this.cua=new ArrayBlockingQueue<bkgsubtraction>(50);
 		for(int i=0; i<listfiles.getModel().getSize();i++){
 			File f = (File)listfiles.getModel().getElementAt(i);
-			Pattern2D data = ImgFileUtils.openPatternFile(f);
+			Pattern2D data = ImgFileUtils.readPatternFile(f);
 			
 			bkgsubtraction opts = new bkgsubtraction(data,doGlass,doBkg,doLP,opt);
 			opts.readOptions(bkgIter, bkgN, fhor, fver, fhorver, aresta, ilor, ipol, glassFactor, amplada, angle, stepsize);
@@ -1131,7 +1130,7 @@ public class D2Dsub_batch extends JFrame {
 				    tAOut.stat("Glass subtraction... ");
 				    
 				    //preparacio dades
-				    Pattern2D glass = ImgFileUtils.openPatternFile(glassD2File);
+				    Pattern2D glass = ImgFileUtils.readPatternFile(glassD2File);
 				    glass.copyMaskPixelsFromImage(dataWork);
 				    
 				    //escalat del vidre

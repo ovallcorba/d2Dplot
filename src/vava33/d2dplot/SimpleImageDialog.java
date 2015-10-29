@@ -1,4 +1,4 @@
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Toolkit;
@@ -15,8 +15,8 @@ import java.awt.GridBagConstraints;
 
 import com.vava33.jutils.FileUtils;
 
-import vava33.plot2d.auxi.ImgFileUtils;
-import vava33.plot2d.auxi.Pattern2D;
+import vava33.d2dplot.auxi.ImgFileUtils;
+import vava33.d2dplot.auxi.Pattern2D;
 
 import java.awt.Insets;
 import java.awt.event.ActionListener;

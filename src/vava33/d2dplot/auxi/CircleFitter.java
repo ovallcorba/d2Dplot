@@ -1,4 +1,4 @@
-package vava33.plot2d.auxi;
+package vava33.d2dplot.auxi;
 
 import java.awt.geom.Point2D;
 

@@ -1,4 +1,4 @@
-package vava33.plot2d.auxi;
+package vava33.d2dplot.auxi;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,7 +13,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.plot2d.MainFrame;
+import vava33.d2dplot.MainFrame;
 
 import com.vava33.jutils.FileUtils;
 

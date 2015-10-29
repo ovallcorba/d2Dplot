@@ -1,4 +1,4 @@
-package vava33.plot2d;
+package vava33.d2dplot;
 /*
  * TODO:
  *  - Nicer list compounds, results...  DONE!
@@ -47,14 +47,15 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
-import vava33.plot2d.auxi.VavaLogger;
+import com.vava33.jutils.VavaLogger;
 
-import vava33.plot2d.auxi.FilteredListModel;
-import vava33.plot2d.auxi.ImgOps;
-import vava33.plot2d.auxi.PDCompound;
-import vava33.plot2d.auxi.PDDatabase;
-import vava33.plot2d.auxi.PDSearchResult;
-import vava33.plot2d.auxi.PuntCercle;
+import vava33.d2dplot.auxi.FilteredListModel;
+import vava33.d2dplot.auxi.ImgOps;
+import vava33.d2dplot.auxi.PDCompound;
+import vava33.d2dplot.auxi.PDDatabase;
+import vava33.d2dplot.auxi.PDSearchResult;
+import vava33.d2dplot.auxi.Pattern2D;
+import vava33.d2dplot.auxi.PuntCercle;
 
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
@@ -67,6 +68,8 @@ import net.miginfocom.swing.MigLayout;
 public class DB_dialog extends JFrame {
 
     private static final long serialVersionUID = -6104927797410689910L;
+    static final float minDspacingToSearch = 1.15f;
+
     private JButton btnLoadDB;
     private JCheckBox cbox_onTop;
     private JCheckBox chckbxPDdata;
@@ -85,11 +88,11 @@ public class DB_dialog extends JFrame {
 //    private Pattern2D patt2D;
     private boolean showPDDataRings;
     private JButton btnShowDsp;
-    private MainFrame mf;
     private static JProgressBar pBarDB;
 //    private Thread readDBFileThread;
     private ProgressMonitor pm;
     private PDDatabase.openDBfileWorker openDBFwk;
+    private PDDatabase.saveDBfileWorker saveDBFwk;
     private PDDatabase.searchDBWorker searchDBwk;
     private JButton btnTestclosest;
     private JButton btnSearchByPeaks;
@@ -107,12 +110,19 @@ public class DB_dialog extends JFrame {
     private JPanel panel_2;
     private JButton btnAddCompound;
     private JButton btnEditCompound;
+    private static VavaLogger log = D2Dplot_global.log;
+
+    private Pattern2D patt2d;
+    private ImagePanel ipanel;
+    private JButton btnAddToQuicklist;
     
     /**
      * Create the dialog.
      */
-    public DB_dialog(MainFrame mf) {
-        this.mf = mf;
+    public DB_dialog(ImagePanel ip) {
+        this.setIpanel(ip);
+        this.setPatt2d(ip.getPatt2D());
+        
         setIconImage(Toolkit.getDefaultToolkit().getImage(DB_dialog.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Compound DB");
@@ -122,10 +132,10 @@ public class DB_dialog extends JFrame {
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 600, 660);
-        getContentPane().setLayout(new BorderLayout());
-        getContentPane().add(this.contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("", "[grow]", "[598px,grow]"));
+        setBounds(x, y, 680, 680);
+        getContentPane().setLayout(new MigLayout("fill, insets 5", "[grow]", "[grow][37px]"));
+        getContentPane().add(this.contentPanel, "cell 0 0,grow");
+        contentPanel.setLayout(new MigLayout("fill, insets 0", "[grow]", "[598px,grow]"));
         {
             this.splitPane = new JSplitPane();
             splitPane.setResizeWeight(0.7);
@@ -137,11 +147,11 @@ public class DB_dialog extends JFrame {
                 {
                     {
                         {
-                            panel_left.setLayout(new MigLayout("", "[grow]", "[25px][grow][]"));
+                            panel_left.setLayout(new MigLayout("fill, insets 0", "[grow]", "[25px][grow][]"));
                             {
                                 panel = new JPanel();
                                 panel_left.add(panel, "cell 0 0,grow");
-                                panel.setLayout(new MigLayout("", "[40.00px][][][][grow]", "[25px][25px][23px]"));
+                                panel.setLayout(new MigLayout("fill, insets 0", "[][][][][grow]", "[][][]"));
                                 this.btnLoadDB = new JButton("Load DB");
                                 panel.add(btnLoadDB, "cell 0 0,growx,aligny center");
                                 {
@@ -158,7 +168,6 @@ public class DB_dialog extends JFrame {
                                     this.chckbxPDdata.setSelected(true);
                                     this.cbox_onTop = new JCheckBox("on top");
                                     panel.add(cbox_onTop, "cell 4 0,alignx right,aligny center");
-                                    cbox_onTop.setSelected(true);
                                     this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
                                     this.cbox_onTop.addItemListener(new ItemListener() {
                                         @Override
@@ -172,12 +181,12 @@ public class DB_dialog extends JFrame {
                                         panel.add(btnSearchByPeaks, "cell 0 1 2 1,growx,aligny center");
                                         {
                                             chckbxIntensityInfo = new JCheckBox("Intensity info");
-                                            panel.add(chckbxIntensityInfo, "cell 2 1,alignx left,aligny center");
-                                        }
-                                        {
-                                            chckbxNpksInfo = new JCheckBox("Npks info");
-                                            panel.add(chckbxNpksInfo, "cell 3 1,alignx left,aligny center");
-                                            chckbxNpksInfo.setSelected(true);
+                                            chckbxIntensityInfo.addItemListener(new ItemListener() {
+                                                public void itemStateChanged(ItemEvent e) {
+                                                    do_chckbxIntensityInfo_itemStateChanged(e);
+                                                }
+                                            });
+                                            panel.add(chckbxIntensityInfo, "hidemode 3,cell 3 1,alignx left,aligny center");
                                         }
                                         this.lblHelp = new JLabel("?");
                                         panel.add(lblHelp, "cell 4 1,alignx right,aligny center");
@@ -208,6 +217,16 @@ public class DB_dialog extends JFrame {
                                             txtNamefilter = new JTextField();
                                             panel.add(txtNamefilter, "cell 2 2 3 1,growx,aligny center");
                                             txtNamefilter.setColumns(10);
+                                            {
+                                                chckbxNpksInfo = new JCheckBox("Use nr. of total reflections");
+                                                chckbxNpksInfo.addItemListener(new ItemListener() {
+                                                    public void itemStateChanged(ItemEvent arg0) {
+                                                        do_chckbxNpksInfo_itemStateChanged(arg0);
+                                                    }
+                                                });
+                                                panel.add(chckbxNpksInfo, "hidemode 3,cell 2 1,alignx left,aligny center");
+                                                chckbxNpksInfo.setSelected(true);
+                                            }
                                             
                                             txtNamefilter.getDocument().addDocumentListener(new DocumentListener() {
                                                 public void changedUpdate(DocumentEvent e) {
@@ -246,7 +265,7 @@ public class DB_dialog extends JFrame {
                 {
                     panel_1 = new JPanel();
                     panel_left.add(panel_1, "cell 0 1,grow");
-                    panel_1.setLayout(new MigLayout("", "[grow][]", "[][grow][]"));
+                    panel_1.setLayout(new MigLayout("fill, insets 0", "[grow][]", "[][grow][]"));
                     {
                         lblHeader = new JLabel("");
                         panel_1.add(lblHeader, "cell 0 0 2 1");
@@ -286,7 +305,7 @@ public class DB_dialog extends JFrame {
                 this.panel_right = new JPanel();
                 this.panel_right.setBackground(Color.BLACK);
                 this.splitPane.setRightComponent(this.panel_right);
-                panel_right.setLayout(new MigLayout("", "[grow]", "[grow]"));
+                panel_right.setLayout(new MigLayout("fill, insets 0", "[grow]", "[grow]"));
                 {
                     this.scrollPane_1 = new JScrollPane();
                     scrollPane_1.setViewportBorder(null);
@@ -305,7 +324,7 @@ public class DB_dialog extends JFrame {
         }
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            getContentPane().add(buttonPane, "cell 0 1,growx,aligny top");
             JButton okButton = new JButton("close");
             okButton.addActionListener(new ActionListener() {
                 @Override
@@ -316,7 +335,7 @@ public class DB_dialog extends JFrame {
             {
                 btnTestclosest = new JButton("testClosest");
                 btnTestclosest.setVisible(false);
-                buttonPane.setLayout(new MigLayout("", "[112px][70px]", "[25px]"));
+                buttonPane.setLayout(new MigLayout("fill, insets 0", "[][]", "[]"));
                 btnTestclosest.setEnabled(false);
                 buttonPane.add(btnTestclosest, "cell 0 0,alignx center,aligny center");
                 btnTestclosest.addActionListener(new ActionListener() {
@@ -333,7 +352,7 @@ public class DB_dialog extends JFrame {
             {
                 panel_2 = new JPanel();
                 panel_left.add(panel_2, "cell 0 2,grow");
-                panel_2.setLayout(new MigLayout("", "[][][]", "[]"));
+                panel_2.setLayout(new MigLayout("fill, insets 0", "[][][][]", "[]"));
                 {
                     btnAddCompound = new JButton("Add Compound");
                     btnAddCompound.addActionListener(new ActionListener() {
@@ -341,7 +360,7 @@ public class DB_dialog extends JFrame {
                             do_btnAddCompound_actionPerformed(arg0);
                         }
                     });
-                    panel_2.add(btnAddCompound, "cell 0 0");
+                    panel_2.add(btnAddCompound, "cell 0 0,alignx center");
                 }
                 {
                     btnEditCompound = new JButton("Edit Compound");
@@ -350,10 +369,19 @@ public class DB_dialog extends JFrame {
                             do_btnEditCompound_actionPerformed(e);
                         }
                     });
-                    panel_2.add(btnEditCompound, "cell 1 0");
+                    panel_2.add(btnEditCompound, "cell 1 0,alignx center");
                 }
                 btnShowDsp = new JButton("Compound info");
                 panel_2.add(btnShowDsp, "cell 2 0,alignx center,aligny center");
+                {
+                    btnAddToQuicklist = new JButton("Add to Quicklist");
+                    btnAddToQuicklist.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                            do_btnAddToQuicklist_actionPerformed(e);
+                        }
+                    });
+                    panel_2.add(btnAddToQuicklist, "cell 3 0,alignx center");
+                }
                 btnShowDsp.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent arg0) {
                         do_btnShowDsp_actionPerformed(arg0);
@@ -362,13 +390,11 @@ public class DB_dialog extends JFrame {
             }
         }
         tAOut.ln("** PDDatabase **");
-
-//      dataFile = mf.getOpenedFile();
-//      patt2D = mf.getPatt2D();
         lm = new DefaultListModel();
         listCompounds.setModel(lm);
         tAOut.ln(" Reading default database: "+PDDatabase.getDefaultDBpath());
         do_btnLoadDB_actionPerformed(null,false);
+        this.setAlwaysOnTop(cbox_onTop.isSelected());
     }
 
     @Override
@@ -378,22 +404,59 @@ public class DB_dialog extends JFrame {
     }
 
     //boolean ask for default or not
-    protected void do_btnLoadDB_actionPerformed(ActionEvent arg0,boolean ask) {
+    protected void do_btnLoadDB_actionPerformed(ActionEvent arg0,boolean askIfDefaultDB) {
         
-        //primer creem el progress monitor, el worker i hi afegim el listener
+        //primer creem el progress monitor, 
         pm = new ProgressMonitor(this,
                 "Reading DB file...",
                 "", 0, 100);
         pm.setProgress(0);
         pBarDB.setString("Reading DB");
         pBarDB.setStringPainted(true);
-        openDBFwk = new PDDatabase.openDBfileWorker(null,false);
+        
+        //db per defecte:
+        File DBFile = new File(PDDatabase.getDefaultDBpath());
+        
+        //Ara preguntem (si s'escau) sobre obrir una externa o la default
+        if (askIfDefaultDB){
+            Object[] options = {"Load default DB",
+            "Open external DB file"};
+            int n = JOptionPane.showOptionDialog(this,
+            "Open default DB or one from a file?",
+            "Load DB",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]);
+            
+            log.debug("option = "+n);
+            
+            if (n == JOptionPane.CLOSED_OPTION) {
+                return;
+            }
+            if (n != JOptionPane.YES_OPTION) {
+                //Carrega un fitxer de base de dades
+                JFileChooser fileChooser = new JFileChooser();
+                FileNameExtensionFilter filter = new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat");
+                fileChooser.addChoosableFileFilter(filter);
+                fileChooser.setCurrentDirectory(new File(MainFrame.getWorkdir()));
+                int selection = fileChooser.showOpenDialog(null);
+                if (selection != JFileChooser.APPROVE_OPTION) {
+                    tAOut.stat("No data file selected");
+                    return;
+                }
+                DBFile = fileChooser.getSelectedFile();
+            }
+        }
+        
+        //Si hem arribat aquí creem el worker, hi afegim el listener
+        openDBFwk = new PDDatabase.openDBfileWorker(DBFile,false);
         openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
-
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
-              //VavaLogger.LOG.info("hello from propertyChange");
-              VavaLogger.LOG.info(evt.getPropertyName());
+              //log.debug("hello from propertyChange");
+              log.debug(evt.getPropertyName());
               if ("progress" == evt.getPropertyName() ) {
                   int progress = (Integer) evt.getNewValue();
                   pm.setProgress(progress);
@@ -419,74 +482,10 @@ public class DB_dialog extends JFrame {
             }
         });
         
-        //Ara preguntem si carregar la DB interna o carregar un fitxer apart:
-        int n = JOptionPane.YES_OPTION; //per defecte obrim local
-        if (ask){
-            Object[] options = {"Load default DB",
-            "Open external DB file"};
-            n = JOptionPane.showOptionDialog(this,
-            "Open default DB or one from a file?",
-            "Load DB",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            options,
-            options[0]);
-            
-            VavaLogger.LOG.info("option = "+n);
-        }
-        
-        if (n == JOptionPane.YES_OPTION) {
-            //load internal DB
-            PDDatabase.reset();
-            openDBFwk.setReadLocal(true);
-            openDBFwk.execute();
-//            this.acknowledgeCOD();
-            
-            //            URL zipUrl = this.getClass().getResource(localDB);
-//            try{
-//                File zipFile = new File(zipUrl.toURI());
-//                ZipFile zip = new ZipFile(zipFile);
-////                InputStream is = zip.getInputStream(zip.getEntry("codDB.db"));
-//                //reset current Database
-//                PDDatabase.reset();
-//                //read database file in zip
-//                openDBFwk.setFileToRead(zip);
-//                openDBFwk.execute();
-//                this.acknowledgeCOD();
-//            }catch(Exception e){
-//                e.printStackTrace();
-//            }
-            
-            //////File file = new File(classLoader.getResource("file/test.xml").getFile());
-            return;
-        }
-        
-        if (n == JOptionPane.CLOSED_OPTION) {
-            return;
-        }
-        
-        //SI ARRIBEM AQUI HEM D'OBRIR EL DIALEG:
-        
-        //Carrega un fitxer de base de dades
-        JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat");
-        fileChooser.addChoosableFileFilter(filter);
-        fileChooser.setCurrentDirectory(new File(MainFrame.getWorkdir()));
-        int selection = fileChooser.showOpenDialog(null);
-        if (selection != JFileChooser.APPROVE_OPTION) {
-            tAOut.stat("No data file selected");
-            return;
-        }
         //reset current Database
-        PDDatabase.reset();
-        //read database file
-        openDBFwk.setFileToRead(fileChooser.getSelectedFile());
+        PDDatabase.resetDB();
+        //read database file, executing the swingworker task
         openDBFwk.execute();
-                
-        //DEBUG ADD ALL COMPOUNDS TO LIST
-//        this.updateList();
-        
     }
 
     protected void do_cbox_onTop_itemStateChanged(ItemEvent arg0) {
@@ -495,7 +494,7 @@ public class DB_dialog extends JFrame {
 
     protected void do_chckbxCalibrate_itemStateChanged(ItemEvent arg0) {
         this.showPDDataRings = chckbxPDdata.isSelected();
-        mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), this.getCurrentCompound());
+        this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), this.getCurrentCompound());
 //        this.showPDDataRings = chckbxPDdata.isSelected();
 //        if (chckbxPDdata.isSelected() && this.getCurrentCompound()!=null){
 //            mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), this.getCurrentCompound());    
@@ -589,9 +588,9 @@ public class DB_dialog extends JFrame {
         pBarDB.setString("Updating DB");
         pBarDB.setStringPainted(true);
         lm.clear();
-        Iterator<PDCompound> itrcomp = PDDatabase.getCompList().iterator();
+        Iterator<PDCompound> itrcomp = PDDatabase.getDBCompList().iterator();
         int n = 0;
-        int ncomp = PDDatabase.getCompList().size();
+        int ncomp = PDDatabase.getDBCompList().size();
         while (itrcomp.hasNext()){
             PDCompound c = (PDCompound) itrcomp.next();
 //            lm.addElement(c.printCompound()); //he tret el .trim()
@@ -601,7 +600,7 @@ public class DB_dialog extends JFrame {
                 pBarDB.setValue((int)(((float)n/(float)ncomp)/100.f));    
             }
         }
-        lblHeader.setText(" RefNum  Name  [Formula]");
+        lblHeader.setText(" RefNum  Name  [Formula]  (alt. names)");
         pBarDB.setValue(100);
         pBarDB.setStringPainted(false);
         
@@ -625,7 +624,7 @@ public class DB_dialog extends JFrame {
 //        }
         
         //debug:
-        mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), c);
+        this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), c);
     }
 
     public boolean isShowPDDataRings() {
@@ -638,15 +637,15 @@ public class DB_dialog extends JFrame {
     protected void do_listCompounds_valueChanged(ListSelectionEvent arg0) {
         if (arg0.getValueIsAdjusting()) return;
         PDCompound comp = this.getCurrentCompound();
-        mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), comp);
-        if (comp!=null)tAOut.ln(comp.printInfoLine());
+        this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), comp);
+        if (comp!=null)tAOut.ln(comp.printInfo2Line());
     }
     
     
 //    @Override
 //    public void propertyChange(PropertyChangeEvent evt) {
 //        // TODO Auto-generated method stub
-//        VavaLogger.LOG.info("hello from propertyChange");
+//        log.debug("hello from propertyChange");
 //        if ("percent" == evt.getPropertyName() ) {
 //            int progress = (Integer) evt.getNewValue();
 //            pm.setProgress(progress);
@@ -693,22 +692,21 @@ public class DB_dialog extends JFrame {
     }
     
     //CANVIEM PER NO UTILITZAR EL LM AMB TOTS ELS COMPOSTOS  -- AL FINAL NO, fem boto per tornar a mostrar tots
-    public void loadSearchPeaksResults(ArrayList<Float> searchlist){
+    public void loadSearchPeaksResults(){
+        
+        if (lm==null){return;}
+        
         //aqui en principi tindrem una llista de resultats a PDDatabase i s'haurà de mostrar
         lm.clear();
-//        float minDSPin = Collections.min(searchlist);
-//        int nDSPin = searchlist.size();
-        PDSearchResult.setMinDSPin(Collections.min(searchlist));
-        PDSearchResult.setnDSPin(searchlist.size());
         
-        ArrayList<PDSearchResult> res = PDDatabase.getSearchresults();
+        ArrayList<PDSearchResult> res = PDDatabase.getDBSearchresults();
         
         //mirem si hi ha criteris complementaris pel residual
         if (chckbxIntensityInfo.isSelected() || chckbxNpksInfo.isSelected()){
             Iterator<PDSearchResult> itrcomp = res.iterator();
             while (itrcomp.hasNext()){
                 PDSearchResult c = itrcomp.next();
-                float resid = c.getResidual();
+                float resid = c.getResidualPositions();
                 if (chckbxIntensityInfo.isSelected()){
                     resid = resid + c.getResidual_intensities();
                 }
@@ -717,10 +715,9 @@ public class DB_dialog extends JFrame {
 //                    resid = resid * (Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1)); 
 //                                  * (Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1));
                 }
-                c.setResidual(resid);
+                c.setTotal_residual(resid);
             }            
         }
-        
         Collections.sort(res);
         Iterator<PDSearchResult> itrcomp = res.iterator();
         int nsol = 0;
@@ -730,10 +727,11 @@ public class DB_dialog extends JFrame {
             lm.addElement(c);
             nsol = nsol + 1;
         }
-        lblHeader.setText(" Residual  inputRefs/compoundRefs  CompoundName  [Formula] ");
+        lblHeader.setText(" Residual  inputRefs/compoundRefs  CompoundName  [Formula]  (alt. names)");
     }
     
-    public void searchPeaks(final ArrayList<Float> searchlist, ArrayList<Float> searchlistIntensities){
+    public void searchPeaks(){
+        
         pm = new ProgressMonitor(this,
                 "Searching for peak matching...",
                 "", 0, 100);
@@ -742,13 +740,13 @@ public class DB_dialog extends JFrame {
         pBarDB.setString("Searching DB");
         pBarDB.setStringPainted(true);
         
-        searchDBwk = new PDDatabase.searchDBWorker(searchlist,searchlistIntensities);
+        searchDBwk = new PDDatabase.searchDBWorker(patt2d,minDspacingToSearch);
         searchDBwk.addPropertyChangeListener(new PropertyChangeListener() {
 
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
-              //VavaLogger.LOG.info("hello from propertyChange");
-              VavaLogger.LOG.info(evt.getPropertyName());
+              //log.debug("hello from propertyChange");
+              log.debug(evt.getPropertyName());
               if ("progress" == evt.getPropertyName() ) {
                   int progress = (Integer) evt.getNewValue();
                   pm.setProgress(progress);
@@ -762,7 +760,7 @@ public class DB_dialog extends JFrame {
                           tAOut.stat("search cancelled");
                       } else {
                           tAOut.stat("search finished!");
-                          loadSearchPeaksResults(searchlist);
+                          loadSearchPeaksResults();
                       }
                       pm.close();
                       pBarDB.setValue(100);
@@ -779,29 +777,11 @@ public class DB_dialog extends JFrame {
     
     
     protected void do_btnSearchByPeaks_actionPerformed(ActionEvent e) {
-        if (MainFrame.getPatt2D().getPuntsCercles().isEmpty()){
+        if (getPatt2d().getPuntsCercles().isEmpty()){
             tAOut.stat("Please select some peaks clicking in the image");
             return;
         }
-        Iterator<PuntCercle> itrP = MainFrame.getPatt2D().getPuntsCercles().iterator();
-        ArrayList<Float> searchlist = new ArrayList<Float>();
-        ArrayList<Float> searchlistInten = new ArrayList<Float>();
-        while (itrP.hasNext()) {
-            PuntCercle pa = itrP.next();
-            float dsp = (float)MainFrame.getPatt2D().calcDsp(pa.getT2());
-            if (dsp > MainFrame.minDspacingToSearch){
-                searchlist.add(dsp);    
-                //per la intensitat fem el promig de l'anell
-                float circleInt = ImgOps.intRadCircle(MainFrame.getPatt2D(),(float)FastMath.toDegrees(pa.getT2()), -1.f);
-                VavaLogger.LOG.info("Intensity (NOT normalized to 100 or 1st peak) of peak: "+(float)FastMath.toDegrees(pa.getT2())+" is "+circleInt);
-                searchlistInten.add(circleInt);
-            }
-        }
-        if (searchlist.isEmpty()){
-            tAOut.stat("no peaks found");
-            return;
-        }
-        this.searchPeaks(searchlist,searchlistInten);
+        this.searchPeaks();
     }
     
     protected void filterList(){
@@ -881,12 +861,45 @@ public class DB_dialog extends JFrame {
     protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
         File f = FileUtils.fchooser(null, null, true);
         if (f == null)return;
-        boolean ok = PDDatabase.saveDB(f);
-        if (ok){
-            tAOut.stat("DB saved to "+f.toString());
-        }else{
-            tAOut.stat("Error saving file "+f.toString());
-        }
+        
+        //primer creem el progress monitor, 
+        pm = new ProgressMonitor(this,
+                "Saving DB file...",
+                "", 0, 100);
+        pm.setProgress(0);
+        pBarDB.setString("Saving DB");
+        pBarDB.setStringPainted(true);
+        
+        //Si hem arribat aquí creem el worker, hi afegim el listener
+        saveDBFwk = new PDDatabase.saveDBfileWorker(f,false);
+        saveDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                log.debug(evt.getPropertyName());
+                if ("progress" == evt.getPropertyName() ) {
+                    int progress = (Integer) evt.getNewValue();
+                    pm.setProgress(progress);
+                    pBarDB.setValue(progress);
+                    pm.setNote(String.format("%d%%\n", progress));
+                    if (pm.isCanceled() || saveDBFwk.isDone()) {
+                        Toolkit.getDefaultToolkit().beep();
+                        if (pm.isCanceled()) {
+                            saveDBFwk.cancel(true);
+                            tAOut.stat("Error saving file "+saveDBFwk.getDbFileString());
+                        } else {
+                            tAOut.stat("DB saved to "+saveDBFwk.getDbFileString());
+                        }
+                        pm.close();
+                        pBarDB.setValue(100);
+                        pBarDB.setStringPainted(true);
+                        updateListAllCompounds();
+                        //startButton.setEnabled(true);
+                    }
+                }
+            }
+        });
+        
+        saveDBFwk.execute();
         
     }
     protected void do_btnAddCompound_actionPerformed(ActionEvent arg0) {
@@ -897,186 +910,33 @@ public class DB_dialog extends JFrame {
         DB_editor dbe = new DB_editor(this.getCurrentCompound(),this);
         dbe.setVisible(true);
     }
+
+    public Pattern2D getPatt2d() {
+        return patt2d;
+    }
+
+    public void setPatt2d(Pattern2D patt2d) {
+        this.patt2d = patt2d;
+    }
+
+    public ImagePanel getIpanel() {
+        return ipanel;
+    }
+
+    public void setIpanel(ImagePanel ipanel) {
+        this.ipanel = ipanel;
+    }
+    protected void do_chckbxNpksInfo_itemStateChanged(ItemEvent arg0) {
+        this.loadSearchPeaksResults();
+    }
+    protected void do_chckbxIntensityInfo_itemStateChanged(ItemEvent e) {
+        this.loadSearchPeaksResults();
+    }
+    protected void do_btnAddToQuicklist_actionPerformed(ActionEvent e) {
+        PDCompound pdc = this.getCurrentCompound();
+        if (pdc!=null){
+            PDDatabase.addCompoundQL(this.getCurrentCompound(),true);            
+        }
+    }
 }
 
-
-
-
-
-
-
-
-//ALTRES COSES QUE HE DESCARTAT
-
-//public void loadSearchPeaksResults(ArrayList<Float> searchlist){
-//    //aqui en principi tindrem una llista de resultats a PDDatabase i s'haurà de mostrar
-//    lm.clear();
-//    ArrayList<PDDatabase.SearchResult> res = PDDatabase.getSearchresults();
-//    Collections.sort(res);
-//    float minDSPin = Collections.min(searchlist);
-//    int nDSPin = searchlist.size();
-//    Iterator<PDDatabase.SearchResult> itrcomp = res.iterator();
-//    while (itrcomp.hasNext()){
-//        PDDatabase.SearchResult c = itrcomp.next();
-//        Iterator<Float> itref = c.getC().getDspacings().iterator();
-//        int nrefcomp = 0;
-//        while (itref.hasNext()){
-//            float r = itref.next();
-//            if (r>=(minDSPin-0.05f)){
-//                nrefcomp = nrefcomp + 1;
-//            }
-//        }
-//        lm.addElement(c.getC().printCompound().trim()+" "+c.getResidual()+" "+nDSPin+" "+nrefcomp);
-//    }
-//    lblHeader.setText(" RefNum  Residual  inputRefs/compoundRefs  CompoundName  [Formula] ");
-//}
-
-
-//private static class checkDBread implements Runnable {
-//
-//    Thread th;
-//    String fpath;
-//    
-//    checkDBread(Thread t, String filepath){
-//        this.th=t;
-//        this.fpath=filepath;
-//    }
-//    @Override
-//    public void run() {
-//        // TODO Auto-generated method stub
-//        while (th.isAlive()){
-//            try {
-//                VavaLogger.LOG.info("Sleep");
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
-//            if (th.isInterrupted()){
-//                tAOut.stat("reading of DB file "+this.fpath+" stopped!");
-//                tAOut.stat(" --> ncompounds = "+PDDatabase.getnCompounds());    
-//                return;                    
-//            }
-//        }
-//        tAOut.stat("reading of DB file "+this.fpath+" stopped!");
-//        tAOut.stat(" --> ncompounds = "+PDDatabase.getnCompounds());    
-//    }
-//}
-
-
-//this.pBarDB.setIndeterminate(true);
-//this.pBarDB.setString("reading DB");
-//this.pBarDB.setStringPainted(true);
-
-//readDBFileThread = PDDatabase.readDataFile(fileChooser.getSelectedFile(),pBarDB);
-//checkDBread th = new checkDBread(readDBFileThread,fileChooser.getSelectedFile().toString()); 
-//SwingUtilities.invokeLater(th);
-
-
-
-
-
-//////////////AQUEST VA PERFECTE, ABANS DE CANVIAR PER LLEGIR ZIP
-
-//protected void do_btnLoadDB_actionPerformed(ActionEvent arg0) {
-//    
-//    //preguntem si carregar la DB interna o carregar un fitxer apart:
-//    
-//    URL zipUrl = this.getClass().getResource(localDB);
-//    try{
-//        File zipFile = new File(zipUrl.toURI());
-//        ZipFile zip = new ZipFile(zipFile);
-////        InputStream is = zip.getInputStream(zip.getEntry("codDB.db"));        
-//        pm = new ProgressMonitor(this,
-//                "Reading DB file...",
-//                "", 0, 100);
-//        pm.setProgress(0);
-//        openDBFwk = new PDDatabase.openDBfileWorker(zip); 
-//        openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
-//
-//            @Override
-//            public void propertyChange(PropertyChangeEvent evt) {
-//              //VavaLogger.LOG.info("hello from propertyChange");
-//              VavaLogger.LOG.info(evt.getPropertyName());
-//              if ("progress" == evt.getPropertyName() ) {
-//                  int progress = (Integer) evt.getNewValue();
-//                  pm.setProgress(progress);
-//                  pm.setNote(String.format("%d%%\n", progress));
-//                  if (pm.isCanceled() || openDBFwk.isDone()) {
-//                      Toolkit.getDefaultToolkit().beep();
-//                      if (pm.isCanceled()) {
-//                          openDBFwk.cancel(true);
-//                          tAOut.stat("reading of DB file "+openDBFwk.getReadedFile()+" stopped!");
-//                          tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
-//                      } else {
-//                          tAOut.stat("reading of DB file "+openDBFwk.getReadedFile()+" finished!");
-//                          tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
-//                      }
-//                      pm.close();
-//                      updateListAllCompounds();
-//                      //startButton.setEnabled(true);
-//                  }
-//              }
-//            }
-//        });
-//                
-//        openDBFwk.execute();
-//    }catch(Exception e){
-//        e.printStackTrace();
-//    }
-//    
-//    //////File file = new File(classLoader.getResource("file/test.xml").getFile());
-//    
-//    
-//    //Carrega un fitxer de base de dades
-//    JFileChooser fileChooser = new JFileChooser();
-//    FileNameExtensionFilter filter = new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat");
-//    fileChooser.addChoosableFileFilter(filter);
-//    fileChooser.setCurrentDirectory(new File(MainFrame.getWorkdir()));
-//    int selection = fileChooser.showOpenDialog(null);
-//    if (selection != JFileChooser.APPROVE_OPTION) {
-//        tAOut.stat("No data file selected");
-//        return;
-//    }
-//    //reset current Database
-//    PDDatabase.reset();
-//    
-//    pm = new ProgressMonitor(this,
-//            "Reading DB file...",
-//            "", 0, 100);
-//    pm.setProgress(0);
-//    openDBFwk = new PDDatabase.openDBfileWorker(fileChooser.getSelectedFile());
-//    openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
-//
-//        @Override
-//        public void propertyChange(PropertyChangeEvent evt) {
-//          //VavaLogger.LOG.info("hello from propertyChange");
-//          VavaLogger.LOG.info(evt.getPropertyName());
-//          if ("progress" == evt.getPropertyName() ) {
-//              int progress = (Integer) evt.getNewValue();
-//              pm.setProgress(progress);
-//              pm.setNote(String.format("%d%%\n", progress));
-//              if (pm.isCanceled() || openDBFwk.isDone()) {
-//                  Toolkit.getDefaultToolkit().beep();
-//                  if (pm.isCanceled()) {
-//                      openDBFwk.cancel(true);
-//                      tAOut.stat("reading of DB file "+openDBFwk.getDbfile()+" stopped!");
-//                      tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
-//                  } else {
-//                      tAOut.stat("reading of DB file "+openDBFwk.getDbfile()+" stopped!");
-//                      tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
-//                  }
-//                  pm.close();
-//                  updateListAllCompounds();
-//                  //startButton.setEnabled(true);
-//              }
-//          }
-//        }
-//    });
-//            
-//    openDBFwk.execute();
-//            
-//    //DEBUG ADD ALL COMPOUNDS TO LIST
-////    this.updateList();
-//    
-//}

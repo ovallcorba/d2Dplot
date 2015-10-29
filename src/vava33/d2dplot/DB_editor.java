@@ -1,4 +1,4 @@
-package vava33.plot2d;
+package vava33.d2dplot;
 
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -13,9 +13,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTextArea;
 
-import vava33.plot2d.auxi.PDCompound;
-import vava33.plot2d.auxi.PDDatabase;
-import vava33.plot2d.auxi.PDReflection;
+import vava33.d2dplot.auxi.PDCompound;
+import vava33.d2dplot.auxi.PDDatabase;
+import vava33.d2dplot.auxi.PDReflection;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -287,7 +287,7 @@ public class DB_editor extends JDialog {
             }
             //ADD COMPOUND:
             co = new PDCompound(txtName.getText().trim());
-            PDDatabase.addCompound(co);
+            PDDatabase.addCompoundDB(co);
         }
         
         co.addCompoundName(txtNamealt.getText().trim());
@@ -336,7 +336,7 @@ public class DB_editor extends JDialog {
         options,
         options[0]);
         if (n == JOptionPane.YES_OPTION) {
-            PDDatabase.getCompList().remove(this.getComp());
+            PDDatabase.getDBCompList().remove(this.getComp());
             this.closeAndUpdateList();
         }
     }
