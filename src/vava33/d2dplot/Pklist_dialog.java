@@ -18,15 +18,12 @@ import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 
-import vava33.d2dplot.auxi.OrientSolucio;
-import vava33.d2dplot.auxi.PuntCercle;
-import vava33.d2dplot.auxi.PuntSolucio;
+import vava33.d2dplot.auxi.PuntClick;
 
 import javax.swing.JList;
 
@@ -43,7 +40,6 @@ import java.awt.event.ItemEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 
 public class Pklist_dialog extends JDialog {
@@ -59,6 +55,7 @@ public class Pklist_dialog extends JDialog {
     private JScrollPane scrollPane;
     private JCheckBox cbox_onTop;
     private JButton btnSaveappend;
+    
     private static VavaLogger log = D2Dplot_global.log;
 
     private ImagePanel ipanel;
@@ -199,19 +196,7 @@ public class Pklist_dialog extends JDialog {
             	gbc_btnSaveappend.gridy = 0;
             	buttonPane.add(btnSaveappend, gbc_btnSaveappend);
             }
-//            {
-//            	btnSaveAs = new JButton("Save as");
-//            	btnSaveAs.addActionListener(new ActionListener() {
-//            		public void actionPerformed(ActionEvent e) {
-//            			do_btnSaveAs_actionPerformed(e);
-//            		}
-//            	});
-//            	GridBagConstraints gbc_btnSaveAs = new GridBagConstraints();
-//            	gbc_btnSaveAs.insets = new Insets(0, 0, 0, 5);
-//            	gbc_btnSaveAs.gridx = 1;
-//            	gbc_btnSaveAs.gridy = 0;
-//            	buttonPane.add(btnSaveAs, gbc_btnSaveAs);
-//            }
+
             {
                 lblCheckValues = new JLabel("");
                 lblCheckValues.setForeground(Color.RED);
@@ -243,21 +228,21 @@ public class Pklist_dialog extends JDialog {
     }
     
     public void loadPeakList() {
-//        DefaultListModel<String> lm = new DefaultListModel<String>();
-//        lm.clear();
+
         DefaultListModel lm = (DefaultListModel)list_pk.getModel();
         lm.clear();
         //mostrem la llista puntsCercles
-        Iterator<PuntCercle> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
+        Iterator<PuntClick> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
         int i = 1;
         lblPeakList.setText(" Num     pX       pY       2T       I");
         while (itrP.hasNext()) {
-            PuntCercle pa = itrP.next();
+            PuntClick pa = itrP.next();
             String entry = String.format(Locale.ENGLISH, "%4d  %s", i,pa.toString());
             lm.addElement(entry);
             i++;
         }
         list_pk.setModel(lm);
+
     }
 
     protected void tanca() {
@@ -276,38 +261,33 @@ public class Pklist_dialog extends JDialog {
 		float selx = Float.parseFloat(sel[1]);
 		float sely = Float.parseFloat(sel[2]);
 		float tol = 0.1f;
-		Iterator<PuntCercle> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
+		Iterator<PuntClick> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
 		while (itrP.hasNext()) {
-		    PuntCercle pa = itrP.next();
+		    PuntClick pa = itrP.next();
 		    if ((FastMath.abs(pa.getX()-selx)<=tol)&&(FastMath.abs(pa.getY()-sely)<=tol)){
 		        //es el mateix punt, el borrem
 		        ipanel.getPatt2D().getPuntsCercles().remove(pa);
 		    }
 		}
         this.loadPeakList(); //recarreguem la llista
+		
 	}
 	protected void do_chckbxOnTop_itemStateChanged(ItemEvent arg0) {
         this.setAlwaysOnTop(cbox_onTop.isSelected());
 	}
 	
-//	File outfile = null;
-//	boolean firstWrite = true;
-//	int nextToWrite=0;
-//	private JButton btnSaveAs;
-	
 	protected void do_btnSaveappend_actionPerformed(ActionEvent e) {
 		
-//		if (ipanel.isShowIndexing()){
 	    btnSaveappend.setText("Save");
 	    //simplement guardem normal
-	    File outfileIndex = FileUtils.fchooser(new File(MainFrame.getWorkdir()), null, true);
+	    File outfileIndex = FileUtils.fchooser(this,new File(D2Dplot_global.getWorkdir()), null, true);
 	    try{
 	        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(outfileIndex, false)));
 	        out.println("# "+this.ipanel.getPatt2D().getImgfile().toString());
 	        //escribim els elements de la llista
 	        //primer ordenem la llista !220415
-	        ArrayList<PuntCercle> ord = new ArrayList<PuntCercle>();
-	        Iterator<PuntCercle> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
+	        ArrayList<PuntClick> ord = new ArrayList<PuntClick>();
+	        Iterator<PuntClick> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();
 	        while (itrP.hasNext()) {
 	            ord.add(itrP.next());
 	        }
@@ -316,17 +296,18 @@ public class Pklist_dialog extends JDialog {
 	        itrP = ord.iterator();
 	        int i = 1;
 	        while (itrP.hasNext()) {
-	            PuntCercle pa = itrP.next();
+	            PuntClick pa = itrP.next();
 	            String entry = String.format(Locale.ENGLISH, "%4d  %s", i,pa.toString());
 	            out.println(entry);
 	            i++;
 	        }
-	        //			    for(int i=0; i<list_pk.getModel().getSize(); i++){
-	        //			    	out.println(list_pk.getModel().getElementAt(i));
-	        //			    }
 	        out.close();
 	    }catch(Exception ex){
-	        ex.printStackTrace();
+	        if(D2Dplot_global.isDebug())ex.printStackTrace();
+	        log.warning("error saving file");
 	    }
+	    D2Dplot_global.setWorkdir(outfileIndex);
 	    return;
+	}
 }
+

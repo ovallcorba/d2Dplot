@@ -1,11 +1,7 @@
 package vava33.d2dplot;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -18,6 +14,7 @@ import javax.swing.JTextField;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 
+import vava33.d2dplot.auxi.ImageTiltRot_diag;
 import vava33.d2dplot.auxi.Pattern2D;
 import net.miginfocom.swing.MigLayout;
 
@@ -48,6 +45,8 @@ public class Param_dialog extends JDialog {
     private JTextField txtOmeini;
     private JTextField txtOmefin;
     private JTextField txtAcqtime;
+    private JButton label;
+    private JButton btnUpdate;
 
     /**
      * Create the dialog.
@@ -59,7 +58,6 @@ public class Param_dialog extends JDialog {
         this.patt2D = pattern;
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Instrumental Parameters");
-        // setBounds(100, 100, 660, 730);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
@@ -69,122 +67,131 @@ public class Param_dialog extends JDialog {
         getContentPane().setLayout(new MigLayout("", "[]", "[grow][]"));
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         getContentPane().add(this.contentPanel, "cell 0 0,grow");
-        contentPanel.setLayout(new MigLayout("fill, insets 5", "[][grow]", "[grow][grow][grow][grow][grow][grow][grow][grow][][][]"));
+        contentPanel.setLayout(new MigLayout("fill, insets 5", "[][][grow]", "[grow][grow][grow][grow][grow][grow][grow][grow][][][]"));
         {
             JLabel lblSampledetectorDistancemm = new JLabel("Sample-Detector distance (mm)=");
-            contentPanel.add(lblSampledetectorDistancemm, "cell 0 0,alignx trailing,aligny center");
+            contentPanel.add(lblSampledetectorDistancemm, "cell 0 0 2 1,alignx trailing,aligny center");
         }
         {
             this.txtDistOD = new JTextField();
             this.txtDistOD.setText("150.000");
-            contentPanel.add(this.txtDistOD, "cell 1 0,growx,aligny center");
+            contentPanel.add(this.txtDistOD, "cell 2 0,growx,aligny center");
             this.txtDistOD.setColumns(10);
         }
         {
             JLabel lblPixelSizeX = new JLabel("Pixel size X (mm)=");
-            contentPanel.add(lblPixelSizeX, "cell 0 1,alignx trailing,aligny center");
+            contentPanel.add(lblPixelSizeX, "cell 0 1 2 1,alignx trailing,aligny center");
         }
         {
             this.txtPicSizeX = new JTextField();
             this.txtPicSizeX.setText("0.1024");
-            contentPanel.add(this.txtPicSizeX, "cell 1 1,growx,aligny center");
+            contentPanel.add(this.txtPicSizeX, "cell 2 1,growx,aligny center");
             this.txtPicSizeX.setColumns(10);
         }
         {
             JLabel lblPixelSizeY = new JLabel("Pixel size Y (mm)=");
-            contentPanel.add(lblPixelSizeY, "cell 0 2,alignx trailing,aligny center");
+            contentPanel.add(lblPixelSizeY, "cell 0 2 2 1,alignx trailing,aligny center");
         }
         {
             this.txtPicSizeY = new JTextField();
             this.txtPicSizeY.setText("0.1024");
-            contentPanel.add(this.txtPicSizeY, "cell 1 2,growx,aligny center");
+            contentPanel.add(this.txtPicSizeY, "cell 2 2,growx,aligny center");
             this.txtPicSizeY.setColumns(10);
         }
         {
             JLabel lblBeamCentreX = new JLabel("Beam centre X (pixel)=");
-            contentPanel.add(lblBeamCentreX, "cell 0 3,alignx trailing,aligny center");
+            contentPanel.add(lblBeamCentreX, "cell 0 3 2 1,alignx trailing,aligny center");
         }
         {
             this.txtCentrX = new JTextField();
             this.txtCentrX.setText("1024");
-            contentPanel.add(this.txtCentrX, "cell 1 3,growx,aligny center");
+            contentPanel.add(this.txtCentrX, "cell 2 3,growx,aligny center");
             this.txtCentrX.setColumns(10);
         }
         {
             JLabel lblBeamCentreY = new JLabel("Beam centre Y (pixel)=");
-            contentPanel.add(lblBeamCentreY, "cell 0 4,alignx trailing,aligny center");
+            contentPanel.add(lblBeamCentreY, "cell 0 4 2 1,alignx trailing,aligny center");
         }
         {
             this.txtCentrY = new JTextField();
             this.txtCentrY.setText("1024");
-            contentPanel.add(this.txtCentrY, "cell 1 4,growx,aligny center");
+            contentPanel.add(this.txtCentrY, "cell 2 4,growx,aligny center");
             this.txtCentrY.setColumns(10);
         }
         {
             this.lblWavelengtha = new JLabel("Wavelength (A)=");
-            contentPanel.add(this.lblWavelengtha, "cell 0 5,alignx trailing,aligny center");
+            contentPanel.add(this.lblWavelengtha, "cell 0 5 2 1,alignx trailing,aligny center");
         }
         {
             this.txtWave = new JTextField();
             this.txtWave.setText("0.0");
-            contentPanel.add(this.txtWave, "cell 1 5,growx,aligny center");
+            contentPanel.add(this.txtWave, "cell 2 5,growx,aligny center");
             this.txtWave.setColumns(10);
+        }
+        {
+            label = new JButton("?");
+            label.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    do_label_actionPerformed(e);
+                }
+            });
+            contentPanel.add(label, "cell 0 6,alignx left");
         }
         {
             lblDetectorTilt = new JLabel("Detector Tilt (º)=");
             lblDetectorTilt.setToolTipText("");
-            contentPanel.add(lblDetectorTilt, "cell 0 6,alignx trailing,aligny center");
+            contentPanel.add(lblDetectorTilt, "cell 1 6,alignx trailing,aligny center");
         }
         {
             txtTilt = new JTextField();
             txtTilt.setText("0.0");
             txtTilt.setColumns(10);
-            contentPanel.add(txtTilt, "cell 1 6,growx,aligny center");
+            contentPanel.add(txtTilt, "cell 2 6,growx,aligny center");
         }
         {
             lblDetectorRot = new JLabel("Detector Rot (º)=");
-            contentPanel.add(lblDetectorRot, "cell 0 7,alignx trailing,aligny center");
+            contentPanel.add(lblDetectorRot, "cell 0 7 2 1,alignx trailing,aligny center");
         }
         {
             txtRot = new JTextField();
             txtRot.setText("0.0");
             txtRot.setColumns(10);
-            contentPanel.add(txtRot, "cell 1 7,growx,aligny center");
+            contentPanel.add(txtRot, "cell 2 7,growx,aligny center");
         }
         {
             lblscanOmegaIni = new JLabel("(scan) omega ini (º)=");
-            contentPanel.add(lblscanOmegaIni, "cell 0 8,alignx trailing,aligny center");
+            contentPanel.add(lblscanOmegaIni, "cell 0 8 2 1,alignx trailing,aligny center");
         }
         {
             txtOmeini = new JTextField();
             txtOmeini.setText("0.0");
-            contentPanel.add(txtOmeini, "cell 1 8,growx,aligny center");
+            contentPanel.add(txtOmeini, "cell 2 8,growx,aligny center");
             txtOmeini.setColumns(10);
         }
         {
             lblscanOmegaEnd = new JLabel("(scan) omega end (º)=");
-            contentPanel.add(lblscanOmegaEnd, "cell 0 9,alignx trailing,aligny center");
+            contentPanel.add(lblscanOmegaEnd, "cell 0 9 2 1,alignx trailing,aligny center");
         }
         {
             txtOmefin = new JTextField();
             txtOmefin.setText("0.0");
-            contentPanel.add(txtOmefin, "cell 1 9,growx,aligny center");
+            contentPanel.add(txtOmefin, "cell 2 9,growx,aligny center");
             txtOmefin.setColumns(10);
         }
         {
             lblAcquisitionTime = new JLabel("Acquisition time (s)=");
-            contentPanel.add(lblAcquisitionTime, "cell 0 10,alignx trailing,aligny center");
+            contentPanel.add(lblAcquisitionTime, "cell 0 10 2 1,alignx trailing,aligny center");
         }
         {
             txtAcqtime = new JTextField();
             txtAcqtime.setText("0.0");
-            contentPanel.add(txtAcqtime, "cell 1 10,growx,aligny center");
+            contentPanel.add(txtAcqtime, "cell 2 10,growx,aligny center");
             txtAcqtime.setColumns(10);
         }
         {
             JPanel buttonPane = new JPanel();
             getContentPane().add(buttonPane, "cell 0 1,growx,aligny top");
-            buttonPane.setLayout(new MigLayout("fill, insets 5", "[grow]", "[grow][]"));
+            buttonPane.setLayout(new MigLayout("fill, insets 5", "[][grow]", "[grow][]"));
             JButton okButton = new JButton("Apply and Close");
             okButton.addActionListener(new ActionListener() {
                 @Override
@@ -199,10 +206,19 @@ public class Param_dialog extends JDialog {
                         do_btnApply_actionPerformed(e);
                     }
                 });
-                buttonPane.add(btnApply, "flowx,cell 0 0,growx,aligny center");
+                {
+                    btnUpdate = new JButton("Update");
+                    btnUpdate.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                            do_btnUpdate_actionPerformed(e);
+                        }
+                    });
+                    buttonPane.add(btnUpdate, "cell 0 0");
+                }
+                buttonPane.add(btnApply, "flowx,cell 1 0,growx,aligny center");
             }
             okButton.setActionCommand("OK");
-            buttonPane.add(okButton, "cell 0 0,grow");
+            buttonPane.add(okButton, "cell 1 0,grow");
             getRootPane().setDefaultButton(okButton);
             {
                 btnCancel = new JButton("Cancel");
@@ -211,11 +227,11 @@ public class Param_dialog extends JDialog {
                         do_btnCancel_actionPerformed(e);
                     }
                 });
-                buttonPane.add(btnCancel, "cell 0 0,grow");
+                buttonPane.add(btnCancel, "cell 1 0,grow");
             }
             {
                 lblCheckValues = new JLabel("");
-                buttonPane.add(lblCheckValues, "hidemode 3,cell 0 1,alignx center,aligny center");
+                buttonPane.add(lblCheckValues, "hidemode 3,cell 1 1,alignx center,aligny center");
             }
         }
 
@@ -230,13 +246,16 @@ public class Param_dialog extends JDialog {
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
         boolean ok = this.setParameters();
         if (ok) {
-//            tAOut.stat("Edited parameters:");
-//            tAOut.ln(patt2D.getInfo());
             patt2D.recalcularCercles();
             this.dispose();
         }
     }
 
+    public void updateData(Pattern2D patt){
+        this.patt2D=patt;
+        this.getParameters();
+    }
+    
     private void getParameters() {
         this.patt2D.getDistMD();
         this.txtDistOD.setText(Float.toString(this.patt2D.getDistMD()));
@@ -268,7 +287,7 @@ public class Param_dialog extends JDialog {
             this.patt2D.setOmeFin(Float.parseFloat(this.txtOmefin.getText()));
             this.patt2D.setAcqTime(Float.parseFloat(this.txtAcqtime.getText()));
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
             lblCheckValues.setForeground(col[counter % 3]);
             lblCheckValues.setText("check values!");
             counter = counter + 1;
@@ -281,5 +300,13 @@ public class Param_dialog extends JDialog {
     }
     protected void do_btnCancel_actionPerformed(ActionEvent e) {
         this.dispose();
+    }
+    protected void do_label_actionPerformed(ActionEvent e) {
+        ImageTiltRot_diag id = new ImageTiltRot_diag();
+        id.setVisible(true);
+    }
+    
+    protected void do_btnUpdate_actionPerformed(ActionEvent e) {
+        this.getParameters();
     }
 }

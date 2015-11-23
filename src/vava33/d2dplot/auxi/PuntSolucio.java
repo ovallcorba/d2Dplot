@@ -6,25 +6,33 @@ import java.util.Locale;
 
 import org.apache.commons.math3.util.FastMath;
 
-public class PuntSolucio extends Ellipse2D.Float {
+public class PuntSolucio {
 
-    private static final long serialVersionUID = 5416537118064675342L;
+    private static int dincoSolPointSize = 2; //mida defecte, attribut de CLASSE
+    private static boolean dincoSolPointSizeByFc = false;
+    
     Color colorPunt; // no el faig estatic perque ho podriem assignar segons intensitat...
     float coordX, coordY;
-    float coordXclic, coordYclic; //les que s'assignen en mode indexHKL al clicar a la imatge
-    float intenClic; //intensitat en el punt del click
     float fc;
     int h, k, l;
-    int midaPunt;
+    int midaPunt; //AQUESTA ES LA MIDA PER INSTANCIA!!! (factor estructura!)
     float oscil; // valor d'oscilacio
+    int refNumID; //el num que es llegeix del fitxer
+    int seqNumber; //el num sequencial de la solucio a la llista de solucions (per si es borren, etc...)
+    boolean manuallyAdded;
+    
+    public PuntSolucio(int refnum, float cx, float cy, int ih, int ik, int il, float festructura, float foscil) {
 
-    public PuntSolucio(float cx, float cy, int ih, int ik, int il, float festructura, float foscil) {
-        super();
+        if (dincoSolPointSizeByFc){
+            midaPunt = FastMath.round((festructura * festructura) / 500.f);
+            if (midaPunt <= 2)
+                midaPunt = 2;            
+        }else{
+            midaPunt = dincoSolPointSize;
+        }
 
-        midaPunt = FastMath.round((festructura * festructura) / 500.f);
-        if (midaPunt <= 2)
-            midaPunt = 2;
-
+        manuallyAdded = false; //default false
+        
         // dades solucio
         this.coordX = cx;
         this.coordY = cy;
@@ -33,23 +41,17 @@ public class PuntSolucio extends Ellipse2D.Float {
         this.k = ik;
         this.l = il;
         this.oscil = foscil;
-
-        // dades per l'esfera a pintar
-        this.x = cx - midaPunt / 2;
-        this.y = cy - midaPunt / 2;
-        this.width = midaPunt;
-        this.height = midaPunt;
-
+        this.refNumID = refnum;
+        this.seqNumber = refnum;
         this.colorPunt = Color.green;
-        
-        // dades indexacio per click (-1 perque no s'ha fet)
-        this.coordXclic=-1;
-        this.coordYclic=-1;
-        this.intenClic=-1;
     }
 
-	public PuntSolucio(float cx, float cy, int ih, int ik, int il, float festructura, float foscil, Color col) {
-        this(cx, cy, ih, ik, il, festructura, foscil);
+    public Ellipse2D.Float getEllipseAsDrawingPoint(){
+        return new Ellipse2D.Float(this.getCoordX() - midaPunt/2,this.getCoordY() - midaPunt/2,midaPunt,midaPunt);
+    }
+    
+	public PuntSolucio(int refnum, float cx, float cy, int ih, int ik, int il, float festructura, float foscil, Color col) {
+        this(refnum, cx, cy, ih, ik, il, festructura, foscil);
         this.colorPunt = col;
     }
 	
@@ -82,9 +84,36 @@ public class PuntSolucio extends Ellipse2D.Float {
     	return hkl;
     }
     
+    public int getH() {
+        return h;
+    }
+
+    public void setH(int h) {
+        this.h = h;
+    }
+
+    public int getK() {
+        return k;
+    }
+
+    public void setK(int k) {
+        this.k = k;
+    }
+
+    public int getL() {
+        return l;
+    }
+
+    public void setL(int l) {
+        this.l = l;
+    }
 
     public float getOscil() {
         return oscil;
+    }
+
+    public float getFc() {
+        return fc;
     }
 
     public void setColorPunt(Color col) {
@@ -95,30 +124,6 @@ public class PuntSolucio extends Ellipse2D.Float {
         this.oscil = oscil;
     }
 
-	public float getCoordXclic() {
-		return coordXclic;
-	}
-
-	public void setCoordXclic(float coordXclic) {
-		this.coordXclic = coordXclic;
-	}
-
-	public float getCoordYclic() {
-		return coordYclic;
-	}
-
-	public void setCoordYclic(float coordYclic) {
-		this.coordYclic = coordYclic;
-	}
-
-	public float getIntenClic() {
-		return intenClic;
-	}
-
-	public void setIntenClic(float intenClic) {
-		this.intenClic = intenClic;
-	}
-
 	public int getMidaPunt() {
 		return midaPunt;
 	}
@@ -126,5 +131,53 @@ public class PuntSolucio extends Ellipse2D.Float {
 	public void setMidaPunt(int midaPunt) {
 		this.midaPunt = midaPunt;
 	}
+	
+	public int getSeqNumber() {
+	    return seqNumber;
+	}
 
+	public void setSeqNumber(int number) {
+	    this.seqNumber = number;
+	}
+
+    public int getRefNumID() {
+        return refNumID;
+    }
+
+    public void setRefNumID(int refNumID) {
+        this.refNumID = refNumID;
+    }
+
+    public boolean isManuallyAdded() {
+        return manuallyAdded;
+    }
+
+    public void setManuallyAdded(boolean manuallyAdded) {
+        this.manuallyAdded = manuallyAdded;
+    }
+
+    public static int getDincoSolPointSize() {
+        return dincoSolPointSize;
+    }
+
+    public static void setDincoSolPointSize(int dincoSolPointSize) {
+        PuntSolucio.dincoSolPointSize = dincoSolPointSize;
+    }
+
+    public static boolean isDincoSolPointSizeByFc() {
+        return dincoSolPointSizeByFc;
+    }
+
+    public static void setDincoSolPointSizeByFc(boolean dincoSolPointSizeByFc) {
+        PuntSolucio.dincoSolPointSizeByFc = dincoSolPointSizeByFc;
+    }
+
+    @Override
+    public String toString(){
+        //s'ha de mostrar això:
+        //        78      1954       773         0    7    8        0.10      0.00
+        return String.format(" %9d %9d %9d      %4d %4d %4d %11.2f %9.2f", this.getSeqNumber(),FastMath.round(this.getCoordX()),FastMath.round(this.getCoordY()),this.getH(),this.getK(),this.getL(),this.getFc(),this.getOscil());
+
+    }
+    
 }

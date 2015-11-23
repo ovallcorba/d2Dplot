@@ -1,16 +1,11 @@
 package vava33.d2dplot;
 
 import java.awt.BasicStroke;
-import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ItemEvent;
@@ -45,11 +40,11 @@ import vava33.d2dplot.auxi.ImgOps;
 import vava33.d2dplot.auxi.OrientSolucio;
 import vava33.d2dplot.auxi.PDCompound;
 import vava33.d2dplot.auxi.PDReflection;
+import vava33.d2dplot.auxi.Patt2Dzone;
 import vava33.d2dplot.auxi.Pattern2D;
 import vava33.d2dplot.auxi.PolyExZone;
-import vava33.d2dplot.auxi.PuntCercle;
+import vava33.d2dplot.auxi.PuntClick;
 import vava33.d2dplot.auxi.PuntSolucio;
-import javax.swing.JButton;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -58,11 +53,6 @@ import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JTextField;
 import javax.swing.JComboBox;
-import javax.swing.JLayeredPane;
-
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-
 import javax.swing.SwingConstants;
 
 public class ImagePanel extends JPanel {
@@ -75,12 +65,14 @@ public class ImagePanel extends JPanel {
     
     //parametres interaccio/contrast
     private static float incZoom = 0.05f;
-    private static int contrast_fun=0;
-    private static float swinglim=4.5f;
+    private static float maxScaleFit=40.f;
+    private static float minScaleFit=0.10f;
     private static int hklfontSize=13;
     private static float factSliderMax=3.f;
+    private static int contrast_fun=0;
     private boolean color = false;
     private boolean invertY = false;
+    private boolean paintExZ = false;
     private boolean mouseBox = false;
     private boolean mouseDrag = false;
     private boolean mouseZoom = false;
@@ -95,6 +87,7 @@ public class ImagePanel extends JPanel {
     private boolean allowEXZ=true;
     private boolean allowDINCO=true;
     private boolean allowSelPoints=true;
+    private boolean allowPKsearch=true;
     private boolean showQuickListCompoundRings = false; //aquest es l'unic de control en aquest cas
     private boolean showDBCompoundRings = false; //aquest es l'unic de control en aquest cas
     
@@ -110,13 +103,14 @@ public class ImagePanel extends JPanel {
     private Calib_dialog calibration;
     private ExZones_dialog exZones;
     private Dinco_frame dincoFrame;
+    private PKsearch_frame PKsearch;
     private Rectangle2D.Float currentRect;
     private PolyExZone currentPol;
     private PDCompound quickListCompound = null;
     private PDCompound dbCompound = null;
     
     //UI elements
-    private static final boolean sideControls = true;
+//    private static boolean sideControls = true;
     private JLabel lbl2t;
     private JLabel lblCoordX;
     private JLabel lblIntensity;
@@ -134,7 +128,7 @@ public class ImagePanel extends JPanel {
     /**
      * Create the panel.
      */
-    public ImagePanel() {
+    public ImagePanel(boolean sideControls) {
         super();
         
         if (sideControls){
@@ -221,7 +215,6 @@ public class ImagePanel extends JPanel {
             this.slider_contrast.setInverted(false);
             this.slider_contrast.setMinorTickSpacing(1);
             this.slider_contrast.setSnapToTicks(false);
-            //        this.slider_contrast.setValue(3);
             this.slider_contrast.setMaximum(0);
             this.slider_contrast.setValue(this.slider_contrast.getMaximum()/2);
 
@@ -416,26 +409,6 @@ public class ImagePanel extends JPanel {
               }  
           }
           this.setLabelValues(pix.x, pix.y, (float)FastMath.toDegrees(tthRad), dsp, inten);
-            
-//            Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
-//            if (pix.x < 0 || pix.y < 0 || pix.x >= patt2D.getDimX() || pix.y >= patt2D.getDimY()) {
-//                return;
-//            }
-//            lblCoord.setText("[" + FileUtils.dfX_1.format(pix.x) + ";" + FileUtils.dfX_1.format(pix.y) + "]");
-//            int inten = 0;
-//            // El FastMath.round porta a 2048 i out of bound, millor no arrodonir i truncar aqu� igual que al if anterior
-//            inten = (int) (patt2D.getInten((int) (pix.x), (int) (pix.y)));
-//            lblIntensity.setText("I= " + inten);
-//            String t2 = "";
-//            String dsp = "";
-//            if (patt2D.checkIfDistMD()){
-//                double twothetaRad =  patt2D.calc2T(pix,false);
-//                t2 = "2" + D2Dplot_global.theta + "=" + FileUtils.dfX_3.format(FastMath.toDegrees(twothetaRad));
-//                if (patt2D.checkIfWavel()){
-//                    dsp = "; dsp=" + FileUtils.dfX_3.format(patt2D.calcDsp(twothetaRad));
-//                }  
-//                lbl2t.setText("(" + t2 + dsp + ")");
-//            }
         }
     }
 
@@ -490,9 +463,6 @@ public class ImagePanel extends JPanel {
             if (e.getButton() == CLICAR) {
                 pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
             }
-//            if (e.getButton() == ZOOM_BORRAR) {
-//                TODO? no val la pena... millor tornar a començar
-//            }
             
             if (pix == null) return;
             if (calibration.isSetting1stPeakCircle()){
@@ -502,34 +472,51 @@ public class ImagePanel extends JPanel {
         }
         
         // Si tenim marcada l'opcio showHKLindexing afegim a la llista HKL els punts clicats m�s propers
-        if (estaDincoWorkSol() && this.isPatt2D()){
-            // assignem les coordenades "clic" als puntSolucio
+        if (estaDincoAddPeaks() && this.isPatt2D()){
+            
+            //new: afegim el punt a la llista de puntsSol, incrementant el numero (o deixant -1 en cas que sigui en un SOL)
             if (e.getButton() == CLICAR) {
-                int inten;
                 Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
-//                inten = (int) (patt2D.getInten(FastMath.round(pix.x), FastMath.round(pix.y)) * patt2D.getScale());
-                inten = (int) (patt2D.getInten(FastMath.round(pix.x), FastMath.round(pix.y)));
-                //busquem quin �s l'HKL m�s proper i l'assignem
-                PuntSolucio nearestPS = patt2D.getNearestPS(pix.x,pix.y);
-                if (nearestPS!=null){
-                    nearestPS.setCoordXclic(pix.x);
-                    nearestPS.setCoordYclic(pix.y);
-                    nearestPS.setIntenClic(inten);
-                }
+                OrientSolucio os = this.dincoFrame.getActiveOrientSol();
+                if (os==null)return;
+                //2 casos, si s'afegeix en un pxy es posa el següent index. Si es a un fitxer SOL es més complicat... ho gestiona OrientSol
+                os.addSolPoint(pix.x, pix.y, true);
             }
-            //faig que amb el dret es retorna la posicio original de la SOLUCIO
+            //faig que amb el dret es poden borrar punts afegits
             if (e.getButton() == ZOOM_BORRAR) {
                 Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
                 //busquem quin �s l'HKL m�s proper i l'assignem
-                PuntSolucio nearestPS = patt2D.getNearestPS(pix.x,pix.y);
+                PuntSolucio nearestPS = this.dincoFrame.getActiveOrientSol().getNearestPS(pix.x,pix.y,-1);
                 if (nearestPS!=null){
-                    nearestPS.setCoordXclic(-1);
-                    nearestPS.setCoordYclic(-1);
-                    nearestPS.setIntenClic(-1);
+                    this.dincoFrame.getActiveOrientSol().removeSolPoint(nearestPS);
                 }
             }
+            
             //carregem a la llista
-            this.dincoFrame.loadEditPeakList();
+            this.dincoFrame.loadPeakList();
+            return;
+        }
+        
+        // Pksearch
+        if (estaPeakSearchAddPeaks()) {
+            // afegim o treiem punts a la llista pksearch
+            if (e.getButton() == CLICAR) {
+                Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
+                Patt2Dzone pz = PKsearch.integratePk(pix);
+                patt2D.getPkSearchResult().add(pix);
+                PKsearch.getPkinteg().add(pz);
+            }
+            if (e.getButton() == ZOOM_BORRAR) {
+                Point2D.Float pktodel = PKsearch.findNearestPeak(this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y)),10);
+                if (pktodel != null) PKsearch.removePeak(pktodel);
+                if (pktodel != null){
+                    log.debug(pktodel.toString());
+                }else{
+                    log.debug("pktodel is null");
+                }
+            }
+            PKsearch.updateTable();
+            return;
         }
         
         // NOMES afegim els punts i cercles si tenim marcada la indexacio (i no s'ha complert res d'anterior)
@@ -614,13 +601,6 @@ public class ImagePanel extends JPanel {
         float LRy = currentRect.y + currentRect.height;
         // tolerancia pot ser diferent segons el cas
         float tol = 20;
-//        130923 aquesta subrutina ja no es crida per definir zones excloses (nomes calibracio)
-//        if (estaDefinintEXZ())
-//            tol = 1;
-        // log.info(ULx+" "+ULy);
-        // log.info(URx+" "+URy);
-        // log.info(LLx+" "+LLy);
-        // log.info(LRx+" "+LRy);
 
         // PRIMER mirem si est� a una arista
         boolean xMatch = false; // coicideix la x
@@ -662,13 +642,6 @@ public class ImagePanel extends JPanel {
         // sino mirem si est� dins
         if (!xMatch && !xwidMatch && !yMatch && !yheiMatch) {
             if (currentRect.contains(clic)) {
-            // if(currentRect.x>0&&currentRect.x<patt2D.getDimX()-1){
-            // currentRect.x += incX;
-            // }
-            // if(currentRect.y>0&&currentRect.y<patt2D.getDimY()-1){
-            // currentRect.y += incY;
-            // }
-            
             currentRect.x += incX;
             currentRect.y += incY;
             }
@@ -679,8 +652,6 @@ public class ImagePanel extends JPanel {
             currentRect.x = 0;
         if (currentRect.y < 0)
             currentRect.y = 0;
-        // if(currentRect.x+currentRect.width>patt2D.getDimX())currentRect.width=patt2D.getDimX()-currentRect.x;
-        // if(currentRect.y+currentRect.height>patt2D.getDimY())currentRect.height=patt2D.getDimY()-currentRect.y;
         if (currentRect.x + currentRect.width > patt2D.getDimX())
             currentRect.x = patt2D.getDimX() - currentRect.width;
         if (currentRect.y + currentRect.height > patt2D.getDimY())
@@ -695,14 +666,9 @@ public class ImagePanel extends JPanel {
     
     public void editPolygon(java.awt.geom.Point2D.Float dragPoint, float incX, float incY, boolean repaint) {
         Point2D.Float clic = getPixel(dragPoint);
-//        float tolVertex = 10; //+-5 pixels
-//        float tolArista = 5; //+-5 pixels
         
         //provem de fer la tolerancia en relacio a scalefit
         float tolVertex = FastMath.max(5/scalefit,5);
-//        log.info("tolvertex="+tolVertex);
-//        float tolArista = FastMath.max(5/scalefit,2);
-        
         
         //primer mirem si hem clicat sobre algun vertex per moure'l
         int vertex=-1; //el vertex que cliquem
@@ -727,8 +693,6 @@ public class ImagePanel extends JPanel {
             if(repaint)this.repaint();
             return;
         }
-        
-        
     }
 
     protected Ellipse2D.Float ellipseToFrameCoords(Ellipse2D.Float c) {
@@ -737,7 +701,6 @@ public class ImagePanel extends JPanel {
         Point2D.Float newVertex = getFramePointFromPixel(vertex);
         float w = (float) (c.getWidth() * scalefit);
         float h = (float) (c.getHeight() * scalefit);
-        // if(aresta<0.5)aresta=0.5f;
         Ellipse2D.Float newCercle = new Ellipse2D.Float(newVertex.x, newVertex.y, w, h);
         return newCercle;
 
@@ -750,19 +713,27 @@ public class ImagePanel extends JPanel {
         }
         return false;
     }
+    
+    private boolean estaPeakSearch() {
+        if (!allowPKsearch) return false;
+        if (PKsearch != null) {
+            return PKsearch.isShowPoints();
+        }
+        return false;
+    }
+    
+    private boolean estaPeakSearchAddPeaks(){
+        if (!allowPKsearch) return false;
+        if (estaPeakSearch()){
+            return PKsearch.isEditPoints();
+        }
+        return false;
+    }
 
     private boolean estaDefinintEXZ() {
         if (!allowEXZ) return false;
         if (exZones != null) {
             return exZones.isSetExZones();
-        }
-        return false;
-    }
-    
-    private boolean estaDincoWorkSol(){
-        if (!allowDINCO) return false;
-        if (dincoFrame != null){
-            return dincoFrame.isWorkSOL();
         }
         return false;
     }
@@ -775,9 +746,17 @@ public class ImagePanel extends JPanel {
         return false;
     }
     
+    private boolean estaDincoAddPeaks(){
+        if (!allowDINCO) return false;
+        if (estaDincoShowSpots()){
+            return dincoFrame.isAddPeaks();
+        }
+        return false;
+    }
+    
     private boolean estaDincoShowHKL(){
         if (!allowDINCO) return false;
-        if (dincoFrame != null){
+        if (estaDincoShowSpots()){
             return dincoFrame.isShowHKL();
         }
         return false;
@@ -786,30 +765,11 @@ public class ImagePanel extends JPanel {
     private boolean estaSelectPoints(){
         if (!allowSelPoints) return false;
         if (mainf != null){
-            return mainf.isSelectPoints();//TODO
+            return mainf.isSelectPoints();
         }
         return false;
     }
-    
-//    
-//    private boolean estaPintantEXZ() {
-//        if (exZones != null) {
-//            if (exZones.isDrawingExZone()) {
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
-    
-//    private boolean estaPDdatabase() {
-//        if (dbDialog != null){
-//            if (dbDialog.isShowPDDataRings()){
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
-    
+        
     private boolean isShowDBCompoundRings(){
         return showDBCompoundRings;
     }
@@ -862,10 +822,6 @@ public class ImagePanel extends JPanel {
         return panelImatge;
     }
 
-//    public MainFrame getParentFrame() {
-//        return (MainFrame) this.getTopLevelAncestor();
-//    }
-
     public Pattern2D getPatt2D() {
         return patt2D;
     }
@@ -892,7 +848,7 @@ public class ImagePanel extends JPanel {
         }
 
     	float sliderMin = (float)slider_contrast.getMinimum();
-    	float sliderMax = (float)slider_contrast.getMaximum();
+//    	float sliderMax = (float)slider_contrast.getMaximum();
     	float sliderVal = (float)slider_contrast.getValue();
         float ccomponent=-1.f;
 
@@ -1042,14 +998,6 @@ public class ImagePanel extends JPanel {
         }
     }
 
-//    public boolean isShowHKLsol() {
-//        return showHKLsol;
-//    }
-//
-//    public boolean isShowIndexing() {
-//		return showIndexing;
-//	}
-
 	// es mou l'origen a traves d'un increment de les coordenades
     public void moveOrigin(float incX, float incY, boolean repaint) {
         // assignem un nou origen de la imatge amb un increment a les coordenades anteriors
@@ -1087,7 +1035,7 @@ public class ImagePanel extends JPanel {
             // creem imatge normal
             for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-                    if (patt2D.isInExZone(j, i)) {// es mascara, el pintem magenta
+                    if (patt2D.isInExZone(j, i) && this.getPaintExZ()) {// es mascara, el pintem magenta
                         col = new Color(255, 0, 255);
                     } else{
                         if (this.isColor()) {
@@ -1107,7 +1055,7 @@ public class ImagePanel extends JPanel {
             int fila = 0;
             for (int i = patt2D.getDimY() - 1; i >= 0; i--) {
                 for (int j = 0; j < patt2D.getDimX(); j++) {
-                    if (patt2D.isInExZone(j, i)) {// es mascara, el pintem magenta
+                    if (patt2D.isInExZone(j, i) && this.getPaintExZ()) {// es mascara, el pintem magenta
                         col = new Color(255, 0, 255);
                     }else{
                         if (this.isColor()) {
@@ -1134,7 +1082,6 @@ public class ImagePanel extends JPanel {
         return new Rectangle2D.Float(vertex.x, vertex.y, width, height);
     }
     
-    
     protected PolyExZone PolToFrameCoords(PolyExZone p) {
         if (p.npoints<1)return null; //CHECK
         PolyExZone exz = new PolyExZone(false);
@@ -1145,6 +1092,14 @@ public class ImagePanel extends JPanel {
         return exz;
     }    
 
+    public void setPaintExZ(boolean paintexz){
+        this.paintExZ = paintexz;
+    }
+    
+    public boolean getPaintExZ(){
+        return this.paintExZ;
+    }
+    
     // donat un punt clicat mirarem si hi ha cercle a aquest pixel i en cas que aixi sigui el borrarem
     public void removePuntCercle(Point2D.Float clic) {
         patt2D.removePuntCercle(this.getPixel(clic)); // el passem a pixels
@@ -1205,6 +1160,10 @@ public class ImagePanel extends JPanel {
         this.dincoFrame = df;
     }
     
+    public void setPKsearch(PKsearch_frame pKsearch) {
+        PKsearch = pKsearch;
+    }
+
     public void setDBdialog(DB_dialog dbDialog) {
     }
 
@@ -1280,26 +1239,6 @@ public class ImagePanel extends JPanel {
         this.repaint();
     }
 
-//    public void setShowHKLsol(boolean showHKLsol) {
-//        this.showHKLsol = showHKLsol;
-//    }
-//
-//    public void setShowIndexing(boolean show) {
-//        this.showIndexing = show;
-//    }
-//
-//    public boolean isShowHKLIndexing() {
-//		return showHKLIndexing;
-//	}
-//
-//	public void setShowHKLIndexing(boolean showHKLIndexing) {
-//		this.showHKLIndexing = showHKLIndexing;
-//	}
-//
-//	public void setShowSolPoints(boolean show) {
-//        this.showSolPoints = show;
-//    }
-
     public void setSubimage(BufferedImage subimage) {
         this.subimage = subimage;
     }
@@ -1318,12 +1257,12 @@ public class ImagePanel extends JPanel {
         if (zoomIn) {
             scalefit = scalefit + (incZoom * scalefit);
             // posem maxim?
-            if (scalefit >= 25.f)
-                scalefit = 25.f;
+            if (scalefit >= maxScaleFit)
+                scalefit = maxScaleFit;
         } else {
             scalefit = scalefit - (incZoom * scalefit);
-            if (scalefit <= 0.10)
-                scalefit = 0.10f;
+            if (scalefit <= minScaleFit)
+                scalefit = minScaleFit;
         }
 
         // ara el pixel ja no est� al mateix lloc, mirem a quin punt del frame
@@ -1372,7 +1311,7 @@ public class ImagePanel extends JPanel {
     //max=-1 for auto calc max intensity
     public void contrast_slider_properties(int min, int max){
         int old_val = slider_contrast.getValue();
-        if(old_val==0){
+        if(old_val<=0){
             old_val=-1;
             min=this.patt2D.getMinI();
             max=this.calcOptMaxISlider();    
@@ -1432,13 +1371,15 @@ public class ImagePanel extends JPanel {
         try{
             minI=Integer.parseInt(txtConminval.getText());
         }catch(Exception ex){
-            ex.printStackTrace();
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            log.warning("error parsing contrast minimum value");
             minI=0;
         }
         try{
             maxI=Integer.parseInt(txtConmaxval.getText());
         }catch(Exception ex){
-            ex.printStackTrace();
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            log.warning("error parsing contrast max value");
             maxI=D2Dplot_global.satur65;
         }
         fun=cbox_fun.getSelectedIndex();
@@ -1448,6 +1389,46 @@ public class ImagePanel extends JPanel {
         this.getPanelImatge().repaint();
     }
     
+    public static float getIncZoom() {
+        return incZoom;
+    }
+
+    public static void setIncZoom(float incZoom) {
+        ImagePanel.incZoom = incZoom;
+    }
+
+    public static float getMaxScaleFit() {
+        return maxScaleFit;
+    }
+
+    public static void setMaxScaleFit(float maxScaleFit) {
+        ImagePanel.maxScaleFit = maxScaleFit;
+    }
+
+    public static float getMinScaleFit() {
+        return minScaleFit;
+    }
+
+    public static void setMinScaleFit(float minScaleFit) {
+        ImagePanel.minScaleFit = minScaleFit;
+    }
+
+    public static int getHklfontSize() {
+        return hklfontSize;
+    }
+
+    public static void setHklfontSize(int hklfontSize) {
+        ImagePanel.hklfontSize = hklfontSize;
+    }
+
+    public static float getFactSliderMax() {
+        return factSliderMax;
+    }
+
+    public static void setFactSliderMax(float factSliderMax) {
+        ImagePanel.factSliderMax = factSliderMax;
+    }
+
     protected void do_cbox_fun_itemStateChanged(ItemEvent e) {
         applyNewContrastValues();
         log.debug("do_cbox_fun_itemStateChanged called");
@@ -1461,11 +1442,20 @@ public class ImagePanel extends JPanel {
         log.debug("do_txtConminval_actionPerformed called");
     }
     
-    
 //    ------------------------------------ PANELL DE DIBUIX
     
     public class dades2d extends JPanel {
 
+        private Color colorCallibEllipses = Color.orange;
+        private Color colorGuessPointsEllipses = Color.red;
+        private Color colorFittedEllipses = Color.green;
+        private Color colorBoundariesEllipses = Color.magenta;
+        private Color colorExcludedZones = Color.CYAN;
+        private Color colorPeakSearch = Color.green;
+        private Color colorPeakSearchSelected = Color.red;
+        private Color colorQLcomp = Color.green;
+        private Color colorDBcomp = Color.cyan;
+        
         private static final long serialVersionUID = 1L;
         
         public dades2d(){
@@ -1479,7 +1469,7 @@ public class ImagePanel extends JPanel {
           BasicStroke stroke = new BasicStroke(1.5f);
           g1.setStroke(stroke);
           if (points != null){
-              g1.setColor(Color.orange);
+              g1.setColor(colorCallibEllipses);
               Iterator<Point2D.Float> itrP = points.iterator();
               while (itrP.hasNext()){
                   Point2D.Float p = itrP.next();
@@ -1492,7 +1482,7 @@ public class ImagePanel extends JPanel {
 
               //dibuixem els punts estimats dels anells
               if(calibration.isShowGuessPoints()){
-                  g1.setColor(Color.red);
+                  g1.setColor(colorGuessPointsEllipses);
                   Iterator<EllipsePars> itre = calibration.getSolutions().iterator();
                   while (itre.hasNext()){
                       EllipsePars e = itre.next();
@@ -1508,7 +1498,7 @@ public class ImagePanel extends JPanel {
               
               //ara dibuixem les ellipses fitejades
               if(calibration.isShowFittedEllipses()){
-                  g1.setColor(Color.green);
+                  g1.setColor(colorFittedEllipses);
                   Iterator<EllipsePars> itre = calibration.getSolutions().iterator();
                   while (itre.hasNext()){
                       EllipsePars e = itre.next();
@@ -1534,7 +1524,7 @@ public class ImagePanel extends JPanel {
 
               if(calibration.isShowSearchEllipsesBoundaries()){
                   //DEBUG ELLIPSES + and - BOUNDARIES
-                  g1.setColor(Color.magenta);
+                  g1.setColor(colorBoundariesEllipses);
                   if (calibration.getElliCerques()==null) return;
                   Iterator<EllipsePars> itre = calibration.getElliCerques().iterator();
                   while (itre.hasNext()){
@@ -1563,19 +1553,17 @@ public class ImagePanel extends JPanel {
         //Dibuix de les Zones Excloses
         private void drawExZones(Graphics2D g1) {
             currentPol = exZones.getCurrentExZ();
-            g1.setPaint(Color.CYAN);
+            g1.setPaint(colorExcludedZones);
             BasicStroke stroke = new BasicStroke(1.0f);
             g1.setStroke(stroke);
             if (currentPol != null) {
-//                g1.draw(PolToFrameCoords(currentPol));
-//                exZones.updateSelectedElement();
                 if (currentPol.npoints>0) {
                     g1.draw(PolToFrameCoords(currentPol));
                     exZones.updateSelectedElement();
                 }
             }
             // dibuixem el marge
-            int marge = patt2D.getMargin();
+            int marge = patt2D.getExz_margin();
             if (marge <= 0)
                 return;
             Rectangle2D.Float r = new Rectangle2D.Float(marge, marge, patt2D.getDimX() - 2 * marge, patt2D.getDimY()
@@ -1585,9 +1573,9 @@ public class ImagePanel extends JPanel {
 
         //Dibuix dels punts seleccionats
         private void drawPuntsEllipses(Graphics2D g1) {
-            Iterator<PuntCercle> itrPC = patt2D.getPuntsCercles().iterator();
+            Iterator<PuntClick> itrPC = patt2D.getPuntsCercles().iterator();
             while (itrPC.hasNext()) {
-                PuntCercle pc = itrPC.next();
+                PuntClick pc = itrPC.next();
                 EllipsePars e = pc.getEllipse();
                 Ellipse2D.Float p = pc.getPunt();
                 
@@ -1595,7 +1583,7 @@ public class ImagePanel extends JPanel {
                 // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
                 BasicStroke stroke = new BasicStroke(1.0f);
                 g1.setStroke(stroke);
-                g1.setPaint(PuntCercle.getColorCercle());
+                g1.setPaint(PuntClick.getColorCercle());
                 ArrayList<Point2D.Float>points =  e.getEllipsePoints(0, 360, 5);
                 if (points==null)continue;
                 for (int i = 0; i < points.size(); i++){
@@ -1609,7 +1597,7 @@ public class ImagePanel extends JPanel {
                     g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
                 }
                 //el punt
-                g1.setPaint(PuntCercle.getColorPunt());
+                g1.setPaint(PuntClick.getColorPunt());
                 stroke = new BasicStroke(2.0f);
                 g1.setStroke(stroke);
                 g1.draw(ellipseToFrameCoords(p));
@@ -1647,97 +1635,103 @@ public class ImagePanel extends JPanel {
                 }
             }
         }
+        
+        private void drawPksearch(Graphics2D g1) {
+            if (getPatt2D().getPkSearchResult()!=null){
+                Iterator<Point2D.Float> itrpk = getPatt2D().getPkSearchResult().iterator();
+                while (itrpk.hasNext()){
+                    Point2D.Float pk = itrpk.next();
+                    g1.setPaint(colorPeakSearch);
+                    BasicStroke stroke = new BasicStroke(1.0f);
+                    g1.setStroke(stroke);
+                    int radiPixelsCercle = PKsearch.getPlotSize();
+                    Ellipse2D.Float e = new Ellipse2D.Float(pk.x-radiPixelsCercle,pk.y-radiPixelsCercle,radiPixelsCercle*2,radiPixelsCercle*2);
+                    e = ellipseToFrameCoords(e);
+                    g1.draw(e);
+                    g1.fill(e);
+                }
                 
-//        private void drawHKLRings(Graphics2D g1) {
-//            Iterator<HKL_reflection> it = compoundRings.iterator();
-//            while (it.hasNext()) {
-//                HKL_reflection r = it.next();
-//                //2theta to pixels
-//                float radi = (float) FastMath.tan(FastMath.toRadians(r.getT2())) * patt2D.getDistMD();
-//                float cX = patt2D.getCentrX();
-//                float cY = patt2D.getCentrY();
-//                float px = radi/patt2D.getPixSx();
-//                float py = radi/patt2D.getPixSy();
-//                float vx = cX -px;
-//                float vy = cY -py;
-//                Ellipse2D.Float e = new Ellipse2D.Float(vx, vy, px*2, py*2);
-//                g1.setPaint(Color.green);
-//                BasicStroke stroke = new BasicStroke(1.f);
-////                BasicStroke stroke = new BasicStroke(1.f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[] {20,15}, 0);
-//                g1.setStroke(stroke);
-//                // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
-//                g1.draw(ellipseToFrameCoords(e));
-//            }
-//        }
-//        
-//        private void drawDSPRings(Graphics2D g1) {
-//            
-//            Iterator<PDReflection> itpks = dbCompound.getPeaks().iterator();
-//            while (itpks.hasNext()) {
-//                PDReflection ref = itpks.next();
-//                float dsp = ref.getDsp();
-//                float t2rad = (float) patt2D.dspToT2(dsp,false);
-//                //2theta to pixels
-//                EllipsePars e = ImgOps.getElliPars(patt2D, t2rad);
-//                
-//                //PRIMER DIBUIXEM L'ELIPSE I DESPRES EL PUNT (el centre de l'elipse no el dibuixem en aquest cas, nomes a la calibracio)
-//                // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
-//                BasicStroke stroke = new BasicStroke(1.0f);
-//                g1.setStroke(stroke);
-//                g1.setPaint(Color.cyan);
-//                ArrayList<Point2D.Float>points =  e.getEllipsePoints(0, 360, 5);
-//                if (points==null)continue;
-//                for (int i = 0; i < points.size(); i++){
-//                    Point2D.Float p1 = getFramePointFromPixel(points.get(i));
-//                    Point2D.Float p2 = null;
-//                    if (i==(points.size()-1)){
-//                        p2 = getFramePointFromPixel(points.get(0));
-//                    }else{
-//                        p2 = getFramePointFromPixel(points.get(i+1));
-//                    }
-//                    g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
-//                }
-//            }
-//        }
+                //ara pintarem el seleccionat si és el cas
+                g1.setPaint(colorPeakSearchSelected);
+                BasicStroke stroke = new BasicStroke(1.0f);
+                g1.setStroke(stroke);
+                
+                Point2D.Float[] selpunts = PKsearch.getSelectedPeaks();
+                if (selpunts==null)return;
+                
+                float angdeg = PKsearch.getCurrentAngDeg();
+                float tol2t = PKsearch.getCurrentTol2T();
+                if (angdeg<=0)return;
+                if (tol2t<=0)return;
+                
+                for (int i=0;i<selpunts.length;i++){
+                    if (selpunts[i]==null)continue;
+                    
+                    double t2rad = patt2D.calc2T(selpunts[i], false);
+                    float azim = patt2D.getAzimAngle(FastMath.round(selpunts[i].x), FastMath.round(selpunts[i].y), true);
+                    
+                    EllipsePars eOut = ImgOps.getElliPars(patt2D, (t2rad+FastMath.toRadians(tol2t/2)));
+                    EllipsePars eIn= ImgOps.getElliPars(patt2D, (t2rad-FastMath.toRadians(tol2t/2)));
+                    ArrayList<Point2D.Float>pointsOut =  eOut.getEllipsePoints(azim-angdeg, azim+angdeg, 0.5f);
+                    ArrayList<Point2D.Float>pointsIn =  eIn.getEllipsePoints(azim-angdeg, azim+angdeg, 0.5f);
+                    
+                    //ara juntem els punts
+                    if (pointsIn==null)continue;
+                    if (pointsOut==null)continue;
+                    for (int j = 0; i < pointsIn.size(); j++){
+                        Point2D.Float p1 = getFramePointFromPixel(pointsIn.get(j));
+                        if (j==(pointsIn.size()-1))break;
+                        Point2D.Float p2 = getFramePointFromPixel(pointsIn.get(j+1));
+                        g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
+                    }
+                    
+                    for (int j = 0; i < pointsOut.size(); j++){
+                        Point2D.Float p1 = getFramePointFromPixel(pointsOut.get(j));
+                        if (j==(pointsOut.size()-1))break;
+                        Point2D.Float p2 = getFramePointFromPixel(pointsOut.get(j+1));
+                        g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
+                    }
+                    
+                    //ara juntem els dos arcs
+                    Point2D.Float p1 = getFramePointFromPixel(pointsIn.get(0));
+                    Point2D.Float p2 = getFramePointFromPixel(pointsOut.get(0));
+                    g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
+                    p1 = getFramePointFromPixel(pointsIn.get(pointsIn.size()-1));
+                    p2 = getFramePointFromPixel(pointsOut.get(pointsOut.size()-1));
+                    g1.drawLine(FastMath.round(p1.x), FastMath.round(p1.y), FastMath.round(p2.x), FastMath.round(p2.y));
+                }
+            }
+        }
         
         //DIBUIX DINCO
         private void drawSolPoints(Graphics2D g1) {
-            Iterator<OrientSolucio> itrOS = patt2D.getSolucions().iterator();
-            while (itrOS.hasNext()) {
-                OrientSolucio os = itrOS.next();
-                if (os.isShowSol()) {
-                    // es mostra la solucio
-                    Iterator<PuntSolucio> itrS = os.getSol().iterator();
-                    while (itrS.hasNext()) {
-                        PuntSolucio s = itrS.next();
-                        g1.setPaint(s.getColorPunt());
-                        BasicStroke stroke = new BasicStroke(3.0f);
-                        g1.setStroke(stroke);
-                        Ellipse2D.Float e = ellipseToFrameCoords(s);
-                        //si estem a HKLindexing NO mostrem els punts que s'han assignat
-                        //provem de mostrar els actualitzats (els "clic")
-                        if(estaDincoWorkSol()){
-                        	if(s.getCoordXclic()>0){
-                        		float xe = s.getCoordXclic() - s.getMidaPunt()/2;
-                        		float ye = s.getCoordYclic() - s.getMidaPunt()/2;
-                        		Ellipse2D.Float el = new Ellipse2D.Float(xe,ye,s.getMidaPunt(),s.getMidaPunt());
-                        		e = ellipseToFrameCoords(el);
-                        		g1.setPaint(s.getColorPunt().darker().darker());
-                        	}
-                        }
-                        g1.draw(e);
-                        g1.fill(e);
-                        if (estaDincoShowHKL()){
-                            Font font = new Font("Dialog", Font.PLAIN,hklfontSize+1);
-//                            if(s.getOscil()>swinglim){
-//                                font = new Font("Dialog", Font.ITALIC,hklfontSize-1);
-//                            }
-                            g1.setFont(font);
-                            g1.setRenderingHint(
-                                    RenderingHints.KEY_TEXT_ANTIALIASING,
-                                    RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
-                            g1.drawString(s.getHKL(), e.x + (float) s.getWidth() * scalefit, e.y);
-                        }
+            //mostrem l'actiu nomes (canvi respecte el que teniem anteriorment que ciclavem, ara es mes facil de mantenir)
+//            OrientSolucio os = dincoFrame.getActiveOrientSol();
+//            Iterator<PuntSolucio> itrS = os.getSol().iterator();
+            //mosrem ELS SELCCIONATS
+            Object[] oos = dincoFrame.getActiveOrientSols();
+            if (oos == null) return;
+            for (int i=0;i<oos.length;i++){
+                OrientSolucio os = (OrientSolucio)oos[i];
+                Iterator<PuntSolucio> itrS = os.getSol().iterator();
+                while (itrS.hasNext()) {
+                    PuntSolucio s = itrS.next();
+                    g1.setPaint(s.getColorPunt());
+                    BasicStroke stroke = new BasicStroke(3.0f);
+                    g1.setStroke(stroke);
+                    Ellipse2D.Float e = ellipseToFrameCoords(s.getEllipseAsDrawingPoint());
+                    g1.draw(e);
+                    g1.fill(e);
+                    if (estaDincoShowHKL()){
+                        Font font = new Font("Dialog", Font.PLAIN,hklfontSize+1);
+//                        if(s.getOscil()>swinglim){
+//                            font = new Font("Dialog", Font.ITALIC,hklfontSize-1);
+//                        }
+                        g1.setFont(font);
+                        g1.setRenderingHint(
+                                RenderingHints.KEY_TEXT_ANTIALIASING,
+                                RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+                        g1.drawString(s.getHKL(), e.x + e.width, e.y);
                     }
                 }
             }
@@ -1763,7 +1757,8 @@ public class ImagePanel extends JPanel {
                 try {
                     subimage = getImage().getSubimage(rect.x, rect.y, rect.width, rect.height);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if (D2Dplot_global.isDebug())e.printStackTrace();
+                    log.warning("error getting the subImage");
                 }
                 // Rectangle r = g2.getClipBounds();
                 g2.drawImage(getSubimage(), FastMath.max(0, originX), FastMath.max(0, originY),
@@ -1781,16 +1776,17 @@ public class ImagePanel extends JPanel {
                 // nomes hauria d'haver-hi la possibilitat d'1 opcio, calibracio o zones excloses?
                 if (estaCalibrant()) {drawCalibrationC(g1);}
                 if (estaDefinintEXZ()) {drawExZones(g1);}
+                if (estaPeakSearch()) {drawPksearch(g1);}
                 
                 // nomes hauria d'haver-hi la possibilitat d'1 opcio, drawIndexing o drawHKLindexing
-                if (estaSelectPoints()&&!estaDincoWorkSol()) {drawPuntsEllipses(g1);}
+                if (estaSelectPoints()&&!estaDincoAddPeaks()) {drawPuntsEllipses(g1);}
                 
                 if (isShowQuickListCompoundRings() ){
-                    if (quickListCompound != null) drawPDCompoundRings(g1,quickListCompound,Color.green);
+                    if (quickListCompound != null) drawPDCompoundRings(g1,quickListCompound,colorQLcomp);
                 }
                 
                 if (isShowDBCompoundRings()){
-                    if (dbCompound != null)drawPDCompoundRings(g1,dbCompound,Color.cyan);    
+                    if (dbCompound != null)drawPDCompoundRings(g1,dbCompound,colorDBcomp);
                 }
 
                 g1.dispose();
@@ -1798,6 +1794,78 @@ public class ImagePanel extends JPanel {
                 
                 this.repaint();
             }
+        }
+
+        public Color getColorCallibEllipses() {
+            return colorCallibEllipses;
+        }
+
+        public void setColorCallibEllipses(Color colorCallibEllipses) {
+            this.colorCallibEllipses = colorCallibEllipses;
+        }
+
+        public Color getColorGuessPointsEllipses() {
+            return colorGuessPointsEllipses;
+        }
+
+        public void setColorGuessPointsEllipses(Color colorGuessPointsEllipses) {
+            this.colorGuessPointsEllipses = colorGuessPointsEllipses;
+        }
+
+        public Color getColorFittedEllipses() {
+            return colorFittedEllipses;
+        }
+
+        public void setColorFittedEllipses(Color colorFittedEllipses) {
+            this.colorFittedEllipses = colorFittedEllipses;
+        }
+
+        public Color getColorBoundariesEllipses() {
+            return colorBoundariesEllipses;
+        }
+
+        public void setColorBoundariesEllipses(Color colorBoundariesEllipses) {
+            this.colorBoundariesEllipses = colorBoundariesEllipses;
+        }
+
+        public Color getColorExcludedZones() {
+            return colorExcludedZones;
+        }
+
+        public void setColorExcludedZones(Color colorExcludedZones) {
+            this.colorExcludedZones = colorExcludedZones;
+        }
+
+        public Color getColorPeakSearch() {
+            return colorPeakSearch;
+        }
+
+        public void setColorPeakSearch(Color colorPeakSearch) {
+            this.colorPeakSearch = colorPeakSearch;
+        }
+
+        public Color getColorPeakSearchSelected() {
+            return colorPeakSearchSelected;
+        }
+
+        public void setColorPeakSearchSelected(Color colorPeakSearchSelected) {
+            this.colorPeakSearchSelected = colorPeakSearchSelected;
+        }
+
+        public Color getColorQLcomp() {
+            return colorQLcomp;
+        }
+
+        public void setColorQLcomp(Color colorQLcomp) {
+            this.colorQLcomp = colorQLcomp;
+        }
+
+        public Color getColorDBcomp() {
+            return colorDBcomp;
+        }
+
+        public void setColorDBcomp(Color colorDBcomp) {
+            this.colorDBcomp = colorDBcomp;
         }
     }
 }

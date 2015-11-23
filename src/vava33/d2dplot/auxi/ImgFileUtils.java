@@ -27,6 +27,8 @@ import java.util.Scanner;
 import javax.imageio.ImageIO;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -37,7 +39,6 @@ import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.MainFrame;
 
 public final class ImgFileUtils {
     private static VavaLogger log = D2Dplot_global.log;
@@ -106,9 +107,9 @@ public final class ImgFileUtils {
             byte[] buff = new byte[2];
             byte[] buff4 = new byte[4]; // real
             float scale = -1;
-            float centrX, centrY, pixlx, pixly, sepod, wl;
+            float centrX, centrY, pixlx, pixly, sepod, wl, omeIni, omeFin, acqTime;
             int dimX, dimY;
-            int dataHeaderBytes = 36; // bytes de dades en el header
+            int dataHeaderBytes = 48; // bytes de dades en el header
 
             // !FITXER BIN (23/05/2013):
             // !- Cap�alera fixa de 60 bytes. De moment hi ha 9 valors (la resta �s "buida"):
@@ -121,7 +122,6 @@ public final class ImgFileUtils {
             // ! Real*4 PIXLY
             // ! Real*4 DISTOD
             // ! Real*4 WAVEL
-            //TODO:
             // ! Real*4 OME/PHI ini (degrees)
             // ! Real*4 OME/PHI final (degrees)
             // ! REAL*4 ACQTIME
@@ -165,10 +165,21 @@ public final class ImgFileUtils {
             in.read(buff4);
             wl = FileUtils.B4toFloat(buff4);
 
+            in.read(buff4);
+            omeIni = FileUtils.B4toFloat(buff4);
+
+            in.read(buff4);
+            omeFin = FileUtils.B4toFloat(buff4);
+
+            in.read(buff4);
+            acqTime = FileUtils.B4toFloat(buff4);
+
             in.read(new byte[60 - dataHeaderBytes]);
 
             patt2D = new Pattern2D(dimX, dimY, centrX, centrY, 0, 999999999, scale, false);
             patt2D.setExpParam(pixlx, pixly, sepod, wl);
+            patt2D.setScanParameters(omeIni, omeFin, acqTime);
+            
             int count = 0;
 
             // el short arriba a 32,767... per tant maxI/scale=32767
@@ -222,7 +233,8 @@ public final class ImgFileUtils {
 
                 // calculem el factor d'escala
                 patt2D.setScale(patt2D.getMaxI() / (float)D2Dplot_global.satur32); //els bin tenen maxim 32
-
+                
+                in.close();
                 in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                            // buffer
                                                                            // lectura
@@ -248,7 +260,8 @@ public final class ImgFileUtils {
             patt2D.setMillis((float) ((end - start) / 1000000d));
             patt2D.setPixCount(count);
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error reading BIN");
             return null;
         }
         return patt2D; // tot correcte
@@ -326,7 +339,7 @@ public final class ImgFileUtils {
                 
                 //calculem el factor d'escala
                 patt2D.setScale((float)patt2D.getMaxI()/(float)D2Dplot_global.satur32);    
-
+                in.close();
                 in = new BufferedInputStream(new FileInputStream(d2File)); //reiniciem buffer lectura
                 in.read(buff); //dimx
                 in.read(buff); //dimy
@@ -352,7 +365,8 @@ public final class ImgFileUtils {
             patt2D.setMillis((float) ((end - start) / 1000000d));
             patt2D.setPixCount(count);
         }catch(Exception e){
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error reading BIN");
             return null;
         }
         return patt2D; //tot correcte
@@ -503,7 +517,8 @@ public final class ImgFileUtils {
             patt2D.setPixCount(count);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error reading GFRM");
         }
         // parametres instrumentals
         patt2D.setDistMD(distOD);
@@ -527,28 +542,28 @@ public final class ImgFileUtils {
             for (int i = 0; i < 50; i++) {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
-                    if (line.contains("HEADER_BYTES")) {
+                    if (FileUtils.containsIgnoreCase(line,"HEADER_BYTES")) {
                         headerSize = Integer.parseInt(line.substring(13, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("SIZE1")) {
+                    if (FileUtils.containsIgnoreCase(line,"SIZE1")) {
                         dimX = Integer.parseInt(line.substring(6, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("SIZE2")) {
+                    if (FileUtils.containsIgnoreCase(line,"SIZE2")) {
                         dimY = Integer.parseInt(line.substring(6, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("BEAM_CENTER_X")) {
+                    if (FileUtils.containsIgnoreCase(line,"BEAM_CENTER_X")) {
                         beamCX = Float.parseFloat(line.substring(14, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("BEAM_CENTER_Y")) {
+                    if (FileUtils.containsIgnoreCase(line,"BEAM_CENTER_Y")) {
                         beamCY = Float.parseFloat(line.substring(14, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("PIXEL_SIZE")) {
+                    if (FileUtils.containsIgnoreCase(line,"PIXEL_SIZE")) {
                         pixSize = Float.parseFloat(line.substring(11, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("DISTANCE")) {
+                    if (FileUtils.containsIgnoreCase(line,"DISTANCE")) {
                         distOD = Float.parseFloat(line.substring(9, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("WAVELENGTH")) {
+                    if (FileUtils.containsIgnoreCase(line,"WAVELENGTH")) {
                         wl = Float.parseFloat(line.substring(11, line.trim().length() - 1).trim());
                     }
                 }
@@ -593,7 +608,7 @@ public final class ImgFileUtils {
             // calculem el factor d'escala (valor maxim entre quocient i 1, mai
             // escalem per sobre)
             patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)D2Dplot_global.satur65, 1.000f));
-
+            in.close();
             in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                        // buffer
                                                                        // lectura
@@ -616,7 +631,8 @@ public final class ImgFileUtils {
             patt2D.setMillis((float) ((end - start) / 1000000d));
             patt2D.setPixCount(count);
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error reading IMG");
             return null;
         }
 
@@ -644,53 +660,58 @@ public final class ImgFileUtils {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
                     int iigual=line.indexOf("=")+1;
-                    if (line.contains("Size =")) {
+                    if (FileUtils.containsIgnoreCase(line,"Size =")) {
                         binSize = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("Dim_1")) {
+                    if (FileUtils.containsIgnoreCase(line,"Dim_1")) {
                         dimX = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("Dim_2")) {
+                    if (FileUtils.containsIgnoreCase(line,"Dim_2")) {
                         dimY = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("beam_center_x")) {
+                    if (FileUtils.containsIgnoreCase(line,"beam_center_x")) {
                         beamCX = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("beam_center_y")) {
+                    if (FileUtils.containsIgnoreCase(line,"beam_center_y")) {
                         beamCY = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("pixel_size_x") || line.contains("pixelsize_x")) {
+                    if (FileUtils.containsIgnoreCase(line,"pixel_size_x") || FileUtils.containsIgnoreCase(line,"pixelsize_x")) {
                         pixSizeX = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                         pixSizeX = pixSizeX/1000.f;
                     }
-                    if (line.contains("pixel_size_y") || line.contains("pixelsize_y")) {
+                    if (FileUtils.containsIgnoreCase(line,"pixel_size_y") || FileUtils.containsIgnoreCase(line,"pixelsize_y")) {
                         pixSizeY = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                         pixSizeY = pixSizeY/1000.f;
                     }
-                    if (line.contains("ref_distance")) {
+                    if (FileUtils.containsIgnoreCase(line,"ref_distance")) {
                         distOD = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
-                    if (line.contains("ref_wave")) {
+                    if (FileUtils.containsIgnoreCase(line,"ref_wave")) {
                         wl = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
                     }
                     
-                    //scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
-                    //scan_type = mar_ct (1.0,) ;
-                    if (line.contains("scan_type")) {
-                        String line2 = line.substring(iigual, line.trim().length() - 1).trim();
-                        if (line2.contains("mar_scan")){
-                            String[] values = line2.split(",");
-                            omeIni = Float.parseFloat(values[1]);
-                            omeFin = Float.parseFloat(values[2]);
-                            acqTime = Float.parseFloat(values[3].split("\\)")[0]);
-                        }
-                        if (line2.contains("mar_ct")){
-                            omeIni=0;
-                            omeFin=0;
-                            String[] values = line2.split(",");
-                            acqTime = Float.parseFloat(values[0].split("\\(")[0]);
-                        }
-                    }                    
+                    try{
+                        //scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
+                        //scan_type = mar_ct (1.0,) ;
+                        if (FileUtils.containsIgnoreCase(line,"scan_type")) {
+                            String line2 = line.substring(iigual, line.trim().length() - 1).trim();
+                            if (FileUtils.containsIgnoreCase(line2,"mar_scan")){
+                                String[] values = line2.split(",");
+                                omeIni = Float.parseFloat(values[1]);
+                                omeFin = Float.parseFloat(values[2]);
+                                acqTime = Float.parseFloat(values[3].split("\\)")[0]);
+                            }
+                            if (FileUtils.containsIgnoreCase(line2,"mar_ct")){
+                                omeIni=0;
+                                omeFin=0;
+                                String[] values = line2.split(",");
+                                acqTime = Float.parseFloat(values[0].split("\\(")[1]);
+                            }
+                        }                    
+                        
+                    }catch(Exception ex){
+                        log.warning("Could not read the scan type from image header");
+                    }
 
                 }
             }
@@ -762,7 +783,8 @@ public final class ImgFileUtils {
             patt2D.setMillis((float) ((end - start) / 1000000d));
             patt2D.setPixCount(count);
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error reading EDF");
             return null;
         }
 
@@ -795,49 +817,55 @@ public final class ImgFileUtils {
             for (int i = 0; i < 50; i++) {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
+                    if (line.trim().endsWith(";")){
+                        line = line.substring(0, line.trim().length()-1);
+                    }
                     int iigual=line.indexOf("=")+1;;
-                    if (line.contains("Size =")) {
-                        binSize = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    
+                    if (FileUtils.containsIgnoreCase(line,"DataSize")||FileUtils.containsIgnoreCase(line,"Size =")) { //"size =" for legacy
+                        binSize = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Dim_1")) {
-                        dimX = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Dim_1")) {
+                        dimX = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Dim_2")) {
-                        dimY = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Dim_2")) {
+                        dimY = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Beam_center_x")) {
-                        beamCX = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Beam_center_x")) {
+                        beamCX = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Beam_center_y")) {
-                        beamCY = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Beam_center_y")) {
+                        beamCY = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Pixelsize_x")) {
-                        pixSizeX = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Pixelsize_x")) {
+                        pixSizeX = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                         pixSizeX = pixSizeX/1000.f;
                     }
-                    if (line.contains("Pixelsize_y")) {
-                        pixSizeY = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Pixelsize_y")) {
+                        pixSizeY = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                         pixSizeY = pixSizeY/1000.f;
                     }
-                    if (line.contains("Ref_distance")) {
-                        distOD = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Ref_distance")) {
+                        distOD = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Ref_wave")) {
-                        wl = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Ref_wave")) {
+                        wl = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Det_tiltDeg")) {
-                        tilt = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Det_tiltDeg")) {
+                        tilt = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("Det_rotDeg")) {
-                        rot = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"Det_rotDeg")) {
+                        rot = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("EXZmarg")) {
-                        margin = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"EXZmarg")) {
+                        log.debug(line.substring(iigual, line.trim().length()));
+                        margin = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("EXZthres")) {
-                        thresh = Integer.parseInt(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"EXZthres")) {
+                        thresh = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if(line.trim().startsWith("EXZpol")){
+//                    if(line.trim().startsWith("EXZpol")){
+                    if(FileUtils.containsIgnoreCase(line,"EXZpol")){
                         String linia = line.substring(iigual, line.trim().length()).trim();
                         String[] values = linia.split("\\s+");
                         PolyExZone z = new PolyExZone(false);
@@ -851,14 +879,14 @@ public final class ImgFileUtils {
 //                    output.println("Scan_omegaFin = "+FileUtils.dfX_1.format(patt2D.getOmeFin())+" ;");
 //                    output.println("Scan_acqTime = "+FileUtils.dfX_1.format(patt2D.getAcqTime())+" ;");
                     
-                    if (line.contains("omegaIni")) {
-                        omeIni = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"omegaIni")) {
+                        omeIni = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("omegaFin")) {
-                        omeFin = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"omegaFin")) {
+                        omeFin = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
-                    if (line.contains("acqTime")) {
-                        acqTime = Float.parseFloat(line.substring(iigual, line.trim().length() - 1).trim());
+                    if (FileUtils.containsIgnoreCase(line,"acqTime")) {
+                        acqTime = Float.parseFloat(line.substring(iigual, line.trim().length()).trim());
                     }
                 }
             }
@@ -882,6 +910,8 @@ public final class ImgFileUtils {
             patt2D.setTiltDeg(tilt);
             patt2D.setRotDeg(rot);
             patt2D.setExZones(exzones);
+            patt2D.setExz_margin(margin);
+            patt2D.setExz_threshold(thresh);
             
             int count = 0;
             in.read(header);
@@ -935,7 +965,8 @@ public final class ImgFileUtils {
             patt2D.setMillis((float) ((end - start) / 1000000d));
             patt2D.setPixCount(count);
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error reading D2D");
             return null;
         }
 
@@ -947,6 +978,7 @@ public final class ImgFileUtils {
         
         return patt2D; // correcte
     }
+    
     
     // OBERTURA DELS DIFERENTS FORMATS DE DADES2D
     public static Pattern2D readPatternFile(File d2File) {
@@ -1011,7 +1043,7 @@ public final class ImgFileUtils {
         return patt2D;
     }
 
-    public static boolean writePatternFile(File d2File, Pattern2D patt2D){
+    public static File writePatternFile(File d2File, Pattern2D patt2D){
         // comprovem extensio
         log.debug(d2File.toString());
         String ext = FileUtils.getExtension(d2File).trim();
@@ -1025,56 +1057,31 @@ public final class ImgFileUtils {
             SupportedWriteExtensions s = (SupportedWriteExtensions)JOptionPane.showInputDialog(null, "Output format:", "Save File",
                     JOptionPane.PLAIN_MESSAGE, null, possibilities, possibilities[0]);
             if (s == null) {
-                return false;
+                return null;
             }
             format = s;
         }
         
+        File fout = null;
+        
         switch (format){
             case BIN:
-                writeBIN(d2File, patt2D);
+                fout = writeBIN(d2File, patt2D);
                 break;
             case EDF:
-                writeEDF(d2File, patt2D);
+                fout = writeEDF(d2File, patt2D);
                 break;
             case D2D:
-                writeD2D(d2File, patt2D);
+                fout = writeD2D(d2File, patt2D);
                 break;
             case IMG:
-                writeD2D(d2File, patt2D);
+                fout = writeIMG(d2File, patt2D);
                 break;
             default:
                 log.info("Unknown format to write");
-                return false;
+                return null;
         }
-        return true;
-                
-//        if (!ext.equalsIgnoreCase("bin") && !ext.equalsIgnoreCase("img") && !ext.equalsIgnoreCase("spr")
-//                && !ext.equalsIgnoreCase("gfrm")  && !ext.equalsIgnoreCase("edf")) {
-//            Object[] possibilities = { "BIN", "IMG", "SPR", "GFRM", "EDF" };
-//            String s = (String) JOptionPane.showInputDialog(null, "Input format:", "Open File",
-//                    JOptionPane.PLAIN_MESSAGE, null, possibilities, "BIN");
-//            if (s == null || s.length() < 3) {
-//                return null;
-//            }
-//            ext = s;
-//        }
-//
-//        if (ext.equalsIgnoreCase("BIN")) {
-//            if(isNewBIN(d2File)){
-//                patt2D = ImgFileUtils.openBinaryFile(d2File);    
-//            }else{
-//                patt2D = ImgFileUtils.openBinaryFileOLD(d2File);
-//                patt2D.oldBIN=true;
-//            }
-//        }
-//        if (ext.equalsIgnoreCase("IMG")) {
-//            patt2D = ImgFileUtils.openIMGfile(d2File);
-//        }
-//        if (ext.equalsIgnoreCase("SPR")) {
-//            patt2D = ImgFileUtils.openSPRfile(d2File);
-//        }
-        
+        return fout;
     }
     
     public static Pattern2D readSPR(File d2File) {
@@ -1143,7 +1150,8 @@ public final class ImgFileUtils {
             patt2D.setMillis((float) ((end - start) / 1000000d));
             patt2D.setPixCount(count);
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error reading SPR");
             return null;
         }
         return patt2D; // tot correcte
@@ -1163,7 +1171,7 @@ public final class ImgFileUtils {
         // Forcem extensio bin
         d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".bin"));
 
-        int dataHeaderBytes = 36; // bytes de dades en el header
+        int dataHeaderBytes = 48; // bytes de dades en el header
         OutputStream output = null;
         try {
             output = new BufferedOutputStream(new FileOutputStream(d2File));
@@ -1232,6 +1240,24 @@ public final class ImgFileUtils {
             bb.putFloat(patt2D.getWavel());
             output.write(bb.array());
             bb.clear();
+            
+            bb = ByteBuffer.allocate(4);
+            bb.order(ByteOrder.LITTLE_ENDIAN);
+            bb.putFloat(patt2D.getOmeIni());
+            output.write(bb.array());
+            bb.clear();
+            
+            bb = ByteBuffer.allocate(4);
+            bb.order(ByteOrder.LITTLE_ENDIAN);
+            bb.putFloat(patt2D.getOmeFin());
+            output.write(bb.array());
+            bb.clear();
+            
+            bb = ByteBuffer.allocate(4);
+            bb.order(ByteOrder.LITTLE_ENDIAN);
+            bb.putFloat(patt2D.getAcqTime());
+            output.write(bb.array());
+            bb.clear();
 
             output.write(new byte[60 - dataHeaderBytes]);
 
@@ -1243,7 +1269,7 @@ public final class ImgFileUtils {
                     if (patt2D.isInExZone(j, i)) {
                         bb.putShort((short) -1);
                     } else {
-                        if((patt2D.getY0toMask()==1)&&(patt2D.getInten(j, i)==0)){
+                        if((patt2D.getExz_threshold()==1)&&(patt2D.getInten(j, i)==0)){
                             bb.putShort((short) -1);
                         }else{
                             bb.putShort((short)patt2D.getInten(j, i));
@@ -1256,8 +1282,8 @@ public final class ImgFileUtils {
 
             output.close();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            log.info("(FileUtils)Error saving BIN file");
+            if(D2Dplot_global.isDebug())ex.printStackTrace();
+            log.warning("Error saving BIN file");
             return null;
         }
         return d2File;
@@ -1329,7 +1355,8 @@ public final class ImgFileUtils {
             os.close();
             
         }catch(Exception e){
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error saving EDF file");
             return null;
         }
         return d2File;
@@ -1383,7 +1410,8 @@ public final class ImgFileUtils {
             os.close();
             
         }catch(Exception e){
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error saving IMG file");
             return null;
         }
         return d2File;
@@ -1402,24 +1430,24 @@ public final class ImgFileUtils {
             PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(d2File)));
             // ESCRIBIM AL FITXER:
             output.println("{");
-            output.println("ByteOrder = LowByteFirst ;");
-            output.println("DataType = UnsignedShort ;");
-            output.println("Size = "+binSize+" ;");
-            output.println("Dim_1 = "+patt2D.getDimX()+" ;");
-            output.println("Dim_2 = "+patt2D.getDimY()+" ;");
-            output.println("Beam_center_x = "+FileUtils.dfX_2.format(patt2D.getCentrX())+" ;");
-            output.println("Beam_center_y = "+FileUtils.dfX_2.format(patt2D.getCentrY())+" ;");
-            output.println("Pixelsize_x = "+FileUtils.dfX_2.format(patt2D.getPixSx()*1000)+" ;");
-            output.println("Pixelsize_y = "+FileUtils.dfX_2.format(patt2D.getPixSy()*1000)+" ;");
-            output.println("Ref_distance = "+FileUtils.dfX_2.format(patt2D.getDistMD())+" ;");
-            output.println("Ref_wave = "+FileUtils.dfX_4.format(patt2D.getWavel())+" ;");
-            output.println("Det_tiltDeg = "+FileUtils.dfX_3.format(patt2D.getTiltDeg())+" ;");
-            output.println("Det_rotDeg = "+FileUtils.dfX_3.format(patt2D.getRotDeg())+" ;");
-            output.println("Scan_omegaIni = "+FileUtils.dfX_1.format(patt2D.getOmeIni())+" ;");
-            output.println("Scan_omegaFin = "+FileUtils.dfX_1.format(patt2D.getOmeFin())+" ;");
-            output.println("Scan_acqTime = "+FileUtils.dfX_1.format(patt2D.getAcqTime())+" ;");
-            output.println("EXZMargin="+ patt2D.getMargin());
-            output.println("EXZThreshold="+ patt2D.getY0toMask());
+            output.println("ByteOrder = LowByteFirst");
+            output.println("DataType = UnsignedShort");
+            output.println("DataSize = "+binSize);
+            output.println("Dim_1 = "+patt2D.getDimX());
+            output.println("Dim_2 = "+patt2D.getDimY());
+            output.println("Beam_center_x = "+FileUtils.dfX_2.format(patt2D.getCentrX()));
+            output.println("Beam_center_y = "+FileUtils.dfX_2.format(patt2D.getCentrY()));
+            output.println("Pixelsize_x = "+FileUtils.dfX_2.format(patt2D.getPixSx()*1000));
+            output.println("Pixelsize_y = "+FileUtils.dfX_2.format(patt2D.getPixSy()*1000));
+            output.println("Ref_distance = "+FileUtils.dfX_2.format(patt2D.getDistMD()));
+            output.println("Ref_wave = "+FileUtils.dfX_4.format(patt2D.getWavel()));
+            output.println("Det_tiltDeg = "+FileUtils.dfX_3.format(patt2D.getTiltDeg()));
+            output.println("Det_rotDeg = "+FileUtils.dfX_3.format(patt2D.getRotDeg()));
+            output.println("Scan_omegaIni = "+FileUtils.dfX_1.format(patt2D.getOmeIni()));
+            output.println("Scan_omegaFin = "+FileUtils.dfX_1.format(patt2D.getOmeFin()));
+            output.println("Scan_acqTime = "+FileUtils.dfX_1.format(patt2D.getAcqTime()));
+            output.println("EXZMargin ="+ patt2D.getExz_margin());
+            output.println("EXZThreshold ="+ patt2D.getExz_threshold());
             int polcount = 1;
             Iterator<PolyExZone> it = patt2D.getExZones().iterator();
             while (it.hasNext()) {
@@ -1428,7 +1456,7 @@ public final class ImgFileUtils {
                 for (int i=0;i<p.npoints;i++){
                     sb.append(p.getXYvertex(i)).append(" ");
                 }
-                output.println("EXZpol"+polcount+"=" + sb.toString().trim());
+                output.println("EXZpol"+polcount+" =" + sb.toString().trim());
                 polcount = polcount +1;
             }
             output.println("}");
@@ -1455,7 +1483,8 @@ public final class ImgFileUtils {
             os.close();
             
         }catch(Exception e){
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error saving D2D file");
             return null;
         }
         return d2File;
@@ -1470,7 +1499,8 @@ public final class ImgFileUtils {
                 ImageIO.write(i, "png", f);
                 return f;
             } catch (Exception e) {
-                e.printStackTrace();
+                if(D2Dplot_global.isDebug())e.printStackTrace();
+                log.warning("Error saving PNG file");
                 return null;
             }
         }
@@ -1497,7 +1527,8 @@ public final class ImgFileUtils {
             
             in.close();
         } catch (Exception e1) {
-            e1.printStackTrace();
+            if(D2Dplot_global.isDebug())e1.printStackTrace();
+            log.warning("Error in check newBIN");
         }
         
         //File size (bytes):
@@ -1511,7 +1542,8 @@ public final class ImgFileUtils {
             stream = url.openStream();
             bytes = stream.available();
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error in check newBIN");
         }
         if(bytes>limit){
             log.debug(bytes+" bytes --> format NOU");
@@ -1532,7 +1564,7 @@ public final class ImgFileUtils {
                   for (int i = 0; i < 50; i++) {
                       if (scD2file.hasNextLine()) {
                           String line = scD2file.nextLine();
-                          if (line.contains("HEADER_BYTES")) {
+                          if (FileUtils.containsIgnoreCase(line,"HEADER_BYTES")) {
                               headerSize = Integer.parseInt(line.substring(13, line.trim().length() - 1).trim());
                           }
                       }
@@ -1544,8 +1576,8 @@ public final class ImgFileUtils {
                   InputStream in = new BufferedInputStream(new FileInputStream(d2File));
                   byte[] buff = new byte[2];
                   byte[] header = new byte[headerSize];
-                  int maxI=0;
-                  int minI=99999999;
+//                  int maxI=0;
+//                  int minI=99999999;
                   in.read(header);
                   // Haurem de fer dues passades, una per determinar el maxI, minI i
                   // factor d'escala i l'altre per
@@ -1572,7 +1604,7 @@ public final class ImgFileUtils {
                   // calculem el factor d'escala (valor maxim entre quocient i 1, mai
                   // escalem per sobre)
                   patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float)D2Dplot_global.satur32, 1.000f));
-
+                  in.close();
                   in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
                                                                              // buffer
                                                                              // lectura
@@ -1596,7 +1628,8 @@ public final class ImgFileUtils {
 
                   in.close();
               } catch (Exception e) {
-                  e.printStackTrace();
+                  if(D2Dplot_global.isDebug())e.printStackTrace();
+                  log.warning("Error in rescale");
                   return false;
               }
           }else{
@@ -1630,8 +1663,8 @@ public final class ImgFileUtils {
             PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(exfile)));
             // ESCRIBIM AL FITXER:
             output.println("! Excluded zones file for: " + patt2D.getImgfileString());
-            output.println("EXZmargin="+ patt2D.getMargin());
-            output.println("EXZthreshold="+ patt2D.getY0toMask());
+            output.println("EXZmargin="+ patt2D.getExz_margin());
+            output.println("EXZthreshold="+ patt2D.getExz_threshold());
             int polcount = 1;
             Iterator<PolyExZone> it = patt2D.getExZones().iterator();
             while (it.hasNext()) {
@@ -1654,7 +1687,8 @@ public final class ImgFileUtils {
             output.close();
             
         } catch (IOException e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error writting EXZ file");
             return null;
         }
         return exfile;
@@ -1673,6 +1707,9 @@ public final class ImgFileUtils {
     	}
         if (!exfile.exists())
             return false;
+        
+        boolean readEXZ = FileUtils.YesNoDialog(null, "Excluded Zones file found. Read it?");
+        if (!readEXZ)return false;
         
         // aqui hauriem de tenir exfile ben assignada, la llegim
         String line;
@@ -1695,16 +1732,16 @@ public final class ImgFileUtils {
                 
                 int iigual=line.indexOf("=")+1;
                 
-                if(line.trim().startsWith("EXZmarg")){
-                    patt2D.setMargin(Integer.parseInt(line.substring(iigual, line.trim().length()).trim()));
+                if(FileUtils.containsIgnoreCase(line, "EXZmarg")){
+                    patt2D.setExz_margin(Integer.parseInt(line.substring(iigual, line.trim().length()).trim()));
                     continue;
                 }
-                if(line.trim().startsWith("EXZthres")){
+                if(FileUtils.containsIgnoreCase(line, "EXZthres")){
                     int yth = Integer.parseInt(line.substring(iigual, line.trim().length()).trim());
-                    patt2D.setY0toMask(yth);
+                    patt2D.setExz_threshold(yth);
                     continue;
                 }
-                if(line.trim().startsWith("EXZpol")){
+                if(FileUtils.containsIgnoreCase(line, "EXZpol")){
                     String linia = line.substring(iigual, line.trim().length()).trim();
                     String[] values = linia.split("\\s+");
                     PolyExZone z = new PolyExZone(false);
@@ -1712,12 +1749,15 @@ public final class ImgFileUtils {
                         //parelles x1 y1 x2 y2 .... que son els vertexs
                         z.addPoint(Integer.parseInt(values[i]), Integer.parseInt(values[i+1]));
                     }
-                    patt2D.addExZone(z);
+                    if (!patt2D.getExZones().contains(z)){ //NO REPETIM ZONES
+                        patt2D.addExZone(z);    
+                    }
                     continue;
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error reading EXZ file");            
             return false;
         }
         return true;
@@ -1747,7 +1787,7 @@ public final class ImgFileUtils {
                 String lineS[] = line.trim().split("\\s+");
                 patt2d.getSolucions()
                       .get(0)
-                      .addSolPoint(Float.parseFloat(lineS[0]), Float.parseFloat(lineS[1]),
+                      .addSolPoint(npunts, Float.parseFloat(lineS[0]), Float.parseFloat(lineS[1]),
                                 Integer.parseInt(lineS[4]), Integer.parseInt(lineS[5]),
                                 Integer.parseInt(lineS[6]), 1.0f,
                                 Float.parseFloat(lineS[2]));
@@ -1758,7 +1798,8 @@ public final class ImgFileUtils {
             patt2d.getSolucions().get(0).setNumReflexions(npunts);
             
         }catch(Exception e){
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error reading XDS file");
         }
         return xdsFile;
     }
@@ -1767,7 +1808,10 @@ public final class ImgFileUtils {
 
         String line;
         boolean endSol = false;
-
+        if (FileUtils.getExtension(solFile).equalsIgnoreCase("pxy")){
+            OrientSolucio.setPXY(true);
+        }
+        
         try {
             Scanner scSolfile = new Scanner(solFile);
             scSolfile.nextLine(); // number of solutions
@@ -1796,18 +1840,13 @@ public final class ImgFileUtils {
                     patt2d.getSolucions().get(i).setGrainNr(scSolfile.nextInt());
                     line = scSolfile.nextLine();
                     log.debug(scSolfile.nextLine());// CENTRE
-//                    scSolfile.nextLine();// CENTRE
                     patt2d.getSolucions().get(i).setNumReflexions(scSolfile.nextInt());
                     line = scSolfile.nextLine();
                     patt2d.getSolucions().get(i).setValorFrot(Float.parseFloat(line)); // valor funcio rotacio
-//                    log.debug(scSolfile.nextLine());
                     log.debug(patt2d.getSolucions().get(i).getNumReflexions()+" "+patt2d.getSolucions().get(i).getValorFrot());
                     log.debug(scSolfile.nextLine());// matriu Rot
                     log.debug(scSolfile.nextLine());// matriu Rot
                     log.debug(scSolfile.nextLine());// matriu Rot
-//                    scSolfile.nextLine();// matriu Rot
-//                    scSolfile.nextLine();// matriu Rot
-//                    scSolfile.nextLine();// matriu Rot
                     // ara comencen les reflexions
                     while (!endSol) {
                         if (!scSolfile.hasNextLine()) {
@@ -1826,12 +1865,14 @@ public final class ImgFileUtils {
                         String[] lineS = line.trim().split("\\s+");
                         patt2d.getSolucions()
                               .get(i)
-                              .addSolPoint(Float.parseFloat(lineS[1]), Float.parseFloat(lineS[2]),
+                              .addSolPoint(Integer.parseInt(lineS[0]), 
+                                        Float.parseFloat(lineS[1]), Float.parseFloat(lineS[2]),
                                         Integer.parseInt(lineS[3]), Integer.parseInt(lineS[4]),
                                         Integer.parseInt(lineS[5]), Float.parseFloat(lineS[6]),
                                         Float.parseFloat(lineS[7]));
                     }
                     patt2d.getSolucions().get(i).setNumReflexions(npunts);
+                    patt2d.getSolucions().get(i).renumberSOLpoints();
                 }
 
             } else { // cas d'un sol gra
@@ -1886,19 +1927,22 @@ public final class ImgFileUtils {
                             lineS = line.trim().split("\\s+");
                             patt2d.getSolucions()
                                   .get(i)
-                                  .addSolPoint(Float.parseFloat(lineS[1]), Float.parseFloat(lineS[2]),
+                                  .addSolPoint(Integer.parseInt(lineS[0]), 
+                                            Float.parseFloat(lineS[1]), Float.parseFloat(lineS[2]),
                                             Integer.parseInt(lineS[3]), Integer.parseInt(lineS[4]),
                                             Integer.parseInt(lineS[5]), Float.parseFloat(lineS[6]),
                                             Float.parseFloat(lineS[7]));
                         }
                         patt2d.getSolucions().get(i).setNumReflexions(npunts);
+                        patt2d.getSolucions().get(i).renumberSOLpoints();
                         i++;
                     }
                 }
             }
             scSolfile.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error reading SOL file");
         }
         return solFile;
     }    
@@ -1932,7 +1976,8 @@ public final class ImgFileUtils {
             }
             reader.close();
         }catch(Exception e){
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error reading LAT (internal) file");
             return null;
         }
         return pdc;
@@ -1966,7 +2011,8 @@ public final class ImgFileUtils {
             }
             reader.close();
         }catch(Exception e){
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error reading LAT file");
             return null;
         }
         return pdc;
@@ -1977,12 +2023,11 @@ public final class ImgFileUtils {
     public static class batchConvertFileWorker extends SwingWorker<Integer,Integer> {
 
         private File[] flist;
-        private boolean stop;
         LogJTextArea taOut;
         
+        //distMD & wavel -1 to take the ones from the original image, exzfile=null for the same.
         public batchConvertFileWorker(File[] files, LogJTextArea textAreaOutput) {
             this.flist = files;
-            this.stop = false;
             this.taOut = textAreaOutput;
         }
         
@@ -1998,6 +2043,48 @@ public final class ImgFileUtils {
                     JOptionPane.PLAIN_MESSAGE, null, possibilities, possibilities[0]);
             if (format == null) {
                 return -1;
+            }
+            
+            //preguntem si es volen canviar parametres instrumentals per defecte:
+            //PREGUNTEM HKL,FSTRUCT AND OSCIL?
+            JPanel myPanel = new JPanel();
+            JTextField txtDistMD = new JTextField(10);
+            JTextField txtWaveL = new JTextField(10);
+            txtDistMD.setText("StoD Distance");
+            txtWaveL.setText("Wavelength");
+            myPanel.add(txtDistMD);
+            myPanel.add(txtWaveL);
+            Object[] optionsW = {"Yes, apply these!","No, take from source images"};
+            JOptionPane.showOptionDialog(null, myPanel, "Apply Custom Distance and Wavelength?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, optionsW, optionsW[1]);
+            
+            //intentem treure els inputs:
+            float newDistMD=-1.f;
+            float newWavel=-1.f;
+            
+            try{
+                newDistMD = Float.parseFloat(txtDistMD.getText());    
+            }catch(Exception e){
+                log.info("Could not read sample-detector distance, using the ones from input files");
+            }
+            try{
+                newWavel = Float.parseFloat(txtWaveL.getText());  
+            }catch(Exception e){
+                log.info("Could not read wavelength, using the ones from input files");
+            }
+            
+            //ask for excluded zones files
+            File newExZfile = null;
+            Object[] options = {"Yes","No"};
+            int m = JOptionPane.showOptionDialog(null,
+                    "Apply an Excluded Zones file to all images?",
+                    "ExZ file",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null, //do not use a custom Icon
+                    options, //the titles of buttons
+                    options[1]); //default button title
+            if (m==JOptionPane.YES_OPTION){
+                newExZfile = FileUtils.fchooser(null,new File(D2Dplot_global.workdir), null, false);
             }
             
             //ara anem imatge per imatge a guardar-la (mateix nom, diferent extensio, preguntarem si overwrite)
@@ -2032,51 +2119,35 @@ public final class ImgFileUtils {
                     if (!owrite)continue;
                 }
                 
+                //mirem si s'han forçat alguns dels parametres instrumentals:
+                if (newDistMD > 0){
+                    in.setDistMD(newDistMD);
+                }
+                if (newWavel > 0){
+                    in.setWavel(newWavel);
+                }
+                
+                if (newExZfile != null){
+                    ImgFileUtils.readEXZ(in, newExZfile);
+                }
+                
                 //podem escriure fitxer out
                 File f = null;
-                switch (format){
-                    case BIN:
-                        f=ImgFileUtils.writeBIN(out, in);
-                        break;
-                    case D2D:
-                        f=ImgFileUtils.writeD2D(out, in);
-                        break;
-                    case EDF:
-                        f=ImgFileUtils.writeEDF(out, in);
-                        break;
-                    case IMG:
-                        f=ImgFileUtils.writeIMG(out, in);
-                        break;
-                    default:
-                        break;
-                    
-                }
+                
+                //provem d'escriure directament i que s'encarregui el metode write del format
+                
+                f = ImgFileUtils.writePatternFile(out, in);
                 
                 if (f != null) {
                     if (this.taOut!=null) taOut.stat(f.toString()+" written!");
                     log.info(f.toString()+" written!");
                 }else{
                     if (this.taOut!=null) taOut.stat("Error writting "+out.toString());
-                    log.info("Error writting "+out.toString());
+                    log.warning("Error writting "+out.toString());
                 }
             }
             this.setProgress(100);
             return 0;
         }
     }
-    
-    
-    
-    
-//    public void reopenIMG(File d2dfile, Pattern2D patt2D){
-//        //TODO
-        
-//        //fem que si es zona exclosa no el tingui en compte
-//        if(patt2D.isInExZone(j,i))continue;
-//        //fem que si es zona exclosa valdra -1
-//        if(patt2D.isInExZone(j,i)){
-//            patt2D.setIntenB2(j, i, (short)-1);
-//            continue;
-//        }
-//    }
 }

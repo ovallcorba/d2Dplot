@@ -10,18 +10,15 @@ import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import java.awt.GridBagLayout;
-import java.awt.GridBagConstraints;
-
 import com.vava33.jutils.FileUtils;
 
 import vava33.d2dplot.auxi.ImgFileUtils;
 import vava33.d2dplot.auxi.Pattern2D;
 
-import java.awt.Insets;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import net.miginfocom.swing.MigLayout;
 
 public class SimpleImageDialog extends JDialog {
 
@@ -45,32 +42,15 @@ public class SimpleImageDialog extends JDialog {
 		getContentPane().setLayout(new BorderLayout());
 		contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
 		getContentPane().add(contentPanel, BorderLayout.CENTER);
-		GridBagLayout gbl_contentPanel = new GridBagLayout();
-		gbl_contentPanel.columnWidths = new int[]{0, 0};
-		gbl_contentPanel.rowHeights = new int[]{0, 0};
-		gbl_contentPanel.columnWeights = new double[]{1.0, Double.MIN_VALUE};
-		gbl_contentPanel.rowWeights = new double[]{1.0, Double.MIN_VALUE};
-		contentPanel.setLayout(gbl_contentPanel);
+		contentPanel.setLayout(new MigLayout("insets 0", "[grow]", "[grow]"));
 		{
-			panel = new ImagePanel();
-			GridBagConstraints gbc_panel = new GridBagConstraints();
-			gbc_panel.fill = GridBagConstraints.BOTH;
-			gbc_panel.gridx = 0;
-			gbc_panel.gridy = 0;
-			contentPanel.add(panel, gbc_panel);
+			panel = new ImagePanel(true);
+			contentPanel.add(panel, "cell 0 0,grow");
 		}
 		{
 			JPanel buttonPane = new JPanel();
 			getContentPane().add(buttonPane, BorderLayout.SOUTH);
 			{
-				{
-					GridBagLayout gbl_buttonPane = new GridBagLayout();
-					gbl_buttonPane.columnWidths = new int[] {0, 0, 0, 0};
-					gbl_buttonPane.rowHeights = new int[]{25, 0};
-					gbl_buttonPane.columnWeights = new double[]{0.0, 1.0, 0.0, 0.0};
-					gbl_buttonPane.rowWeights = new double[]{0.0, Double.MIN_VALUE};
-					buttonPane.setLayout(gbl_buttonPane);
-				}
 				JButton btnSaveBin = new JButton("Save BIN");
 				btnSaveBin.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent e) {
@@ -84,12 +64,8 @@ public class SimpleImageDialog extends JDialog {
 							do_btnResetView_actionPerformed(e);
 						}
 					});
-					GridBagConstraints gbc_btnResetView = new GridBagConstraints();
-					gbc_btnResetView.anchor = GridBagConstraints.WEST;
-					gbc_btnResetView.insets = new Insets(5, 5, 5, 5);
-					gbc_btnResetView.gridx = 0;
-					gbc_btnResetView.gridy = 0;
-					buttonPane.add(btnResetView, gbc_btnResetView);
+					buttonPane.setLayout(new MigLayout("", "[][][grow][]", "[25px]"));
+					buttonPane.add(btnResetView, "cell 0 0,alignx left,aligny center");
 				}
 				{
 					JButton btnTrueSize = new JButton("True Size");
@@ -98,19 +74,9 @@ public class SimpleImageDialog extends JDialog {
 							do_btnTrueSize_actionPerformed(e);
 						}
 					});
-					GridBagConstraints gbc_btnTrueSize = new GridBagConstraints();
-					gbc_btnTrueSize.anchor = GridBagConstraints.WEST;
-					gbc_btnTrueSize.insets = new Insets(5, 0, 5, 5);
-					gbc_btnTrueSize.gridx = 1;
-					gbc_btnTrueSize.gridy = 0;
-					buttonPane.add(btnTrueSize, gbc_btnTrueSize);
+					buttonPane.add(btnTrueSize, "cell 1 0,alignx left,aligny center");
 				}
-				GridBagConstraints gbc_btnSaveBin = new GridBagConstraints();
-				gbc_btnSaveBin.anchor = GridBagConstraints.NORTHWEST;
-				gbc_btnSaveBin.insets = new Insets(5, 0, 5, 5);
-				gbc_btnSaveBin.gridx = 2;
-				gbc_btnSaveBin.gridy = 0;
-				buttonPane.add(btnSaveBin, gbc_btnSaveBin);
+				buttonPane.add(btnSaveBin, "cell 2 0,alignx right,aligny top");
 			}
 			JButton cancelButton = new JButton("Close");
 			cancelButton.addActionListener(new ActionListener() {
@@ -119,12 +85,7 @@ public class SimpleImageDialog extends JDialog {
 				}
 			});
 			cancelButton.setActionCommand("Cancel");
-			GridBagConstraints gbc_cancelButton = new GridBagConstraints();
-			gbc_cancelButton.insets = new Insets(5, 0, 5, 5);
-			gbc_cancelButton.anchor = GridBagConstraints.NORTHWEST;
-			gbc_cancelButton.gridx = 3;
-			gbc_cancelButton.gridy = 0;
-			buttonPane.add(cancelButton, gbc_cancelButton);
+			buttonPane.add(cancelButton, "cell 3 0,alignx left,aligny top");
 		}
 		
 		this.patt2D=patt;
@@ -135,7 +96,7 @@ public class SimpleImageDialog extends JDialog {
 	}
 	protected void do_btnSaveBin_actionPerformed(ActionEvent e) {
     	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin)", "bin")};
-    	File fsave = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
+    	File fsave = FileUtils.fchooser(this,new File(MainFrame.getWorkdir()), filter, true);
     	if (fsave == null)return;
     	fsave = ImgFileUtils.writeBIN(fsave, this.patt2D);
     	this.patt2D.setImgfile(fsave);

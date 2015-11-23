@@ -44,13 +44,6 @@ public class PDSearchResult implements Comparable<PDSearchResult>{
         if (diff < 0) return -1;
         return 0;
     }
-//    public int compareTo(PDSearchResult arg0) {
-//        float comparedR = arg0.getResidual();
-//        float diff = this.residual_positions - comparedR;
-//        if (diff > 0) return 1;
-//        if (diff < 0) return -1;
-//        return 0;
-//    }
 
     public static float getMinDSPin() {
         return minDSPin;

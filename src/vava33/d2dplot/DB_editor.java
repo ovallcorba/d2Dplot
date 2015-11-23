@@ -2,6 +2,7 @@ package vava33.d2dplot;
 
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -13,14 +14,22 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTextArea;
 
+import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.VavaLogger;
+
+import vava33.d2dplot.auxi.ImgOps;
 import vava33.d2dplot.auxi.PDCompound;
 import vava33.d2dplot.auxi.PDDatabase;
 import vava33.d2dplot.auxi.PDReflection;
 
+import java.awt.Toolkit;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Scanner;
 
 public class DB_editor extends JDialog {
 
@@ -41,14 +50,17 @@ public class DB_editor extends JDialog {
     private boolean editingExisting = false;
     private PDCompound comp;
     private DB_dialog DBdialog;
+    private static VavaLogger log = D2Dplot_global.log;
 
     /**
      * Create the frame.
      */
     public DB_editor(PDCompound c, DB_dialog parent) {
+        setTitle("DB compound editor");
         this.setComp(c);
         this.setDBdialog(parent);
-        
+        setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource("/img/Icona.png")));
+
         setBounds(100, 100, 699, 529);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -127,13 +139,15 @@ public class DB_editor extends JDialog {
         
         JPanel panel_3 = new JPanel();
         contentPane.add(panel_3, "cell 0 1,grow");
-        panel_3.setLayout(new MigLayout("", "[][]", "[]"));
-        
-        JButton btnImportFile = new JButton("import File");
-        panel_3.add(btnImportFile, "flowx,cell 0 0");
+        panel_3.setLayout(new MigLayout("", "[]", "[]"));
         
         JButton btnImportHkl = new JButton("import HKL");
-        panel_3.add(btnImportHkl, "cell 1 0");
+        btnImportHkl.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnImportHkl_actionPerformed(e);
+            }
+        });
+        panel_3.add(btnImportHkl, "cell 0 0");
         
         JPanel panel_2 = new JPanel();
         contentPane.add(panel_2, "cell 0 2,grow");
@@ -214,7 +228,7 @@ public class DB_editor extends JDialog {
             beta = Float.parseFloat(cellp[4]);
             gamma = Float.parseFloat(cellp[5]);
         }catch(Exception e){
-            e.printStackTrace();
+            if (D2Dplot_global.isDebug())e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error parsing cell parameters, should be: a b c alpha beta gamma");
             return;
         }
@@ -224,7 +238,7 @@ public class DB_editor extends JDialog {
         }
         
         String[] hkl_lines = textAreaDsp.getText().trim().split("\\n");
-        System.out.println(Arrays.toString(hkl_lines));
+        log.debug(Arrays.toString(hkl_lines));
         ArrayList<PDReflection> pdref = new ArrayList<PDReflection>();
         //CHECK CONSISTENCY HKL
         for (int i=0;i<hkl_lines.length;i++){
@@ -234,7 +248,7 @@ public class DB_editor extends JDialog {
                 return;
             }else{
                 try{
-                    System.out.println(Arrays.toString(line));
+                    log.debug(Arrays.toString(line));
                     int h = Integer.parseInt(line[0]);
                     int k = Integer.parseInt(line[1]);
                     int l = Integer.parseInt(line[2]);
@@ -368,5 +382,82 @@ public class DB_editor extends JDialog {
     public void setDBdialog(DB_dialog dBdialog) {
         DBdialog = dBdialog;
     }
+
+    protected void do_btnImportHkl_actionPerformed(ActionEvent e) {
+        //lines like this:
+        //0  -1  -1  26042. 547.139   1
+        FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("HKL file", "hkl", "HKL")};
+        File hklfile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.workdir), filter, 0);
+        if(hklfile==null)return;
+        D2Dplot_global.setWorkdir(hklfile);
+        
+        String cell = txtCell.getText().trim();
+        String[] cellp = cell.split("\\s+");
+        float a,b,c,alfa,beta,gamma;
+        try{
+            a = Float.parseFloat(cellp[0]);
+            b = Float.parseFloat(cellp[1]);
+            c = Float.parseFloat(cellp[2]);
+            alfa = Float.parseFloat(cellp[3]);
+            beta = Float.parseFloat(cellp[4]);
+            gamma = Float.parseFloat(cellp[5]);
+        }catch(Exception ex){
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Cell parameters needed (a b c alpha beta gamma) to parse hkl file");
+            return;
+        }
+        
+        Scanner shkl;
+        ArrayList<PDReflection> refs = new ArrayList<PDReflection>();
+        try {
+            shkl = new Scanner(hklfile);
+            while (shkl.hasNextLine()){
+                String line = shkl.nextLine();
+                String[] values = line.split("\\s+");
+                try{
+                    int h = Integer.parseInt(values[0]);
+                    int k = Integer.parseInt(values[1]);
+                    int l = Integer.parseInt(values[2]);
+                    float inten = Integer.parseInt(values[3]);
+                    refs.add(new PDReflection(h,k,l,-1,inten));
+                }catch(Exception ex2){
+                    if (D2Dplot_global.isDebug())ex2.printStackTrace();
+                    log.warning("error parsing values");
+                }
+            }
+            ImgOps.getDspacingFromHKL(refs, a, b, c, alfa, beta, gamma);
+            shkl.close();
+        } catch (Exception ex) {
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            log.warning("error reading file");
+        }
+        
+        if (refs.size()==0){
+            log.warning("no reflections found");
+            return;
+        }
+        
+        //calculem el factor de normalitzacio de les intensitats a 100
+        Iterator<PDReflection> itrr = refs.iterator();
+        float maxInten = -1;
+        while (itrr.hasNext()){
+            PDReflection p = itrr.next();
+            Float pinten = p.getInten();
+            if(pinten>maxInten){
+                maxInten = pinten;
+            }
+        }
+        float factor = 100/maxInten;
+        
+        //Ara ja escribim al textarea
+        textAreaDsp.setText("");
+        itrr = refs.iterator();
+        while (itrr.hasNext()){
+            PDReflection p = itrr.next();
+            textAreaDsp.append(String.format("%4d %4d %4d %8.4f %8.2f\n", p.getH(),p.getK(),p.getL(),p.getDsp(),p.getInten()*factor));
+        }
+    }
+    
+    
 
 }

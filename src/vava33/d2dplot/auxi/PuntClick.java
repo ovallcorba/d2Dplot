@@ -7,7 +7,7 @@ import java.util.Locale;
 
 import org.apache.commons.math3.util.FastMath;
 
-public class PuntCercle implements Comparable<PuntCercle>{
+public class PuntClick implements Comparable<PuntClick>{
 
     private static Color colorCercle = Color.red;
     private static Color colorPunt = Color.green;
@@ -15,18 +15,20 @@ public class PuntCercle implements Comparable<PuntCercle>{
 
     public static Color getColorCercle() {return colorCercle;}
     public static Color getColorPunt() {return colorPunt;}
-    public static void setColorCercle(Color colorCercle) {PuntCercle.colorCercle = colorCercle;}
-    public static void setColorPunt(Color colorPunt) {PuntCercle.colorPunt = colorPunt;}
+    public static void setColorCercle(Color colorCercle) {PuntClick.colorCercle = colorCercle;}
+    public static void setColorPunt(Color colorPunt) {PuntClick.colorPunt = colorPunt;}
+    public static int getMidaPunt() {return midaPunt;}
+    public static void setMidaPunt(int midaPunt) {PuntClick.midaPunt = midaPunt;}
     
-//    private Ellipse2D.Float cercle;
     int intensity;
     private Ellipse2D.Float punt;
     private EllipsePars ellipse;
     double t2rad; // angle 2 theta en RADIANTS
     float px, py; // coordenades del pixel
+    private Pattern2D whereIBelong;
     
     // tota la informacio junta
-    public PuntCercle(Point2D.Float p, Pattern2D patt2D, float t2rad, int inten) {
+    public PuntClick(Point2D.Float p, Pattern2D patt2D, float t2rad, int inten) {
         // p es el punt clicat ja passat a pixels, afegirem un "punt" (centrant
         // una esfera petita d'aresta Xpx)
         // la mida punt es pot fer interactiva mes endavant si es vol
@@ -36,11 +38,8 @@ public class PuntCercle implements Comparable<PuntCercle>{
         setEllipse(ImgOps.getElliPars(patt2D, p));
         this.t2rad = t2rad;
         this.intensity = inten;
+        this.whereIBelong=patt2D;
     }
-
-//    public Ellipse2D.Float getCercle() {
-//        return cercle;
-//    }
 
     public Ellipse2D.Float getPunt() {
         return punt;
@@ -55,8 +54,9 @@ public class PuntCercle implements Comparable<PuntCercle>{
     }
 
     // recalcula el cercle (en cas que es canvii el centre)
-    public void recalcular(float xCentre, float yCentre, double angle) {
-
+    public void recalcularEllipse() {
+        setEllipse(ImgOps.getElliPars(this.whereIBelong, new Point2D.Float(this.px,this.py)));
+    }
 
     public void setPunt(Ellipse2D.Float punt) {
         this.punt = punt;
@@ -86,7 +86,7 @@ public class PuntCercle implements Comparable<PuntCercle>{
         return linia;
     }
     @Override
-    public int compareTo(PuntCercle o) {
+    public int compareTo(PuntClick o) {
         // compareTo should return < 0 if this is supposed to be
         // less than other, > 0 if this is supposed to be greater than 
         // other and 0 if they are supposed to be equal
@@ -95,7 +95,6 @@ public class PuntCercle implements Comparable<PuntCercle>{
         }
         return -1;
     }
-    
 
     public EllipsePars getEllipse() {
         return ellipse;
@@ -103,6 +102,4 @@ public class PuntCercle implements Comparable<PuntCercle>{
     public void setEllipse(EllipsePars ellipse) {
         this.ellipse = ellipse;
     }
-    
-    
 }

@@ -5,7 +5,7 @@ import java.awt.geom.Point2D;
 
 import org.apache.commons.math3.util.FastMath;
 
-public class PolyExZone extends Polygon {
+public class PolyExZone extends Polygon{
 
     /**
      * 
@@ -79,5 +79,16 @@ public class PolyExZone extends Polygon {
          }
       }
       return result;
+    }
+
+    @Override
+    public boolean equals(Object object)
+    {
+        if (object != null && object instanceof PolyExZone)
+        {
+            if (this.getBounds().equals(((PolyExZone)object).getBounds())) return true;
+        }
+
+        return false;
     }
 }

@@ -9,19 +9,17 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
 
-import javax.swing.filechooser.FileNameExtensionFilter;
-
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.d2dplot.MainFrame;
-
-import com.vava33.jutils.FileUtils;
+import vava33.d2dplot.D2Dplot_global;
+import com.vava33.jutils.VavaLogger;
 
 public class Pattern1D {
 	float t2i,t2f;
 	float step; //stepsize
 	ArrayList<PointPatt1D> points;
-	
+	private static VavaLogger log = D2Dplot_global.log;
+
 	public class PointPatt1D{
 		int counts;
 		int npix;
@@ -63,18 +61,6 @@ public class Pattern1D {
 			this.points.add(new PointPatt1D(t2p));
 			t2p=t2p+stepsize;
 		}
-		
-		
-//		while(t2p<=t2fin){
-//			this.points.add(new PointPatt1D(t2p));
-//			t2p=t2p+stepsize;
-//		}
-		
-//		Iterator<PointPatt1D> it = this.points.iterator();
-//		while (it.hasNext()){
-//			PointPatt1D pp = it.next();
-//			pp = new PointPatt1D();
-//		}
 	}
 	
 	//afegeix un punt a una posicio concreta del vector (sobreescriu el que hi ha)
@@ -94,13 +80,7 @@ public class Pattern1D {
 
 	//escriu fitxer xy (si fileout==null pregunta on guardar)
 	public void writeXY(File fileout, String title){
-		if(fileout==null){
-			FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("Data file (2T I ESD)","dat","xy")};
-			fileout = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
-		}
-		if(!FileUtils.getExtension(fileout).equalsIgnoreCase("dat")||!FileUtils.getExtension(fileout).equalsIgnoreCase("xy")){
-			fileout = FileUtils.canviExtensio(fileout, "dat");	
-		}
+       if(fileout==null)return;
 		//Escriure fitxer format xy
         try {
             PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(fileout)));
@@ -118,19 +98,14 @@ public class Pattern1D {
             output.close();
             
         } catch (IOException e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error writting xy file");
         }
 	}
 	
     //escriu fitxer xy (si fileout==null pregunta on guardar)
     public void writeXYnorm(File fileout, String title){
-        if(fileout==null){
-            FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("Data file (2T I ESD)","dat","xy")};
-            fileout = FileUtils.fchooser(new File(MainFrame.getWorkdir()), filter, true);
-        }
-        if(!FileUtils.getExtension(fileout).equalsIgnoreCase("dat")||!FileUtils.getExtension(fileout).equalsIgnoreCase("xy")){
-            fileout = FileUtils.canviExtensio(fileout, "dat");  
-        }
+        if(fileout==null)return;
         //Escriure fitxer format xy
         try {
             PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(fileout)));
@@ -149,7 +124,8 @@ public class Pattern1D {
             output.close();
             
         } catch (IOException e) {
-            e.printStackTrace();
+            if(D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("error writting xy file");
         }
     }
 	

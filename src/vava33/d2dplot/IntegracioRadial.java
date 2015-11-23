@@ -6,6 +6,7 @@ import java.awt.Toolkit;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -30,9 +31,9 @@ import vava33.d2dplot.auxi.Pattern1D;
 import vava33.d2dplot.auxi.Pattern2D;
 import vava33.d2dplot.auxi.Pattern1D.PointPatt1D;
 
-import java.awt.GridBagLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.io.File;
 import java.util.Iterator;
 
 import javax.swing.JCheckBox;
@@ -71,7 +72,7 @@ public class IntegracioRadial extends JFrame {
 	 */
 	public IntegracioRadial(Pattern2D patt) {
 		this.patt2D=patt;
-		setTitle("Radial Integration (ON DEVELOPEMENT, USE WITH CAUTION)");
+		setTitle("Radial Integration");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 726, 456);
         setIconImage(Toolkit.getDefaultToolkit().getImage(Help_dialog.class.getResource("/img/Icona.png")));
@@ -84,7 +85,6 @@ public class IntegracioRadial extends JFrame {
 		contentPane.add(lbltini, "cell 0 0,alignx right");
 		
 		txt_2ti = new JTextField();
-		txt_2ti.setBackground(Color.WHITE);
 		txt_2ti.setText("1.0");
 		contentPane.add(txt_2ti, "cell 1 0,alignx left");
 		txt_2ti.setColumns(10);
@@ -113,7 +113,6 @@ public class IntegracioRadial extends JFrame {
 		contentPane.add(lblStep, "cell 0 1,alignx right");
 		
 		txt_step = new JTextField();
-		txt_step.setBackground(Color.WHITE);
 		txt_step.setText("0.01");
 		contentPane.add(txt_step, "cell 1 1,alignx left");
 		txt_step.setColumns(10);
@@ -142,14 +141,12 @@ public class IntegracioRadial extends JFrame {
 		contentPane.add(lbltfin, "cell 0 2,alignx right");
 		
 		txt_2tf = new JTextField();
-		txt_2tf.setBackground(Color.WHITE);
 		txt_2tf.setText("40.0");
 		contentPane.add(txt_2tf, "cell 1 2,alignx left");
 		txt_2tf.setColumns(10);
 		txt_2tf.setText(FileUtils.dfX_2.format(patt2D.getMax2TdegCircle()));
 		
 		chckbxCorrlp = new JCheckBox("LP correction");
-		chckbxCorrlp.setEnabled(false);
 		contentPane.add(chckbxCorrlp, "cell 4 2");
 		
 		chartPanel = new ChartPanel((JFreeChart) null);
@@ -159,12 +156,6 @@ public class IntegracioRadial extends JFrame {
 		chartPanel.setMaximumDrawHeight(1800);
 		chartPanel.setHorizontalAxisTrace(true);
 		contentPane.add(chartPanel, "cell 0 3 6 1,grow");
-		GridBagLayout gbl_chartPanel = new GridBagLayout();
-		gbl_chartPanel.columnWidths = new int[]{0};
-		gbl_chartPanel.rowHeights = new int[]{0};
-		gbl_chartPanel.columnWeights = new double[]{Double.MIN_VALUE};
-		gbl_chartPanel.rowWeights = new double[]{Double.MIN_VALUE};
-		chartPanel.setLayout(gbl_chartPanel);
 		
 		double optstep = FastMath.atan(patt.getPixSx()/patt.getDistMD());
         txt_step.setText(FileUtils.dfX_3.format(FastMath.toDegrees(optstep)));
@@ -185,7 +176,7 @@ public class IntegracioRadial extends JFrame {
         Iterator<PointPatt1D> itp = p.getPoints().iterator();
         while(itp.hasNext()){
         	PointPatt1D point = itp.next();
-//        	VavaLogger.LOG.info(point.getT2()+","+point.getCounts());
+            log.fine(point.getT2()+","+point.getCounts());
         	if(norm){
         	    pattplot.add(point.getT2(),(float)point.getCounts()/(float)point.getNpix());
         	}else{
@@ -193,12 +184,6 @@ public class IntegracioRadial extends JFrame {
         	}
         }
         
-//        pattplot.add(0,0);
-//        pattplot.add(1,1);
-//        pattplot.add(2,2);
-//        pattplot.add(3,3);
-//        pattplot.add(4,4);
-//        pattplot.add(5,5);
         dataset.addSeries(pattplot);
         
         // Generate the graph
@@ -222,7 +207,15 @@ public class IntegracioRadial extends JFrame {
     
 	protected void do_btn_save_actionPerformed(ActionEvent arg0) {
 		if(patt1D!=null){
-			patt1D.writeXYnorm(null,patt2D.getImgfile().toString());
+		    File fileout;
+            FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("Data file (2T I ESD)","dat","xy")};
+	        fileout = FileUtils.fchooser(null,new File(MainFrame.getWorkdir()), filter, true);
+	        if(!FileUtils.getExtension(fileout).equalsIgnoreCase("dat")||!FileUtils.getExtension(fileout).equalsIgnoreCase("xy")){
+	            fileout = FileUtils.canviExtensio(fileout, "dat");  
+	        }
+		    if (fileout!=null){
+	            patt1D.writeXYnorm(fileout,patt2D.getImgfile().toString());		        
+		    }
 		}
 	}
 	
@@ -237,7 +230,7 @@ public class IntegracioRadial extends JFrame {
             t2fin=Float.parseFloat(txt_2tf.getText());
             stepsize=Float.parseFloat(txt_step.getText());
         }catch(Exception e){
-            e.printStackTrace();
+            if (D2Dplot_global.isDebug())e.printStackTrace();
             JOptionPane.showMessageDialog(this,
                     "Check input angles and step",
                     "Incorrect values",
@@ -269,7 +262,7 @@ public class IntegracioRadial extends JFrame {
             boolean corrInAng = chckbxCorriang.isSelected();
             this.patt1D = ImgOps.radialIntegration(patt2D, t2ini, t2fin,stepsize, cakein, cakeout,usetilt,corrLP,corrInAng);    
         }catch(Exception e){
-            log.info("Error during radial integration");
+            log.warning("Error during radial integration");
         }
         
         this.plotPattern(patt1D,true);

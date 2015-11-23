@@ -1,12 +1,4 @@
 package vava33.d2dplot;
-/*
- * TODO:
- *  - Nicer list compounds, results...  DONE!
- *  - Search taking into account number of peaks, intensities, etc..  DONE!
- *  - Search by name  -- DONE FILTER
- *  - Search by 1D pattern
- */
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -28,7 +20,6 @@ import java.util.Iterator;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -50,25 +41,21 @@ import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 import vava33.d2dplot.auxi.FilteredListModel;
-import vava33.d2dplot.auxi.ImgOps;
 import vava33.d2dplot.auxi.PDCompound;
 import vava33.d2dplot.auxi.PDDatabase;
 import vava33.d2dplot.auxi.PDSearchResult;
 import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.auxi.PuntCercle;
-
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.JProgressBar;
-
-import org.apache.commons.math3.util.FastMath;
 
 import net.miginfocom.swing.MigLayout;
 
 public class DB_dialog extends JFrame {
 
     private static final long serialVersionUID = -6104927797410689910L;
-    static final float minDspacingToSearch = 1.15f;
+    private static float minDspacingToSearch = 1.15f;
+    private static final int maxNsol = 50;
 
     private JButton btnLoadDB;
     private JCheckBox cbox_onTop;
@@ -94,14 +81,12 @@ public class DB_dialog extends JFrame {
     private PDDatabase.openDBfileWorker openDBFwk;
     private PDDatabase.saveDBfileWorker saveDBFwk;
     private PDDatabase.searchDBWorker searchDBwk;
-    private JButton btnTestclosest;
     private JButton btnSearchByPeaks;
     private JCheckBox chckbxIntensityInfo;
     private JCheckBox chckbxNameFilter;
     private JTextField txtNamefilter;
     private JCheckBox chckbxNpksInfo;
     
-    private int maxNsol = 50;
     private JButton btnResetSearch;
     private JButton btnSaveDb;
     private JLabel lblHeader;
@@ -190,8 +175,6 @@ public class DB_dialog extends JFrame {
                                         }
                                         this.lblHelp = new JLabel("?");
                                         panel.add(lblHelp, "cell 4 1,alignx right,aligny center");
-                                        lblHelp.setEnabled(false);
-                                        lblHelp.setVisible(false);
                                         this.lblHelp.addMouseListener(new MouseAdapter() {
                                             @Override
                                             public void mouseEntered(MouseEvent e) {
@@ -305,7 +288,7 @@ public class DB_dialog extends JFrame {
                 this.panel_right = new JPanel();
                 this.panel_right.setBackground(Color.BLACK);
                 this.splitPane.setRightComponent(this.panel_right);
-                panel_right.setLayout(new MigLayout("fill, insets 0", "[grow]", "[grow]"));
+                panel_right.setLayout(new MigLayout("fill, insets 5", "[grow]", "[grow]"));
                 {
                     this.scrollPane_1 = new JScrollPane();
                     scrollPane_1.setViewportBorder(null);
@@ -333,16 +316,7 @@ public class DB_dialog extends JFrame {
                 }
             });
             {
-                btnTestclosest = new JButton("testClosest");
-                btnTestclosest.setVisible(false);
                 buttonPane.setLayout(new MigLayout("fill, insets 0", "[][]", "[]"));
-                btnTestclosest.setEnabled(false);
-                buttonPane.add(btnTestclosest, "cell 0 0,alignx center,aligny center");
-                btnTestclosest.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent arg0) {
-                        do_btnTestclosest_actionPerformed(arg0);
-                    }
-                });
             }
             okButton.setActionCommand("OK");
             buttonPane.add(okButton, "cell 1 0,alignx right,aligny center");
@@ -437,16 +411,13 @@ public class DB_dialog extends JFrame {
             }
             if (n != JOptionPane.YES_OPTION) {
                 //Carrega un fitxer de base de dades
-                JFileChooser fileChooser = new JFileChooser();
-                FileNameExtensionFilter filter = new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat");
-                fileChooser.addChoosableFileFilter(filter);
-                fileChooser.setCurrentDirectory(new File(MainFrame.getWorkdir()));
-                int selection = fileChooser.showOpenDialog(null);
-                if (selection != JFileChooser.APPROVE_OPTION) {
+                FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat")};
+                DBFile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+                if(DBFile==null){
                     tAOut.stat("No data file selected");
                     return;
                 }
-                DBFile = fileChooser.getSelectedFile();
+                D2Dplot_global.setWorkdir(DBFile);
             }
         }
         
@@ -510,43 +481,27 @@ public class DB_dialog extends JFrame {
         lblHelp.setForeground(Color.black);
     }
 
-    //TODO: HELP
     protected void do_lbllist_mouseReleased(MouseEvent e) {
         tAOut.ln("");
-        tAOut.ln("** PDDatabase HELP **");
+        tAOut.ln("** General help **");
+        tAOut.ln(" - Click on a compound to see the rings on the image (if ShowRings is selected)");
+        tAOut.ln(" - Check apply name filter and type to find the desired compound");
+        tAOut.ln(" - Add/Edit compounds by clicking the respective buttons and filling the info. Alternatively you can edit manually the DB file "
+                + "(which is a simple self-explanatory text file)");
+        tAOut.ln(" - Add to QuickList (QL) to access the rings from the main window directly. Compounds in the QL are saved in a separate file "
+                + "with the same format as the DB file and can also be edited the same way");
+        tAOut.ln("** Search by peaks **");
+        tAOut.ln(" - On the main window click on the desired rings so that they are selected in the point list (Sel.points should be active)");
+        tAOut.ln(" - Click the button -search by peaks-");
+        tAOut.ln(" - List will be updated by the best matching compounds (with respective residuals)");
+        tAOut.ln(" - Click on the compounds to see the rings on top of your image and check if they really match");
         tAOut.ln("");
-//        tAOut.ln("Acknowledgements:\n"
-//                + "The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD) "
-//                + "for which the d-spacings have been calculated according to the reported cell parameters and contents (on 06/03/2015).\n"
-//                + "COD references (http://www.crystallography.net/):\n"
-//                + "Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427\n"
-//                + "Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.");
-//        tAOut.ln("");
+        tAOut.ln("Note:\n"
+                + "The default DB is a small selection of compounds taken from different sources, mostly publications. Each entry contains the reference from "
+                + "where it has been taken (with the respective authors) which can be retrieved by clicking -compound info- or by editing the compound."
+                + "For any doubts/comments/complaints/suggestions, please contact the author\n");
+        tAOut.ln("");
     }
-    
-//    protected void acknowledgeCOD_tArea(){
-//        tAOut.ln("");
-//        tAOut.ln("The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD, http://www.crystallography.net) "
-//                + "for which the d-spacings have been calculated according to the reported cell parameters and contents (on 06/03/2015 by OV).\n"
-//                + "COD references:\n"
-//                + "Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427\n"
-//                + "Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.");
-//        tAOut.ln("");        
-//    }
-    
-//    protected void acknowledgeCOD(){
-//        if (!cod_acknowledged){
-//            String codack="<html> <div style=\"text-align:justify\"> The default DB is a selection of inorganic compounds taken from the Crystallography Open Database (COD, http://www.crystallography.net) for which the d-spacings have been calculated according to the reported cell parameters (on 06/03/2015 by OV) <br> <br> <font size=-1>COD references: <br> Grazulis, S., Daškevič, A., Merkys, A., Chateigner, D., Lutterotti, L., Quiros, M., Serebryanaya, N.R., Moeck, P., Downs, R. T. & Le Bail, A. (2012) Nucl. Acids Res. 40 (D1), D420-D427 <br> Grazulis, S., Chateigner, D., Downs, R. T., Yokochi, A.  F.  T., Quiros, M., Lutterotti, L., Manakova, E., Butkus, J., Moeck, P. & Le Bail, A. (2009). J. Appl. Cryst. 42, 726-729.<br> </font> </div> </html>";
-//            Help_dialog hd = new Help_dialog("COD acknowledgements",codack);
-//            hd.setSize(750,320);
-//            hd.setLocationRelativeTo(this);
-//            hd.setLocation(hd.getLocation().x, hd.getLocation().y-240);
-//            hd.setVisible(true);
-//            this.setAlwaysOnTop(true); //to get the focus
-////            this.requestFocusInWindow();
-//            cod_acknowledged=true;
-//        }
-//    }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
         this.dispose();
@@ -567,18 +522,6 @@ public class DB_dialog extends JFrame {
         return null;
     }
     
-//    public PDCompound getCurrentCompound() {
-//        if (listCompounds == null){return null;}
-//        if (listCompounds.getSelectedIndex() >= 0) {
-//            String sel = (String) listCompounds.getSelectedValue();
-//            int ov_index = Integer.parseInt((sel.trim().split("\\s+"))[0]);
-//            PDCompound comp = PDDatabase.get_compound_from_ovNum(ov_index);
-////            tAOut.ln(comp.printInfoMultipleLines());
-//            return comp;
-//        } else {
-//            return null;
-//        }
-//    }
 
     public boolean isShowDataRings() {
         return showPDDataRings;
@@ -611,19 +554,8 @@ public class DB_dialog extends JFrame {
             tAOut.ln("Select a compound first");
             return;
         }
-//        tAOut.ln(c.getOv_number()+" "+c.getCompName()+" "+c.getFormula()+" "+c.getCodCODE());
-//        tAOut.ln(c.getA()+" "+c.getB()+" "+c.getC()+" "+c.getAlfa()+" "+c.getBeta()+" "+c.getGamma());
         tAOut.ln(c.printInfoMultipleLines());
-//        for (int i=0; i<c.getPeaks().size();i++){
-//            int h = c.getPeaks().get(i).getH();
-//            int k = c.getPeaks().get(i).getK();
-//            int l = c.getPeaks().get(i).getL();
-//            float dsp = c.getPeaks().get(i).getDsp();
-//            float inten = c.getPeaks().get(i).getInten();
-//            tAOut.ln(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));
-//        }
-        
-        //debug:
+
         this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), c);
     }
 
@@ -641,55 +573,6 @@ public class DB_dialog extends JFrame {
         if (comp!=null)tAOut.ln(comp.printInfo2Line());
     }
     
-    
-//    @Override
-//    public void propertyChange(PropertyChangeEvent evt) {
-//        // TODO Auto-generated method stub
-//        log.debug("hello from propertyChange");
-//        if ("percent" == evt.getPropertyName() ) {
-//            int progress = (Integer) evt.getNewValue();
-//            pm.setProgress(progress);
-//            pm.setNote(String.format("Completed %d%%.\n", progress));
-//            if (pm.isCanceled() || openDBFwk.isDone()) {
-//                Toolkit.getDefaultToolkit().beep();
-//                if (pm.isCanceled()) {
-//                    openDBFwk.cancel(true);
-//                    tAOut.stat("reading of DB file "+openDBFwk.getDbfile()+" stopped!");
-//                    tAOut.stat(" --> ncompounds = "+getnCompounds());    
-//                } else {
-//                    tAOut.stat("reading of DB file "+openDBFwk.getDbfile()+" stopped!");
-//                    tAOut.stat(" --> ncompounds = "+getnCompounds());    
-//                }
-//                //startButton.setEnabled(true);
-//            }
-//        }
-//    }
-    
-    
-    protected void do_btnTestclosest_actionPerformed(ActionEvent arg0) {
-//        ArrayList<Float> lab6pks = new ArrayList<Float>();
-//        lab6pks.add(4.15710f);
-//        lab6pks.add(2.93950f);
-//        lab6pks.add(2.40010f);
-//        lab6pks.add(2.07850f);
-//        lab6pks.add(1.85910f);
-//        lab6pks.add(1.69710f);
-//        lab6pks.add(1.46970f);
-//        lab6pks.add(1.38570f);
-//        lab6pks.add(1.38570f);
-//        lab6pks.add(1.31460f);
-//        lab6pks.add(1.25340f);
-//        PDDatabase.takeClosest(lab6pks,4.141f);
-//        PDDatabase.takeClosest(lab6pks,2.936f);
-//        PDDatabase.takeClosest(lab6pks,2.395f);
-//        PDDatabase.takeClosest(lab6pks,2.075f);
-//        PDDatabase.takeClosest(lab6pks,1.861f);
-//        PDDatabase.takeClosest(lab6pks,1.697f);
-//        PDDatabase.takeClosest(lab6pks,1.466f);
-//        PDDatabase.takeClosest(lab6pks,1.383f);
-//        PDDatabase.takeClosest(lab6pks,1.312f);
-//        PDDatabase.takeClosest(lab6pks,1.249f);
-    }
     
     //CANVIEM PER NO UTILITZAR EL LM AMB TOTS ELS COMPOSTOS  -- AL FINAL NO, fem boto per tornar a mostrar tots
     public void loadSearchPeaksResults(){
@@ -776,6 +659,7 @@ public class DB_dialog extends JFrame {
     }
     
     
+    //la faig nova passant PuntsCercles al swingworker
     protected void do_btnSearchByPeaks_actionPerformed(ActionEvent e) {
         if (getPatt2d().getPuntsCercles().isEmpty()){
             tAOut.stat("Please select some peaks clicking in the image");
@@ -792,23 +676,12 @@ public class DB_dialog extends JFrame {
             listCompounds.setModel(filteredListModel);
             filteredListModel.setFilter(new FilteredListModel.Filter() {
                 public boolean accept(Object element) {
-//                    String s = (String)element;
-                    
-                    //PROVA PER BUSCAR EN TOTS ELS CAMPS DE LA DATABASE (name, namealt, cell, comment, spacegroup,...)
-//                    PDCompound comp = null;
-//                    if (element instanceof PDCompound){
-//                        comp = (PDCompound) listCompounds.getSelectedValue();
-//                    }
-//                    if (element instanceof PDSearchResult){
-//                        PDSearchResult sr = (PDSearchResult) listCompounds.getSelectedValue();
-//                        comp = sr.getC();
-//                    }
-//                    if (comp == null) return false;
+
                     PDCompound comp = null;
                     try{
                         comp = (PDCompound)element;    
                     }catch(Exception e){
-                        System.out.println("trying searchresult...");
+                        log.debug("trying searchresult...");
                         comp = ((PDSearchResult)element).getC();
                     }
                     if (comp == null) return false;
@@ -831,14 +704,6 @@ public class DB_dialog extends JFrame {
                     }
                     return true;
                     
-                    //aixo funciona pero es simple, vull que amb espais provi tots els ordres de paraules
-                    //i sigui CASE INSENSITIVE
-//                    String s = (String)element;
-//                    if (s.contains(txtNamefilter.getText())){
-//                        return true;
-//                    }
-//                    return false;
-                    
                 }
             });
             if (txtNamefilter.getText().trim().length() == 0){
@@ -848,20 +713,16 @@ public class DB_dialog extends JFrame {
                 tAOut.stat("Number of (filtered) compounds = "+filteredListModel.getSize());    
             }
         }
-            
-//        }else{
-//            listCompounds.setModel(lm);
-//            tAOut.stat("Number of compounds = "+lm.getSize());    
-//        }
         
     }
     protected void do_btnResetSearch_actionPerformed(ActionEvent arg0) {
         this.updateListAllCompounds();
     }
     protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
-        File f = FileUtils.fchooser(null, null, true);
+        FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB files", "db", "DB")};
+        File f = FileUtils.fchooserSaveAsk(this, new File(D2Dplot_global.getWorkdir()),filter);
         if (f == null)return;
-        
+        D2Dplot_global.setWorkdir(f);
         //primer creem el progress monitor, 
         pm = new ProgressMonitor(this,
                 "Saving DB file...",
@@ -938,5 +799,12 @@ public class DB_dialog extends JFrame {
             PDDatabase.addCompoundQL(this.getCurrentCompound(),true);            
         }
     }
-}
 
+    public static float getMinDspacingToSearch() {
+        return minDspacingToSearch;
+    }
+
+    public static void setMinDspacingToSearch(float minDspacingToSearch) {
+        DB_dialog.minDspacingToSearch = minDspacingToSearch;
+    }
+}

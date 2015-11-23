@@ -1,6 +1,8 @@
 package vava33.d2dplot;
 
 import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Insets;
@@ -37,7 +39,6 @@ import vava33.d2dplot.auxi.ImgOps;
 import vava33.d2dplot.auxi.PDCompound;
 import vava33.d2dplot.auxi.PDDatabase;
 import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.tests.SubroutineTest;
 
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
@@ -52,6 +53,8 @@ import javax.swing.KeyStroke;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -63,7 +66,6 @@ public class MainFrame extends JFrame {
     private Pattern2D patt2D;
     private boolean fileOpened = false;
     private File openedFile;
-//    private ArrayList<LAT_data> customLATs;
     
     private ImagePanel panelImatge;    
     private D2Dsub_frame d2DsubWin;
@@ -77,6 +79,8 @@ public class MainFrame extends JFrame {
     private DB_dialog dbDialog;
     private Dinco_frame dincoFrame;
     private Param_dialog paramDialog;
+    private HPtools_frame hpframe;
+    private PKsearch_frame pksframe;
     
     private JButton btn05x;
     private JButton btn2x;
@@ -130,15 +134,34 @@ public class MainFrame extends JFrame {
     private JMenuItem mntmHpTools;
     private JPanel panel;
 
+    //sumimages
+    ProgressMonitor pm;
+    ImgFileUtils.batchConvertFileWorker convwk;
+    ImgOps.sumImagesFileWorker sumwk;
+    private JButton btnInstParameters;
+    private JSeparator separator;
+    private JPanel panel_1;
+    private JButton btnRadIntegr;
+    private JButton btnTtsdincoSol;
+    private JMenuItem mntmSubtractImages;
+    private JCheckBox chckbxPaintExz;
+    
+    public static String getBinDir() {return D2Dplot_global.binDir;}
+    public static String getSeparator() {return D2Dplot_global.separator;}
+    public static String getWorkdir() {return D2Dplot_global.getWorkdir();}
+    public static void setWorkdir(String wdir) {D2Dplot_global.setWorkdir(wdir);}
+    
     /**
      * Launch the application. ES POT PASSAR COM A ARGUMENT EL DIRECTORI DE TREBALL ON S'OBRIRAN PER DEFECTE ELS DIALEGS
      * 
      */
     public static void main(String[] args) {
-    	//LOGGER
-//    	log = new VavaLogger("d2dplot");
-//    	log.enableLogger(D2Dplot_global.logging);
-//    	log.setLogLevel(D2Dplot_global.loglevel);
+        
+        //first thing to do is read PAR files if exist
+        FileUtils.detectOS();
+        D2Dplot_global.readParFile();
+        
+    	//LOGGER with the read parameters from file
         D2Dplot_global.initLogger("d2dplot");
         log = D2Dplot_global.log;
     	    	
@@ -150,7 +173,8 @@ public class MainFrame extends JFrame {
             // UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName()); //java metal
             
         } catch (Throwable e) {
-            e.printStackTrace();
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.warning("Error initializing System look and feel");
         }
 
 
@@ -172,7 +196,8 @@ public class MainFrame extends JFrame {
                     frame.setLocationRelativeTo(null);
                     frame.setVisible(true);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if (D2Dplot_global.isDebug())e.printStackTrace();
+                    log.severe("Error initializing main window");
                 }
             }
         });
@@ -182,6 +207,12 @@ public class MainFrame extends JFrame {
      * Create the frame.
      */
     public MainFrame() {
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                do_this_windowClosing(e);
+            }
+        });
         setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource("/img/Icona.png")));
         setTitle("d2Dplot");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -239,12 +270,26 @@ public class MainFrame extends JFrame {
                 do_mntmBatchConvert_actionPerformed(e);
             }
         });
+        
+        mntmSubtractImages = new JMenuItem("Subtract Images");
+        mntmSubtractImages.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_mntmSubtractImages_actionPerformed(e);
+            }
+        });
+        mntmSubtractImages.setMnemonic('u');
+        mnFile.add(mntmSubtractImages);
         mnFile.add(mntmBatchConvert);
         
         separator = new JSeparator();
         mnFile.add(separator);
         
         mntmQuit = new JMenuItem("Quit");
+        mntmQuit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_mntmQuit_actionPerformed(arg0);
+            }
+        });
         mntmQuit.setMnemonic('q');
         mntmQuit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_MASK));
         mnFile.add(mntmQuit);
@@ -255,6 +300,8 @@ public class MainFrame extends JFrame {
                 do_mntmAbout_actionPerformed(e);
             }
         });
+//        mntmAbout.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+//        mntmAbout.setPreferredSize(new Dimension(40,20));
         
         mnImageOps = new JMenu("Image");
         mnImageOps.setMnemonic('i');
@@ -270,7 +317,7 @@ public class MainFrame extends JFrame {
         });
         mnImageOps.add(mntmInstrumentalParameters);
         
-        mntmLabCalibration = new JMenuItem("LaB6 Calibration (comming soon...)");
+        mntmLabCalibration = new JMenuItem("LaB6 Calibration (soon...)");
         mntmLabCalibration.setEnabled(false);
         mntmLabCalibration.setMnemonic('l');
         mntmLabCalibration.addActionListener(new ActionListener() {
@@ -308,8 +355,12 @@ public class MainFrame extends JFrame {
         });
         mnImageOps.add(mntmRadialIntegration);
         
-        mntmHpTools = new JMenuItem("HP tools (comming soon...)");
-        mntmHpTools.setEnabled(false);
+        mntmHpTools = new JMenuItem("HP Cu Pcalc.");
+        mntmHpTools.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_mntmHpTools_actionPerformed(e);
+            }
+        });
         mntmHpTools.setMnemonic('h');
         mnImageOps.add(mntmHpTools);
         
@@ -317,7 +368,7 @@ public class MainFrame extends JFrame {
         mnGrainAnalysis.setMnemonic('g');
         menuBar.add(mnGrainAnalysis);
         
-        mntmDincoSol = new JMenuItem("Load DINCO SOL");
+        mntmDincoSol = new JMenuItem("Load tts-INCO/REDUC files");
         mntmDincoSol.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmDincoSol_actionPerformed(e);
@@ -333,8 +384,13 @@ public class MainFrame extends JFrame {
         });
         mnGrainAnalysis.add(mntmLoadXdsFile);
         
-        mntmFindPeaks = new JMenuItem("Find Peaks (comming soon...)");
-        mntmFindPeaks.setEnabled(false);
+        mntmFindPeaks = new JMenuItem("Find Peaks");
+        mntmFindPeaks.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_mntmFindPeaks_actionPerformed(arg0);
+            }
+        });
+//        mntmFindPeaks.setEnabled(false);
         mnGrainAnalysis.add(mntmFindPeaks);
         
         mntmClearAll = new JMenuItem("Clear all");
@@ -350,6 +406,11 @@ public class MainFrame extends JFrame {
         menuBar.add(mnPhaseId);
         
         mntmDatabase = new JMenuItem("Database");
+        mntmDatabase.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_mntmDatabase_actionPerformed(e);
+            }
+        });
         mntmDatabase.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_MASK));
         mntmDatabase.setMnemonic('d');
         mnPhaseId.add(mntmDatabase);
@@ -401,6 +462,20 @@ public class MainFrame extends JFrame {
                     }
                 });
         this.lblOpened = new JLabel("(no image loaded)");
+        lblOpened.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                do_lblOpened_mouseReleased(e);
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                do_lblOpened_mouseEntered(e);
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                do_lblOpened_mouseExited(e);
+            }
+        });
         panel_2.add(lblOpened, "cell 1 0,alignx left,aligny center");
         
         btnPrev = new JButton("<");
@@ -426,12 +501,12 @@ public class MainFrame extends JFrame {
         this.splitPane_1.setResizeWeight(1.0);
         this.panel_all.add(this.splitPane_1, "cell 0 1,grow");
 
-        this.panelImatge = new ImagePanel();
+        this.panelImatge = new ImagePanel(D2Dplot_global.sideControls);
         this.splitPane_1.setLeftComponent(this.panelImatge);
         this.panelImatge.setBorder(null);
         this.panel_controls = new JPanel();
         this.splitPane_1.setRightComponent(this.panel_controls);
-        panel_controls.setLayout(new MigLayout("fill, insets 0", "[120px,grow]", "[][][][][grow]"));
+        panel_controls.setLayout(new MigLayout("fill, insets 0", "[120px,grow]", "[][][][][][grow]"));
         
         btnInstParameters = new JButton("I. Parameters");
         btnInstParameters.addActionListener(new ActionListener() {
@@ -452,7 +527,7 @@ public class MainFrame extends JFrame {
                 do_btnResetView_actionPerformed(arg0);
             }
         });
-        panel_opcions.setLayout(new MigLayout("fill, insets 0", "[60px][60]", "[][][][][]"));
+        panel_opcions.setLayout(new MigLayout("fill, insets 0", "[60px][60]", "[][][][][][]"));
         this.btnResetView.setMargin(new Insets(2, 2, 2, 2));
         this.panel_opcions.add(this.btnResetView, "cell 0 0 2 1,growx,aligny center");
         this.btnMidaReal = new JButton("True size");
@@ -502,6 +577,14 @@ public class MainFrame extends JFrame {
         });
         panel_opcions.add(chckbxInvertY, "cell 0 4 2 1");
         
+        chckbxPaintExz = new JCheckBox("Paint ExZ");
+        chckbxPaintExz.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent arg0) {
+                do_chckbxPaintExz_itemStateChanged(arg0);
+            }
+        });
+        panel_opcions.add(chckbxPaintExz, "cell 0 5 2 1");
+        
         panel = new JPanel();
         panel.setBorder(new TitledBorder(null, "Points", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel_controls.add(panel, "cell 0 2,grow");
@@ -524,7 +607,7 @@ public class MainFrame extends JFrame {
         panel_3 = new JPanel();
         panel_3.setBorder(new TitledBorder(null, "Identification", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel_controls.add(panel_3, "cell 0 3,grow");
-        panel_3.setLayout(new MigLayout("fill, insets 0", "[120px]", "[][][][][]"));
+        panel_3.setLayout(new MigLayout("fill, insets 0, hidemode 3", "[120px]", "[][][][][]"));
         
         btnDbdialog = new JButton("Database");
         btnDbdialog.setPreferredSize(new Dimension(100, 32));
@@ -538,12 +621,6 @@ public class MainFrame extends JFrame {
         panel_3.add(chckbxShowRings, "cell 0 2,alignx left,aligny center");
         
         combo_LATdata = new JComboBox();
-//        combo_LATdata.addMouseListener(new MouseAdapter() {
-//            @Override
-//            public void mouseClicked(MouseEvent e) {
-//                do_combo_LATdata_mouseClicked(e);
-//            }
-//        });
         combo_LATdata.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent arg0) {
                 do_combo_showRings_itemStateChanged(arg0);
@@ -553,13 +630,31 @@ public class MainFrame extends JFrame {
         combo_LATdata.setModel(new DefaultComboBoxModel(new String[] {}));
         
         btnAddLat = new JButton("Add to List");
-        btnAddLat.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                do_btnAddLat_actionPerformed(arg0);
-            }
-        });
+        btnAddLat.setVisible(false);
+        btnAddLat.setEnabled(false);
         btnAddLat.setPreferredSize(new Dimension(100, 32));
         panel_3.add(btnAddLat, "cell 0 4,growx,aligny center");
+        
+        panel_1 = new JPanel();
+        panel_1.setBorder(new TitledBorder(null, "Shortcuts", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_controls.add(panel_1, "cell 0 4,grow");
+        panel_1.setLayout(new MigLayout("fill, insets 0", "[grow]", "[][]"));
+        
+        btnRadIntegr = new JButton("Rad. Integr");
+        btnRadIntegr.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnRadIntegr_actionPerformed(e);
+            }
+        });
+        panel_1.add(btnRadIntegr, "cell 0 0,growx,aligny center");
+        
+        btnTtsdincoSol = new JButton("tts-INCO");
+        btnTtsdincoSol.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnTtsdincoSol_actionPerformed(e);
+            }
+        });
+        panel_1.add(btnTtsdincoSol, "cell 0 1,growx,aligny center");
         chckbxShowRings.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent arg0) {
                 do_chckbxShowRings_itemStateChanged(arg0);
@@ -577,11 +672,9 @@ public class MainFrame extends JFrame {
         if(f.exists()){
         	if (f.isFile()){//l'obrim
                 this.updatePatt2D(f);
-                setWorkdir(f.getAbsolutePath());
-                log.info("workdir:"+getWorkdir());
+//                D2Dplot_global.setWorkdir(f);
+//                log.info("workdir:"+getWorkdir()); //ja es fa dins updatePatt2d
         	}
-        }else{
-            setWorkdir(System.getProperty("user.dir"));
         }
     }
 
@@ -596,10 +689,24 @@ public class MainFrame extends JFrame {
         
         //inicialitzem l'arraylist a D2Dplot_global --- ja ho fa el metode en questio a global
         //BUSQUEM SI HI HA FITXERS .LAT al directori del programa i els afegim a quicklist (D2Dplot_global)
-        PDDatabase.populateQuickList();
+        if(D2Dplot_global.isConfigFileReaded()==null){
+            tAOut.stat(String.format("No config file found on: %s, it will be created on exit!",D2Dplot_global.configFilePath));
+        }else{
+            if(D2Dplot_global.isConfigFileReaded()==true){
+                tAOut.stat(String.format("Config file readed: %s",D2Dplot_global.configFilePath));    
+            }else{
+                tAOut.stat(String.format("Error reading config file: %s",D2Dplot_global.configFilePath));
+            }
+        }
+        D2Dplot_global.initPars();
+        D2Dplot_global.init_ApplyColorsToIPanel(this.getPanelImatge());
+        D2Dplot_global.checkDBs();
+        boolean ok = PDDatabase.populateQuickList(false);
+        if (ok){
+            tAOut.stat(String.format("QuickList DB file: %s",PDDatabase.getLocalQL()));
+        }
         combo_LATdata.setPrototypeDisplayValue("XX"); 
         updateQuickList();
-        
     }
     
     public static void updateQuickList(){
@@ -610,11 +717,10 @@ public class MainFrame extends JFrame {
         }
     }
     
+    //tanco tot
     private void reset() {
         this.fileOpened = false;
         this.panelImatge.setImagePatt2D(null);
-//        this.panelImatge.getSlider_contrast().setMinimum(0);
-//        this.panelImatge.getSlider_contrast().setValue(0);  //AUTO NOW IS MANAGED BY THE TICK
         this.patt2D = null;
         if (this.d2DsubWin != null) {
             this.d2DsubWin.dispose();
@@ -632,11 +738,32 @@ public class MainFrame extends JFrame {
             this.dincoFrame.dispose();
             this.dincoFrame = null;
         }
+        if (this.pksframe != null) {
+            this.pksframe.dispose();
+            this.dincoFrame = null;
+        }
+        if (this.paramDialog != null) {
+            this.paramDialog.dispose();
+            this.paramDialog = null;
+        }
+        if (this.dbDialog != null) {
+            this.dbDialog.dispose();
+            this.dbDialog = null;
+        }
+        if (this.irWin != null) {
+            this.irWin.dispose();
+            this.irWin = null;
+        }
+        if (this.pkListWin != null) {
+            this.pkListWin.dispose();
+            this.pkListWin = null;
+        }
+        
         //TODO ADDD NEW THINGS IF NECESSARY
     }
     
     public void updatePatt2D(File d2File) {
-        setWorkdir(d2File.getPath().substring(0, d2File.getPath().length() - d2File.getName().length()));
+        D2Dplot_global.setWorkdir(d2File);
         log.info("workdir="+getWorkdir());
         patt2D = ImgFileUtils.readPatternFile(d2File);
         
@@ -650,6 +777,7 @@ public class MainFrame extends JFrame {
             tAOut.ln(patt2D.getInfo());
             fileOpened = true;
             openedFile = d2File;
+            this.updateIparameters();
         } else {
             tAOut.stat("Error reading 2D file");
             tAOut.stat("No file opened");
@@ -668,6 +796,7 @@ public class MainFrame extends JFrame {
           tAOut.ln(patt2D.getInfo());
           fileOpened = true;
           openedFile = null;
+          this.updateIparameters();
       } else {
           tAOut.stat("Error reading 2D file");
           tAOut.stat("No file opened");
@@ -695,12 +824,21 @@ public class MainFrame extends JFrame {
           if(verbose)tAOut.ln(patt2D.getInfo());
           fileOpened = true;
           openedFile = patt2D.getImgfile();
+          this.updateIparameters();
       } else {
           tAOut.stat("Error reading 2D file");
           tAOut.stat("No file opened");
           fileOpened = false;
           openedFile = null;
       }
+    }
+    
+    public void updateIparameters(){
+        if (patt2D != null) {
+            if (paramDialog!=null){
+                paramDialog.updateData(patt2D);
+            }
+        }
     }
     
     public PDCompound getQuickListCompound(){
@@ -712,6 +850,41 @@ public class MainFrame extends JFrame {
             log.debug("error in quicklist casting to PDCompound");
             return null;
         }
+    }
+    
+    protected void do_this_windowClosing(WindowEvent e) {
+      //FIRST SAVE OPTIONS
+      D2Dplot_global.writeParFile();
+      
+      //this is a test
+//      Object[] options1 = {"Yes","No"};
+//      int n1 = JOptionPane.showOptionDialog(null,
+//              "This is a test and it has no effect?",
+//              "test",
+//              JOptionPane.YES_NO_OPTION,
+//              JOptionPane.QUESTION_MESSAGE,
+//              null, //do not use a custom Icon
+//              options1, //the titles of buttons
+//              options1[1]); //default button title
+      
+      //SECOND SAVE QL FILE IF MODIFIED
+      if(PDDatabase.isQLmodified()){
+          //prompt and save QL file if necessary
+          Object[] options = {"Yes","No"};
+          int n = JOptionPane.showOptionDialog(null,
+                  "QuickList has changed, overwrite current default file?",
+                  "Update QL",
+                  JOptionPane.YES_NO_OPTION,
+                  JOptionPane.QUESTION_MESSAGE,
+                  null, //do not use a custom Icon
+                  options, //the titles of buttons
+                  options[1]); //default button title
+          if (n==JOptionPane.YES_OPTION){
+              PDDatabase.saveDBfileWorker saveDBFwk = new PDDatabase.saveDBfileWorker(new File(D2Dplot_global.QLfile),true);
+              saveDBFwk.execute();    
+          } 
+      }
+      this.dispose();
     }
     
     protected void do_btn05x_actionPerformed(ActionEvent arg0) {
@@ -744,6 +917,8 @@ public class MainFrame extends JFrame {
             // tanquem zones excloses en cas que estigui obert
             if (exZones != null)
                 exZones.dispose();
+            if (pksframe != null)
+                pksframe.dispose();
             if (calibration == null) {
                 calibration = new Calib_dialog(patt2D);
             }
@@ -756,6 +931,8 @@ public class MainFrame extends JFrame {
             // tanquem calibracio en cas que estigui obert
             if (calibration != null)
                 calibration.dispose();
+            if (pksframe != null)
+                pksframe.dispose();
             if (exZones == null) {
                 exZones = new ExZones_dialog(this);
             }
@@ -763,6 +940,22 @@ public class MainFrame extends JFrame {
             panelImatge.setExZones(exZones);
         }
     }
+    
+    protected void do_mntmFindPeaks_actionPerformed(ActionEvent arg0) {
+        if (patt2D != null) {
+            if (exZones != null)
+                exZones.dispose();
+            if (calibration != null)
+                calibration.dispose();
+            if (pksframe == null) {
+                pksframe = new PKsearch_frame(patt2D,false,null);
+            }
+            pksframe.setVisible(true);
+            panelImatge.setPKsearch(pksframe);
+        }
+
+    }
+    
     protected void do_mntmBackgroundSubtraction_actionPerformed(ActionEvent e) {
         if (patt2D != null) {
             if (d2DsubWin == null) {
@@ -784,6 +977,15 @@ public class MainFrame extends JFrame {
             }
             irWin.setVisible(true); 
         }
+    }
+    
+
+    protected void do_btnTtsdincoSol_actionPerformed(ActionEvent e) {
+        mntmDincoSol.doClick();
+    }
+    
+    protected void do_btnRadIntegr_actionPerformed(ActionEvent e) {
+        mntmRadialIntegration.doClick();
     }
 
     protected void do_btnMidaReal_actionPerformed(ActionEvent e) {
@@ -857,18 +1059,24 @@ public class MainFrame extends JFrame {
         }
     }
 
+    protected void do_mntmQuit_actionPerformed(ActionEvent arg0) {
+        this.do_this_windowClosing(null);
+    }
+    
+    protected void do_mntmDatabase_actionPerformed(ActionEvent e) {
+        btnDbdialog.doClick();
+    }
+    
     protected void do_btnDbdialog_actionPerformed(ActionEvent arg0) {
-//        if (patt2D != null) {
-            // tanquem calibracio en cas que estigui obert
-            if (calibration != null) calibration.dispose();
-            if (exZones != null) exZones.dispose();
+        // tanquem calibracio en cas que estigui obert
+        if (calibration != null) calibration.dispose();
+        if (exZones != null) exZones.dispose();
 
-            if (dbDialog == null) {
-                dbDialog = new DB_dialog(this.getPanelImatge());
-            }
-            dbDialog.setVisible(true);
-            panelImatge.setDBdialog(dbDialog);
-//        }
+        if (dbDialog == null) {
+            dbDialog = new DB_dialog(this.getPanelImatge());
+        }
+        dbDialog.setVisible(true);
+        panelImatge.setDBdialog(dbDialog);
     }
 
     protected void do_chckbxShowRings_itemStateChanged(ItemEvent arg0) {
@@ -879,37 +1087,7 @@ public class MainFrame extends JFrame {
 
     }
    
-    //TODO:AQUI S'HAURIEN DE MOSTRAR 3 OPCIONS:
-    //1) posar a la quicklist un compost de la database
-    //2) importar a la quicklist un LAT, HKL, etc...
-    //3) generar les reflexions a partir d'una cella + grup espacial
-    protected void do_btnAddLat_actionPerformed(ActionEvent arg0) {
-//        //TODO:lectura fitxer lat i addició al combobox
-////        File d2File;
-//        JFileChooser fileChooser = new JFileChooser();
-//        FileNameExtensionFilter filter = new FileNameExtensionFilter("LAT file", "lat", "LAT");
-//        fileChooser.addChoosableFileFilter(filter);
-//        fileChooser.setCurrentDirectory(new File(getWorkdir()));
-//        int selection = fileChooser.showOpenDialog(null);
-//        if (selection != JFileChooser.APPROVE_OPTION) {
-//            if (!fileOpened) {
-//                tAOut.stat("No LAT file selected");
-//            }
-//            return;
-//        }
-//        // llegim el LAT
-//        File latf = fileChooser.getSelectedFile();
-//        LAT_data ld = new LAT_data(FileUtils.getFNameNoExt(latf.getName()));
-//        boolean ok = ld.readLATfile(latf);
-//        if (ok){
-//            combo_LATdata.addItem(FileUtils.getFNameNoExt(latf.getName()));
-//            this.getCustomLATs().add(ld); //AFEGIDA!
-//        }
-//        
-    }
-    
     protected void do_combo_showRings_itemStateChanged(ItemEvent arg0) {
-//        panelImatge.setShowRings(chckbxShowRings.isSelected(), this.getShowRingCompound());
         if (arg0.getStateChange() == ItemEvent.SELECTED) {
             panelImatge.setShowQuickListCompoundRings(chckbxShowRings.isSelected(), this.getQuickListCompound());
         }
@@ -932,6 +1110,7 @@ public class MainFrame extends JFrame {
             return;
         }
         tAOut.stat("File PNG saved: " + imFile.toString());
+        D2Dplot_global.setWorkdir(imFile);
     }
     
     protected void do_mntmAbout_actionPerformed(ActionEvent e) {
@@ -952,13 +1131,70 @@ public class MainFrame extends JFrame {
         panelImatge.pintaImatge();
     }
     
+    protected void do_chckbxPaintExz_itemStateChanged(ItemEvent arg0) {
+        panelImatge.setPaintExZ(chckbxPaintExz.isSelected());
+        log.debug("do_chckbxPaintExz_itemStateChanged called");
+        panelImatge.pintaImatge();
+    }
+    
+
+    protected void do_lblOpened_mouseReleased(MouseEvent e) {
+        if (lblOpened.getText().startsWith("(no")||lblOpened.getText().isEmpty())return;
+        
+        File f = new File(lblOpened.getText());
+//        String fpath = f.getPath().substring(0, f.getPath().length()-f.getName().length());
+        String fpath = f.getParent();
+        boolean opened=false;
+        try {
+            if(Desktop.isDesktopSupported()){
+                Desktop.getDesktop().open(new File(fpath));
+                opened=true;
+            }else{
+                if(FileUtils.getOS().equalsIgnoreCase("win")){
+                    new ProcessBuilder("explorer.exe","/select,",lblOpened.getText()).start();
+                    opened=true;
+                }
+                if(FileUtils.getOS().equalsIgnoreCase("lin")){
+                    //kde dolphin
+                    try{
+                        new ProcessBuilder("dolphin",lblOpened.getText()).start(); 
+                        opened=true;
+                    }catch(Exception ex){
+                        if(D2Dplot_global.isDebug())ex.printStackTrace();
+                    }
+                    //gnome nautilus
+                    try{
+                        new ProcessBuilder("nautilus",lblOpened.getText()).start(); 
+                        opened=true;
+                    }catch(Exception ex){
+                        if(D2Dplot_global.isDebug())ex.printStackTrace();
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            if(D2Dplot_global.isDebug())ex.printStackTrace();
+        }
+        if(!opened)tAOut.addtxt(true,true,"Unable to open folder");
+    }
+
+    protected void do_lblOpened_mouseEntered(MouseEvent e) {
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        this.lblOpened.setForeground(Color.blue);
+    }
+    protected void do_lblOpened_mouseExited(MouseEvent e) {
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+        this.lblOpened.setForeground(Color.black);
+    }
+    
     protected void do_mntmDincoSol_actionPerformed(ActionEvent e) {
         //Preguntem per obrir un fitxer SOL pero de totes formes obrirem el dialeg
         if (dincoFrame == null) {
-            dincoFrame = new Dinco_frame(this.getPatt2D());
+            dincoFrame = new Dinco_frame(this.getPanelImatge());
         }
-        dincoFrame.setSOLMode();
-        dincoFrame.openSOL();
+        if (!dincoFrame.hasSolutionsLoaded()){
+            dincoFrame.setSOLMode();
+            dincoFrame.openSOL();
+        }
         dincoFrame.setVisible(true);
         panelImatge.setDinco(dincoFrame);
     }
@@ -966,25 +1202,51 @@ public class MainFrame extends JFrame {
     protected void do_mntmLoadXdsFile_actionPerformed(ActionEvent e) {
         //Preguntem per obrir un fitxer XDS pero de totes formes obrirem el dialeg
         if (dincoFrame == null) {
-            dincoFrame = new Dinco_frame(this.getPatt2D());
+            dincoFrame = new Dinco_frame(this.getPanelImatge());
         }
-        dincoFrame.setXDSMode();
-        dincoFrame.openXDS();
+        if (!dincoFrame.hasSolutionsLoaded()){
+            dincoFrame.setXDSMode();
+            dincoFrame.openXDS();
+        }
         dincoFrame.setVisible(true);
         panelImatge.setDinco(dincoFrame);
     }
     
-    ProgressMonitor pm;
-    ImgFileUtils.batchConvertFileWorker convwk;
-    ImgOps.sumImagesFileWorker sumwk;
-    private JButton btnInstParameters;
-    private JSeparator separator;
-//    Pattern2D pattsuma;
+    protected void do_mntmClearAll_actionPerformed(ActionEvent e) {
+        this.getPatt2D().clearSolutions();
+        this.dincoFrame.dispose();
+    }
+
+    protected void do_mntmHpTools_actionPerformed(ActionEvent e) {
+        if (hpframe == null) {
+            hpframe = new HPtools_frame(this.getPatt2D());
+        }
+        hpframe.setVisible(true);
+    }
+    
+    protected void do_mntmSubtractImages_actionPerformed(ActionEvent e) {
+        
+        Subtract_dialog sdiag = new Subtract_dialog();
+        sdiag.setVisible(true);
+        
+        Pattern2D img = ImgFileUtils.readPatternFile(sdiag.getImage());
+        float fac = sdiag.getFactor();
+        Pattern2D img2 = ImgFileUtils.readPatternFile(sdiag.getBkgImage());
+        
+        if(img==null)return;
+        if(img2==null)return;
+        
+        Pattern2D dataSub = ImgOps.subtractBKG_v2(img, img2, fac, tAOut)[0];
+        updatePatt2D(dataSub);    
+    }
+    
+
     
     protected void do_mntmSumImages_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(new File(getWorkdir()), filt, filt.length-1);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, filt.length-1);
         if (flist==null) return;
+        D2Dplot_global.setWorkdir(flist[0]);
 
         pm = new ProgressMonitor(null,
                 "Summing Images...",
@@ -995,36 +1257,26 @@ public class MainFrame extends JFrame {
 
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
-                //log.debug("hello from propertyChange");
                 log.debug(evt.getPropertyName());
                 if ("progress" == evt.getPropertyName() ) {
                     int progress = (Integer) evt.getNewValue();
                     pm.setProgress(progress);
                     pm.setNote(String.format("%d%%\n", progress));
-                    log.debug("hi from inside if progress");
+                    log.fine("hi from inside if progress");
                     if (pm.isCanceled() || sumwk.isDone()) {
-                        log.debug("hi from inside if cancel/done");
+                        log.fine("hi from inside if cancel/done");
                         Toolkit.getDefaultToolkit().beep();
                         if (pm.isCanceled()) {
                             sumwk.cancel(true);
                             log.debug("sumwk canceled");
                         } else {
                             log.debug("sumwk finished!!");
-//                            Pattern2D suma = sumwk.getpattSum();
-//                            if (suma==null){
-//                                tAOut.stat("Error summing files");
-//                                return;
-//                            }else{
-//                                updatePatt2D(suma);    
-//                            }
                         }
                         pm.close();
                     }
                 }
                 if (sumwk.isDone()){
-                    log.debug("hi from outside if progress");
-//                    pattsuma = sumwk.getpattSum();
-//                    updatePatt2D(pattsuma);
+                    log.fine("hi from outside if progress");
                     Pattern2D suma = sumwk.getpattSum();
                     if (suma==null){
                         tAOut.stat("Error summing files");
@@ -1033,17 +1285,6 @@ public class MainFrame extends JFrame {
                         updatePatt2D(suma);    
                     }
                 }
-//                if (sumwk.isDone()){
-//                    updatePatt2D(pattsuma);   
-////                    log.debug("sumwk finished!!");
-////                    Pattern2D suma = sumwk.getpattSum();
-////                    if (suma==null){
-////                        tAOut.stat("Error summing files");
-////                        return;
-////                    }else{
-////                        updatePatt2D(suma);    
-////                    }
-//                }
             }
         });
         sumwk.execute();
@@ -1053,8 +1294,9 @@ public class MainFrame extends JFrame {
     
     protected void do_mntmBatchConvert_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(new File(getWorkdir()), filt, filt.length-1);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, filt.length-1);
         if (flist==null) return;
+        D2Dplot_global.setWorkdir(flist[0]);
         
         pm = new ProgressMonitor(null,
                 "Converting Images...",
@@ -1084,18 +1326,18 @@ public class MainFrame extends JFrame {
             }
         });
         convwk.execute();
-       
     }
     
     private void openImgFile(){
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File d2File = FileUtils.fchooser(new File(getWorkdir()), filt, filt.length-1, false, false);
+        File d2File = FileUtils.fchooser(this,new File(getWorkdir()), filt, filt.length-1, false, false);
         if (d2File == null){
             if (!fileOpened){
                 tAOut.stat("No data file selected");
             }
             return;
         }
+        D2Dplot_global.setWorkdir(d2File);
         
         // resetejem
         this.reset();
@@ -1105,20 +1347,22 @@ public class MainFrame extends JFrame {
     private void saveImgFile(){
         if (this.getPatt2D()!=null){
             FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterWrite();
-            File f = FileUtils.fchooser(new File(getWorkdir()), filt, filt.length-1, true, true);
-            boolean savedOK = false;
+            File f = FileUtils.fchooser(this,new File(getWorkdir()), filt, filt.length-1, true, true);
             if (f!=null){
-                savedOK = ImgFileUtils.writePatternFile(f,this.getPatt2D());
-                if (savedOK){
+                D2Dplot_global.setWorkdir(f);
+                File outf = ImgFileUtils.writePatternFile(f,this.getPatt2D());
+                if (outf!=null){
                     int n = JOptionPane.showConfirmDialog(this, "Load the new saved file?", "Refresh file", JOptionPane.YES_NO_OPTION);
                     if (n == JOptionPane.YES_OPTION) {
                         this.reset();
-                        this.updatePatt2D(f);
+                        this.updatePatt2D(outf);
                     }
+                }else{
+                    tAOut.stat("Error saving file");
                 }
             }
         }else{
-            tAOut.stat("Open an image before saving");
+            tAOut.stat("Choose an image file saving");
         }
     }
     
@@ -1138,10 +1382,6 @@ public class MainFrame extends JFrame {
         this.openedFile = openedFile;
     }
     
-//    public ArrayList<LAT_data> getCustomLATs() {
-//        return customLATs;
-//    }  
-    
     public LogJTextArea gettAOut() {
         return tAOut;
     }
@@ -1149,28 +1389,5 @@ public class MainFrame extends JFrame {
     public boolean isSelectPoints(){
         return this.chckbxIndex.isSelected();
     }
-    
-    public static String getBinDir() {return D2Dplot_global.binDir;}
-//    public static String getD2dsubExec() {return D2Dplot_global.d2dsubExec;}
-    public static String getSeparator() {return D2Dplot_global.separator;}
-    public static String getWorkdir() {return D2Dplot_global.workdir;}
-    public static void setWorkdir(String wdir) {D2Dplot_global.workdir=wdir;}
-    
-    private void debug_openTestsubroutines() {
-        SubroutineTest st = new SubroutineTest();
-        st.setVisible(true);
-    }
-    
-    private void debug_openYarc(){
-        DebugYarc dya = new DebugYarc(this.getPatt2D());
-         dya.setVisible(true);
-    }
 
-    protected void do_mntmClearAll_actionPerformed(ActionEvent e) {
-        this.getPatt2D().clearSolutions();
-        this.dincoFrame.dispose();
-    }
-//    protected void do_combo_LATdata_mouseClicked(MouseEvent e) {
-//        this.updateQuickList();
-//    }
 }

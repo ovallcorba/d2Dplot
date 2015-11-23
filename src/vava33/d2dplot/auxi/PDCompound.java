@@ -24,8 +24,6 @@ public class PDCompound {
     private String formula;
     private String reference;
     private ArrayList<String> comment;
-//    private ArrayList<Float> dspacings;
-//    private ArrayList<Float> intensities;
     private ArrayList<PDReflection> peaks;
     
     private static VavaLogger log = D2Dplot_global.log;
@@ -34,8 +32,6 @@ public class PDCompound {
         this.compName = new ArrayList<String>();
         this.compName.add(name);
         this.comment = new ArrayList<String>();
-//        this.dspacings = new ArrayList<Float>();
-//        this.intensities = new ArrayList<Float>();
         this.peaks = new ArrayList<PDReflection>();
         spaceGroup="";
         formula="";
@@ -59,8 +55,6 @@ public class PDCompound {
         this.spaceGroup = sg;
         this.formula = elem;
         this.peaks = pks;
-//        this.dspacings = dsp;
-//        this.intensities = inten;
     }
     
     public PDCompound(String name, float a, float b, float c, float al, float be, float ga, String sg, String elem){
@@ -76,8 +70,6 @@ public class PDCompound {
     }
     
     public String toString(){
-        //return String.format("%d %s %s", this.getOv_number(), this.getCompName(), this.getFormula());
-//        return String.format("%6d %s [%s]", this.getCnumber(), this.getCompName().get(0), this.getFormula());
         String altnames = this.getAltNames();
         if (!altnames.isEmpty()){
             return String.format("%s [%s] (aka: %s)", this.getCompName().get(0), this.getFormula(), this.getAltNames());    
@@ -87,8 +79,6 @@ public class PDCompound {
     }
     
     public String toStringNameFormula(){
-        //return String.format("%d %s %s", this.getOv_number(), this.getCompName(), this.getFormula());
-//        return String.format("%6d %s [%s]", this.getCnumber(), this.getCompName().get(0), this.getFormula());
         return String.format("%s [%s]", this.getCompName().get(0), this.getFormula());
     }
     
@@ -111,32 +101,18 @@ public class PDCompound {
         }
     }
     
-    //TODO: REESTILITZAR
     public String printInfoMultipleLines(){
-        //return String.format("%d %s %s", this.getOv_number(), this.getCompName(), this.getFormula());
         StringBuilder sb = new StringBuilder();
-//        sb.append(String.format("--- Compound num. %d  ---\n", this.getCnumber()));
         sb.append(String.format(" %s [%s]\n", this.getCompName().get(0),this.getFormula()));
         String altnames = this.getAltNames();
         if (!altnames.isEmpty())sb.append(String.format(" Other names: %s\n", altnames));
-//        sb.append(String.format(" Formula: %s\n", this.getFormula()));
         sb.append(String.format(" Cell: %.4f %.4f %.4f %.3f %.3f %.3f (s.g. %s)\n", this.getA(),this.getB(),this.getC(), this.getAlfa(),this.getBeta(),this.getGamma(),this.getSpaceGroup()));
-//        sb.append(String.format(" SGroup: %s\n", this.getSpaceGroup()));
         if (!this.getReference().isEmpty()) {
             sb.append(String.format(" Reference: %s\n", this.getReference()));
         }   
         String comments = this.getAllComments();
         if (!comments.isEmpty())sb.append(String.format(" Comments: %s\n", comments));
         sb.append(" Reflection list:\n");
-        
-//        for (int i=0; i<this.getPeaks().size();i++){
-//          int h = this.getPeaks().get(i).getH();
-//          int k = this.getPeaks().get(i).getK();
-//          int l = this.getPeaks().get(i).getL();
-//          float dsp = this.getPeaks().get(i).getDsp();
-//          float inten = this.getPeaks().get(i).getInten();
-//          sb.append(String.format("   %3d %3d %3d %9.5f %7.2f\n",h,k,l,dsp,inten));
-//        }
         
         sb.append(this.getHKLlines());
         
@@ -176,8 +152,6 @@ public class PDCompound {
     
     //return the maximum intensity of the first npeaks of the compound
     public float getMaxInten(int npeaks){
-//        List<Float> sub = this.getIntensities().subList(0, npeaks-1);
-//        return Collections.max(sub);
         Iterator<PDReflection> itpks = this.getPeaks().iterator();
         int count = 0;
         float maxI = -1;
@@ -310,6 +284,7 @@ public class PDCompound {
         return dsp;
     }
     
+    @SuppressWarnings("unused")
     private ArrayList<Float> getIntensities(){
         ArrayList<Float> inten = new ArrayList<Float>();
         Iterator<PDReflection> itpks = this.getPeaks().iterator();
@@ -339,15 +314,6 @@ public class PDCompound {
         }
         return sb.toString().trim();
     }
-    
-    
-//    public int getCnumber() {
-//        return cnumber;
-//    }
-//
-//    public void setCnumber(int cnumber) {
-//        this.cnumber = cnumber;
-//    }
 
     public String getReference() {
         return reference;
@@ -369,8 +335,6 @@ public class PDCompound {
     public int closestPeak(float dsp){
         
         int index = Collections.binarySearch(this.getDspacings(),dsp,Collections.reverseOrder());
-//      VavaLogger.LOG.info(pklist.toString());
-//      VavaLogger.LOG.info("peak="+peak+" indexFound="+index);
 
         index = Math.abs(index) - 1; //ara apunta al seguent valor, mes petit
         if (index == 0){
@@ -379,9 +343,6 @@ public class PDCompound {
         if ((index == this.getPeaks().size())||(index == (this.getPeaks().size()-1))){
             return this.getPeaks().size()-1;
         }
-        
-        //sempre estara entre index i index-1 (havent corregit ja un cop el -1)
-//      VavaLogger.LOG.info("peak="+peak+" index="+pklist.get(index)+" index-1="+pklist.get(index-1));
       
         //index -1 sempre > que valor, mentre que index sempre < que valor
         float afterdiff = this.getPeaks().get(index-1).getDsp() - dsp;

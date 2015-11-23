@@ -20,16 +20,6 @@ import java.util.zip.ZipFile;
 
 import javax.swing.SwingWorker;
 
-//import vava33.plot2d.auxi.PDCompound.DBreflection;
-
-
-
-
-
-
-
-
-
 import org.apache.commons.math3.util.FastMath;
 
 import vava33.d2dplot.D2Dplot_global;
@@ -43,17 +33,16 @@ public final class PDDatabase {
 
     //Full DB
     private static int nCompounds = 0;  //number of compounds in the DB
-    private static final String localDB = "default.db";  // local DB default file
+    private static String localDB = System.getProperty("user.dir") + D2Dplot_global.separator + "default.db";  // local DB default file
     private static ArrayList<PDCompound> DBcompList = new ArrayList<PDCompound>();  
     private static ArrayList<PDSearchResult> DBsearchresults = new ArrayList<PDSearchResult>();
     
     //quicklist
-    private static final String localQL = "quicklist.db";  // local DB default file
+    private static String localQL = System.getProperty("user.dir") + D2Dplot_global.separator + "quicklist.db";  // local DB default file
     private static ArrayList<PDCompound> QLcompList = new ArrayList<PDCompound>();  
+    private static boolean QLmodified = false;
     
     private static VavaLogger log = D2Dplot_global.log;
-
-//  private static final String localDB = "/latFiles/codDB.db";
     
     public static void resetDB(){
         DBcompList.clear();
@@ -66,6 +55,7 @@ public final class PDDatabase {
         if (updateComboMF){
             MainFrame.updateQuickList();
         }
+        setQLmodified(true);
     }
     
     public static void addCompoundDB(PDCompound c){
@@ -79,6 +69,7 @@ public final class PDDatabase {
         if (updateComboMF){
             MainFrame.updateQuickList();
         }
+        setQLmodified(true);
 
     }
 
@@ -88,17 +79,6 @@ public final class PDDatabase {
         }
         return getQLCompList().iterator();
     }
-    
-//    public static PDCompound get_compound_from_ovNum(int num){
-//        Iterator<PDCompound> it = compList.iterator();
-//        while (it.hasNext()){
-//            PDCompound c = it.next();
-//            if (c.getCnumber() == num){
-//                return c;
-//            }
-//        }
-//        return null;
-//    }
     
     public static int getnCompounds() {
         return nCompounds;
@@ -182,7 +162,7 @@ public final class PDDatabase {
             is.close();
         }
     }
-
+    
     public static String getDefaultDBpath(){
         File f = new File(localDB);
         return f.getAbsolutePath();
@@ -202,7 +182,8 @@ public final class PDDatabase {
         return PDDatabase.getDBCompList().size()+1;
     }
 
-    public static void populateQuickList(){
+    //sets the QLDB modified (useful for the first run)
+    public static boolean populateQuickList(final boolean setDBModified){
         
         //first try to read LAT files in the current folder
         try{
@@ -218,7 +199,7 @@ public final class PDDatabase {
                         p.calcDSPfromHKL();
                         addCompoundQL(p,true);    
                     }else{
-                        log.info("error reading LAT file to QuickList: "+flist[i]);
+                        log.warning("error reading LAT file to QuickList: "+flist[i]);
                     }
                 }
             }
@@ -228,6 +209,8 @@ public final class PDDatabase {
         }
         
         //ara llegirem la default QL db
+        File QLfile = new File(getDefaultQLpath());
+        if (!QLfile.exists()){return false;}
         openDBfileWorker openDBFwk = new PDDatabase.openDBfileWorker(new File(getDefaultQLpath()),true);
         openDBFwk.addPropertyChangeListener(new PropertyChangeListener() {
             @Override
@@ -240,6 +223,7 @@ public final class PDDatabase {
                       if (sw.isDone()) {
                           //s'hauria d'actualitzar el mainframe combo_lat -- o potser ho fem al fer addcompound?
                           MainFrame.updateQuickList();
+                          setQLmodified(setDBModified);
                       }                      
                   }
 
@@ -250,9 +234,34 @@ public final class PDDatabase {
         PDDatabase.resetQL(true);
         //read database file, executing the swingworker task
         openDBFwk.execute();
-
+        return true;
     } 
     
+    
+    public static boolean isQLmodified() {
+        return QLmodified;
+    }
+
+    public static String getLocalDB() {
+        return localDB;
+    }
+
+    public static void setLocalDB(String localDB) {
+        PDDatabase.localDB = localDB;
+    }
+
+    public static String getLocalQL() {
+        return localQL;
+    }
+
+    public static void setLocalQL(String localQL) {
+        PDDatabase.localQL = localQL;
+    }
+
+    public static void setQLmodified(boolean qLmodified) {
+        QLmodified = qLmodified;
+    }
+
     //Aixo llegira el fitxer per omplir la base de dades o la quicklist
     public static class openDBfileWorker extends SwingWorker<Integer,Integer> {
 
@@ -370,7 +379,12 @@ public final class PDDatabase {
                                         int k = Integer.parseInt(dspline[1]);
                                         int l = Integer.parseInt(dspline[2]);
                                         float dsp = Float.parseFloat(dspline[3]);
-                                        float inten = Float.parseFloat(dspline[4]);
+                                        float inten = 1.0f;
+                                        try{
+                                            inten = Float.parseFloat(dspline[4]);    
+                                        }catch(Exception exinten){
+                                            log.debug(String.format("no intensity found for reflection %d %d %d",h,k,l));
+                                        }
                                         comp.addPeak(h, k, l, dsp, inten);
                                     }
                                 }
@@ -389,9 +403,6 @@ public final class PDDatabase {
                                     comp.setBeta(Float.parseFloat(cellPars[7]));
                                     comp.setGamma(Float.parseFloat(cellPars[8]));
                                 }
-//                                if (line2.startsWith("#S ")){
-//                                    comp.addCompoundName((line2.split(":"))[1].trim());
-//                                }
                                
                                 if (line2.startsWith("#UXRD_INFO SPACE GROUP: ")){
                                     comp.setSpaceGroup((line2.split(":"))[1].trim());
@@ -430,9 +441,8 @@ public final class PDDatabase {
                                 
                                 
                             } catch (Exception e) {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                                log.info("error reading compound: "+comp.getCompName());
+                                if(D2Dplot_global.isDebug())e.printStackTrace();
+                                log.warning("error reading compound: "+comp.getCompName());
                             }                        
                             
                         }
@@ -447,7 +457,8 @@ public final class PDDatabase {
                     
                 }
             }catch(Exception e){
-                e.printStackTrace();
+                if(D2Dplot_global.isDebug())e.printStackTrace();
+                log.warning("error reading DB file");
                 this.cancel(true);
                 return 1;
             }
@@ -606,10 +617,10 @@ public final class PDDatabase {
             //generem les llistes de dspacing i intensitats a partir dels punts seleccionats a un pattern2D i un mindsp
             //(ho hem passat aquí perque es costos, sobretot l'extraccio d'intensitats)
             float[] t2deglist = new float[patt2D.getPuntsCercles().size()];
-            Iterator<PuntCercle> itrPks = patt2D.getPuntsCercles().iterator();
+            Iterator<PuntClick> itrPks = patt2D.getPuntsCercles().iterator();
             int n=0;
             while (itrPks.hasNext()){
-                PuntCercle pc = itrPks.next();
+                PuntClick pc = itrPks.next();
                 float dsp = (float) patt2D.calcDsp(pc.getT2rad());
                 if (dsp > mindsp){
                     dspList.add(dsp);
@@ -665,12 +676,6 @@ public final class PDDatabase {
                     setProgress((int) percent);
                     log.debug(String.valueOf(percent));
                 }
-                //sobre el 50%, l'altre 50 es la integracio i passos previs
-//                if ((compIndex % nCompounds/100) == 0){
-//                    float percent = ((float)compIndex/(float)nCompounds)*50.f+50;
-//                    setProgress((int) percent);
-//                    log.debug(String.valueOf(percent));
-//                }
             }
             setProgress(100);
             return 0;

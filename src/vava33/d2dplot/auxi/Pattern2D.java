@@ -1,27 +1,23 @@
 package vava33.d2dplot.auxi;
 
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealMatrix;
-import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.FastMath;
+
+import vava33.d2dplot.D2Dplot_global;
 
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
-import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.MainFrame;
-
 public class Pattern2D {
 
     private static VavaLogger log = D2Dplot_global.log;
-    private static final float t2tolDegSelectedPoints = 0.05f;  
+    private static float t2tolDegSelectedPoints = 0.05f;  
     
     // PARAMETRES IMATGE:
     short[][] intensityB2; // guardem [columna][fila] atencio: columnes=coordX,files=cordY
@@ -44,8 +40,9 @@ public class Pattern2D {
     int pixCount; // pixels totals de la imatge
     
     private ArrayList<OrientSolucio> solucions; // contindra les solucions
-    private ArrayList<PuntCercle> puntsCercles;
-
+    private ArrayList<PuntClick> puntsCercles;
+    private ArrayList<Point2D.Float> pkSearchResult; //de la cerca de pics
+    
     //zones excloses
     private ArrayList<PolyExZone> polyExZones;
     int exz_margin = 0; //per salvar el bin (zones excloses)
@@ -94,7 +91,7 @@ public class Pattern2D {
         // inicialitzem arraylist
         this.polyExZones = new ArrayList<PolyExZone>();
         this.solucions = new ArrayList<OrientSolucio>();
-        this.puntsCercles = new ArrayList<PuntCercle>();
+        this.puntsCercles = new ArrayList<PuntClick>();
         this.exz_margin=0;
         
         this.oldBIN=false;
@@ -121,7 +118,7 @@ public class Pattern2D {
         this(dataIn.getDimX(), dataIn.getDimY(), dataIn.getCentrX(),dataIn.getCentrY(),dataIn.getMaxI(),dataIn.getMinI(),dataIn.getScale(),dataIn.isB4inten());
         this.setExpParam(dataIn.getPixSx(), dataIn.getPixSy(), dataIn.getDistMD(), dataIn.getWavel());
         this.setExZones(dataIn.getExZones());
-        this.setMargin(dataIn.getMargin());
+        this.setExz_margin(dataIn.getExz_margin());
         this.setTiltDeg(dataIn.getTiltDeg());
         this.setRotDeg(dataIn.getRotDeg());
         if(copyIntensities){
@@ -350,11 +347,6 @@ public class Pattern2D {
         float y2 = 0.8f;
         factors[0] = ((y2 - y1) / (x2 - x1)) * angle + y1 - ((y2 - y1) / (x2 - x1)) * x1;
         //AMPLADA
-//      x1 = 0.0f;
-//          y1 = 1.2f;
-//          x2 = maxAngle;
-//          y2 = 0.8f;
-//          factors[1] = ((y2 - y1) / (x2 - x1)) * angle + y1 - ((y2 - y1) / (x2 - x1)) * x1;
         factors[1]=1.f;
         return factors;
     }
@@ -502,7 +494,7 @@ public class Pattern2D {
         this.intensityB4 = newIntenB4array;
     }
     
-    public int getMargin() {
+    public int getExz_margin() {
         return exz_margin;
     }
 
@@ -592,10 +584,9 @@ public class Pattern2D {
         this.intensityB4[x_col][y_row] = inten;
     }
 
-    public void setMargin(int margin) {
+    public void setExz_margin(int margin) {
         this.exz_margin = margin;
     }
-
     public void setMaxI(int maxI) {
         this.maxI = maxI;
     }
@@ -628,14 +619,13 @@ public class Pattern2D {
         this.wavel = wavel;
     }
 
-    public int getY0toMask() {
+    public int getExz_threshold() {
         return exz_threshold;
     }
 
-    public void setY0toMask(int y0toMask) {
+    public void setExz_threshold(int y0toMask) {
         this.exz_threshold = y0toMask;
     }
-    
     public int getMeanI() {
         return meanI;
     }
@@ -678,6 +668,8 @@ public class Pattern2D {
     
     public void clearSolutions() {
         this.solucions.clear();
+        //recontem
+        OrientSolucio.setNumSolucions(0);
     }
     
     public ArrayList<OrientSolucio> getSolucions() {
@@ -686,9 +678,31 @@ public class Pattern2D {
     
     public void addSolucio(OrientSolucio s){
         this.solucions.add(s);
+        //recontem i reassingem colors
+        OrientSolucio.setNumSolucions(this.getSolucions().size());
+        Iterator<OrientSolucio> itros = this.getSolucions().iterator();
+        while(itros.hasNext()){
+            OrientSolucio os = itros.next();
+            os.setNumSolucio(this.getSolucions().indexOf(os));
+            os.assignaColorSol();
+        }
+        
+    }
+    
+    public void removeSolucio(OrientSolucio s){
+        this.solucions.remove(s);
+        //recontem i repintem
+        OrientSolucio.setNumSolucions(this.getSolucions().size());
+        Iterator<OrientSolucio> itros = this.getSolucions().iterator();
+        while(itros.hasNext()){
+            OrientSolucio os = itros.next();
+            os.setNumSolucio(this.getSolucions().indexOf(os));
+            os.assignaColorSol();
+        }
+        
     }
 
-    public ArrayList<PuntCercle> getPuntsCercles() {
+    public ArrayList<PuntClick> getPuntsCercles() {
         return puntsCercles;
     }
     
@@ -696,33 +710,27 @@ public class Pattern2D {
         this.puntsCercles.clear();
     }
     
-    public void addPuntCercle(PuntCercle s){
+    public void addPuntCercle(PuntClick s){
         this.puntsCercles.add(s);
     }
     
     // donat un pixel i una intensitat afegim el puntCercle si hi ha els parametres
     public void addPuntCercle(Point2D.Float pixel, int inten) {
-      //AQUESTA RESPONSABILITAT NO LA TE PATT2D
         if (!this.checkIfDistMD()) {
-//            MainFrame.showSetParameters();
-//            if (this.getDistMD() <= 0 || this.getPixSx() <= 0 || this.getPixSy() <= 0)
                 return;
         }
-//        double t2 = this.calc2T(pixel);
-//        
-//        this.addPuntCercle(new PuntCercle(pixel, this.getCentrX(), this.getCentrY(), t2, inten));
         double t2 = this.calc2T(pixel, false);
-        this.addPuntCercle(new PuntCercle(pixel,this,(float)t2,inten));
+        this.addPuntCercle(new PuntClick(pixel,this,(float)t2,inten));
     }
     
-    public void removePuntCercle(PuntCercle s){
+    public void removePuntCercle(PuntClick s){
         this.puntsCercles.remove(s);
     }
     
     // donat un punt clicat mirarem si hi ha cercle a aquest pixel i en cas que aixi sigui el borrarem
     //EDIT: al passar a treballar amb ellipses, ens fixarem en la 2theta i una tolerancia
     public void removePuntCercle(Point2D.Float pixel) {
-        Iterator<PuntCercle> itrPC = this.getPuntsCercles().iterator();
+        Iterator<PuntClick> itrPC = this.getPuntsCercles().iterator();
         int i = 0;
         int indexTrobat = -1;
         double t2pix = this.calc2T(pixel, true);
@@ -741,12 +749,11 @@ public class Pattern2D {
         }
     }
     
-    //TODO PASSAR A ELLIPSEPARS
     public void recalcularCercles() {
-        Iterator<PuntCercle> itrPC = puntsCercles.iterator();
+        Iterator<PuntClick> itrPC = puntsCercles.iterator();
         while (itrPC.hasNext()) {
-            PuntCercle pc = itrPC.next();
-            pc.recalcular(this.getCentrX(), this.getCentrY(), calc2T(new Point2D.Float(pc.getX(), pc.getY()),false));
+            PuntClick pc = itrPC.next();
+            pc.recalcularEllipse();
         }
     }
     
@@ -870,32 +877,6 @@ public class Pattern2D {
         return (float)azim;
     }
     
-
-    public PuntSolucio getNearestPS(float px, float py){
-        Iterator<OrientSolucio> itrOS = this.getSolucions().iterator();
-        OrientSolucio os = null;
-        while (itrOS.hasNext()) {
-            os = itrOS.next();
-            if (os.isShowSol()) {
-                break;
-            }
-        }
-        if(os==null)return null;
-        // d'aquesta solucio, es busca el puntSolucio m�s proper al punt entrat
-        Iterator<PuntSolucio> itrS = os.getSol().iterator();
-        float minModul = Float.MAX_VALUE;
-        PuntSolucio nearestPS = null;
-        while (itrS.hasNext()) {
-            PuntSolucio s = itrS.next();
-            float modul = (float) FastMath.sqrt((s.getCoordX()-px)*(s.getCoordX()-px)+(s.getCoordY()-py)*(s.getCoordY()-py));
-            if (modul<minModul){
-                nearestPS = s;
-                minModul=modul;
-            }
-        }
-        return nearestPS;
-    }
-
     public float getOmeIni() {
         return omeIni;
     }
@@ -924,6 +905,22 @@ public class Pattern2D {
         this.setAcqTime(acquisitionTime);
         this.setOmeFin(omeEnd);
         this.setOmeIni(omeInitial);
+    }
+
+    public ArrayList<Point2D.Float> getPkSearchResult() {
+        return pkSearchResult;
+    }
+
+    public void setPkSearchResult(ArrayList<Point2D.Float> pkSearchResult) {
+        this.pkSearchResult = pkSearchResult;
+    }
+
+    public static float getT2tolDegSelectedPoints() {
+        return t2tolDegSelectedPoints;
+    }
+
+    public static void setT2tolDegSelectedPoints(float t2tolDegSelectedPoints) {
+        Pattern2D.t2tolDegSelectedPoints = t2tolDegSelectedPoints;
     }
     
 }
