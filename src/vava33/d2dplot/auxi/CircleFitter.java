@@ -262,7 +262,12 @@ public class CircleFitter {
 
     /** Local exception class for algorithm errors. */
     public static class LocalException extends Exception {
-      /** Build a new instance with the supplied message.
+      /**
+         * 
+         */
+        private static final long serialVersionUID = -208015321222330829L;
+
+    /** Build a new instance with the supplied message.
        * @param message error message
        */
       public LocalException(String message) {

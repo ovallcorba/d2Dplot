@@ -13,12 +13,12 @@ import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.FastMath;
 
 import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.MainFrame;
-
 import com.vava33.jutils.VavaLogger;
 
 
 public class EllipsePars {
+    private static final int ElliFitMinPoints = 5;
+
     private double a,b,c,d,e,f;
     private double rmaj,rmin; //radi major i menor de l'ellipse
     private double angrot;  //respecte rmax, zero a les "12h" i positiu horari EN RADIANS
@@ -26,7 +26,6 @@ public class EllipsePars {
     private ArrayList<Point2D.Float> estimPoints;
     private boolean isFit;
     private int lab6ring;
-    private static int ElliFitMinPoints = 15;
     private static VavaLogger log = D2Dplot_global.log;
 
     public EllipsePars(){
@@ -118,25 +117,13 @@ public class EllipsePars {
             this.angrot = angr;
         }
         
-        //i si ho dona respecte rV des de la vertical? es equivalent?
-//          if (rV>rH){ //angrot esta correcte
-//              this.rmaj = rV;
-//              this.rmin = rH;
-//              this.angrot = angr;
-//          }else{ //hem de sumar 90º a angr
-//              this.rmaj = rH;
-//              this.rmin = rV;
-//              this.angrot = angr + (Math.PI/2);
-//          }
-       
-        
     }
     
-    public void printElliPars(){
-        System.out.println("coefs (a b c d e f)="+this.a+" "+this.b+" "+this.c+" "+this.d+" "+this.e+" "+this.f);
-        System.out.println("centre (x y)="+this.xcen+" "+this.ycen);
-        System.out.println("axes (maj min)="+this.rmaj+" "+this.rmin);
-        System.out.println("rot="+this.angrot+" (deg="+FastMath.toDegrees(this.angrot)+")");            
+    public void logElliPars(String level){
+        log.printmsg(level, "coefs (a b c d e f)="+this.a+" "+this.b+" "+this.c+" "+this.d+" "+this.e+" "+this.f);
+        log.printmsg(level, "centre (x y)="+this.xcen+" "+this.ycen);
+        log.printmsg(level, "axes (maj min)="+this.rmaj+" "+this.rmin);
+        log.printmsg(level, "rot="+this.angrot+" (deg="+FastMath.toDegrees(this.angrot)+")");            
     }
     
     public String toStringElliPars(){
@@ -157,9 +144,6 @@ public class EllipsePars {
         if (!isFit) return null;
 
         float zero = (float) ((-this.angrot) -(Math.PI/2)); //value of the vertical zero according d2dplot convention and the parametric eq below
-//        float zero = (float) (-this.angrot -(Math.PI/2)); //value of the vertical zero according d2dplot convention and the parametric eq below
-//        float zero = (float) ((-1)*this.angrot);
-//        float zero = 0;
         float drawpoint = (float) (zero + FastMath.toRadians(angle));
         float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*Math.cos(this.angrot) - rM*Math.sin(drawpoint)*Math.sin(this.angrot));
         float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*Math.sin(this.angrot) + rM*Math.sin(drawpoint)*Math.cos(this.angrot));
@@ -180,24 +164,13 @@ public class EllipsePars {
           fit.add(getEllipsePoint(i));
         }
         return fit;
-        
-        //            float zero = (float) (-this.angrot -(Math.PI/2)); //value of the vertical (zero according d2dplot convention)
-//        float drawIni = (float) (zero + FastMath.toRadians(angleIni));
-//        float drawFin = (float) (zero + FastMath.toRadians(angleFin));
-//        if (step<0) step = (float) FastMath.toRadians(1);
-//        for (float i = drawIni; i<drawFin;i=(float) (i+step)){
-//            
-//            float ex = (float) (x0 + res1*Math.cos(i)*Math.cos(angrot) - res2*Math.sin(i)*Math.sin(angrot));
-//            float ey = (float) (y0 + res1*Math.cos(i)*Math.sin(angrot) + res2*Math.sin(i)*Math.cos(angrot));
-//            fit.add(new Point2D.Float(ex,ey));
-//        }
     }
 
     //fits an ellipse
     public void fitElli(){
         
-        if (this.getEstimPoints().size()<ElliFitMinPoints){
-            log.info("no enougth points to fit ellipse");
+        if (this.getEstimPoints().size()<=ElliFitMinPoints){
+            log.warning("no enougth points to fit ellipse");
             return;
         }
         
@@ -237,9 +210,9 @@ public class EllipsePars {
             D.setRowVector(i, row);
         }
         
-        System.out.println(xv);
-        System.out.println(yv);
-        System.out.println(D);
+        log.debug("xv="+xv);
+        log.debug("yv="+yv);
+        log.debug("D="+D);
         
         RealMatrix S = D.transpose().multiply(D);
         
@@ -268,7 +241,7 @@ public class EllipsePars {
             }
             
             RealVector sol = EV.getEigenvector(index);
-            System.out.println(sol);
+            log.debug("sol="+sol);
             
             double a = sol.getEntry(0);
             double b = sol.getEntry(1)/2;
@@ -280,7 +253,7 @@ public class EllipsePars {
             this.setPars(a,b,c,d,e,f);
             
         }catch(Exception e){
-            log.info("Error during ellipse fitting");
+            log.warning("Error during ellipse fitting");
         }
 
     }
@@ -397,4 +370,4 @@ public class EllipsePars {
     public void setLab6ring(int lab6ring) {
         this.lab6ring = lab6ring;
     }
-    
+}
