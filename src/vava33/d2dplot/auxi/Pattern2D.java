@@ -23,7 +23,7 @@ public class Pattern2D {
     short[][] intensityB2; // guardem [columna][fila] atencio: columnes=coordX,files=cordY
     int[][] intensityB4; // [columna][fila] atencio: columnes=coordX,files=cordY
     int dimX, dimY;
-    int maxI, minI, meanI, nSatur;
+    int maxI, minI, meanI, nSatur,nPkSatur;
     float sdevI;
     float centrX, centrY;
     float distMD, pixSx, pixSy, wavel;
@@ -38,10 +38,11 @@ public class Pattern2D {
      */
     float scale;
     int pixCount; // pixels totals de la imatge
+    int iscan;   // ISCAN=1 (GIR AL VOLTANT DE i); =2 (AL VOLTANT DE j) (POT VALER ZERO), EIX VERTICAL = j, es a dir per MSPD, ISCAN=2
     
     private ArrayList<OrientSolucio> solucions; // contindra les solucions
     private ArrayList<PuntClick> puntsCercles;
-    private ArrayList<Point2D.Float> pkSearchResult; //de la cerca de pics
+    private ArrayList<Peak> pkSearchResult; //de la cerca de pics
     
     //zones excloses
     private ArrayList<PolyExZone> polyExZones;
@@ -83,6 +84,7 @@ public class Pattern2D {
         this.pixSx = -1;
         this.pixSy = -1;
         this.wavel = -1;
+        this.iscan = 2;
         
         //tilt defecte
         this.tiltDeg = 0;
@@ -115,6 +117,10 @@ public class Pattern2D {
     // Genera un pattern 2D amb els mateixos par�metres que un altre (amb zones excloses pero sense intensitats)
     //si es vol una COPIA exacta posar true a copyIntensities
     public Pattern2D(Pattern2D dataIn, boolean copyIntensities){
+        this(dataIn,copyIntensities,false);
+    }
+    
+    public Pattern2D(Pattern2D dataIn, boolean copyIntensities, boolean initIntToZero){
         this(dataIn.getDimX(), dataIn.getDimY(), dataIn.getCentrX(),dataIn.getCentrY(),dataIn.getMaxI(),dataIn.getMinI(),dataIn.getScale(),dataIn.isB4inten());
         this.setExpParam(dataIn.getPixSx(), dataIn.getPixSy(), dataIn.getDistMD(), dataIn.getWavel());
         this.setExZones(dataIn.getExZones());
@@ -126,6 +132,18 @@ public class Pattern2D {
                 this.setIntenB4Array(dataIn.getIntenB4Array());
             }else{
                 this.setIntenB2Array(dataIn.getIntenB2Array());
+            }
+        }else{
+            if (initIntToZero){
+                for (int i = 0; i < this.getDimY(); i++) { // per cada fila (Y)
+                    for (int j = 0; j < this.getDimX(); j++) { // per cada columna (X)
+                        if (dataIn.isB4inten()){
+                            this.setIntenB4(j, i, 0);
+                        }else{
+                            this.setIntenB2(j, i, (short) 0);
+                        }
+                    }
+                }
             }
         }
     }
@@ -259,6 +277,17 @@ public class Pattern2D {
         long yacum=0;
         int npix=0;
         int satur=0;
+        
+        class pixel {
+            int x;
+            int y;
+            pixel(int x, int y) {
+                this.x = x;
+                this.y = y;
+            }
+        }
+        ArrayList<pixel> satPixels=new ArrayList<pixel>();
+        
         for (int i = 0; i < this.getDimY(); i++) { // per cada fila (Y)
             for (int j = 0; j < this.getDimX(); j++) { // per cada columna (X)
                 if(this.getInten(j, i)<0)continue;
@@ -266,6 +295,7 @@ public class Pattern2D {
                 npix=npix+1;
                 if(this.getInten(j, i)>=getSaturValue()){
                     satur=satur+1;
+                    satPixels.add(new pixel(j,i));
                 }
             }
         }
@@ -280,6 +310,45 @@ public class Pattern2D {
             }
         }
         this.sdevI=(float) FastMath.sqrt((float)numerador/(float)npix);
+        
+        //afegit el 160906  calcul pics saturats (a partir dels pixels)
+        int valorPixelsConsiderarMateixPic = 15; //TODO PASSAR A CONSTANT I UNIFICAR AMB PKSEARCH
+        int nsatur= this.getnSatur();
+        int[] idpk = new int[nsatur];
+        float[] xp = new float[nsatur];
+        float[] yp = new float[nsatur];
+        float[] hp = new float[nsatur];
+        for (int i=0;i<nsatur;i++){
+            idpk[i]=0;
+        }
+        int nsat=-1;
+        for (int i=0;i<nsatur;i++){
+            if(idpk[i]==0){
+                nsat = nsat +1;
+                xp[nsat]=0.0f;
+                yp[nsat]=0.0f;
+                hp[nsat]=0.0f;
+                int nequiv = 0;
+                for (int j=i;j<nsatur;j++){
+                    int arg = (satPixels.get(j).x-satPixels.get(i).x)*(satPixels.get(j).x-satPixels.get(i).x)
+                            +(satPixels.get(j).y-satPixels.get(i).y)*(satPixels.get(j).y-satPixels.get(i).y);
+                    float dist = (float) FastMath.sqrt(arg);
+                    if (dist<=valorPixelsConsiderarMateixPic){
+                        idpk[j]=i;
+                        xp[nsat]=xp[nsat]+satPixels.get(j).x;
+                        yp[nsat]=yp[nsat]+satPixels.get(j).y;
+                        hp[nsat]=hp[nsat]+this.getInten(satPixels.get(j).x, satPixels.get(j).y);
+                        nequiv = nequiv +1;
+                    }
+                }
+                xp[nsat]=xp[nsat]/(float)nequiv;
+                yp[nsat]=yp[nsat]/(float)nequiv;
+                hp[nsat]=hp[nsat]/(float)nequiv;
+            }
+        }
+        this.nPkSatur=nsat;
+        log.printmsg("DEBUG", String.format("nombre de pics saturats=%d", this.nPkSatur));
+
     }
     
     //retorna la mitjana de les intensitats de la imatge per sobre un llindar d'intensitat
@@ -789,7 +858,8 @@ public class Pattern2D {
 
         if (degrees) {
             t2p = FastMath.toDegrees(t2p);
-        }
+        }        
+        
         return t2p;
     }    
     
@@ -823,17 +893,42 @@ public class Pattern2D {
     }
     
     //minim stepsize (2theta entre 2 pixels consecutius)
-    public float getMinStepsizeOLD(){
+    public float calcMinStepsizeEstimateWithPixSizeAndDistMD(){
         float picSize = FastMath.min(this.getPixSx(),this.getPixSy()); //en mm
         float minstep = (float) FastMath.atan(picSize / this.getDistMD());
-        return minstep;
+        return (float) FastMath.toDegrees(minstep);
     }
     
     //minim stepsize (2theta entre 2 pixels consecutius) TODO: APROX, s'hauria de fer en varies direccions
-    public float getMinStepsize(){
-        double t2a = this.calc2T(1000, 0, true);
-        double t2b = this.calc2T(1001, 0, true);
-        return (float) FastMath.abs((t2b-t2a));
+    public float calcMinStepsizeBy2Theta4Directions(){
+        double[] steps = new double[4];
+        
+        //faig al final a les 4 direccions pero al mig
+        float cX = this.getCentrX();
+        float cY = this.getCentrY();
+        float quartDimX = this.getDimX()/4;
+        float quartDimY = this.getDimY()/4;
+        
+        //x+
+        double t2a = this.calc2T(cX+quartDimX, cY, true);
+        double t2b = this.calc2T(cX+quartDimX+1, cY, true);
+        steps[0] = FastMath.abs(t2a-t2b);
+        //x-
+        t2a = this.calc2T(cX-quartDimX, cY, true);
+        t2b = this.calc2T(cX-quartDimX-1, cY, true);
+        steps[1] = FastMath.abs(t2a-t2b);
+        
+        //y+
+        t2a = this.calc2T(cX, cY+quartDimY, true);
+        t2b = this.calc2T(cX, cY+quartDimY+1, true);
+        steps[2] = FastMath.abs(t2a-t2b);
+        //y-
+        t2a = this.calc2T(cX, cY-quartDimY, true);
+        t2b = this.calc2T(cX, cY-quartDimY-1, true);
+        steps[3] = FastMath.abs(t2a-t2b);
+        
+        return (float) ImgOps.findMin(steps);
+        
     }
 
     public float getTiltDeg() {
@@ -877,6 +972,54 @@ public class Pattern2D {
         return (float)azim;
     }
     
+    public Point2D.Float getPixelFromAzimutAnd2T(float azimDegrees, float t2deg){
+        //mirarem primer vectors verticals des del centre (azim=0) per mirar la t2 i després aplicarem la rotació...
+        // o millor per tema de tilt...
+        // primer unitari apliquem rotació i l'anem allargant fins a trobar la t2, 
+        //(la tolerancia sera el minstepsize?)... o millor quan ens passem agafem l'anterior (aixi no falla mai)
+        
+        //vector cap amunt (0,1)
+        float verX=0.f;
+        float verY=1.f;
+
+        //com que hem definit azim com rotacio CLOCKWISE desde la vertical, hem d'aplicar angle negatiu
+        double azimRad = (FastMath.toRadians(azimDegrees) * -1);
+        
+        float newX = (float) (verX*(FastMath.cos(azimRad))-verY*(FastMath.sin(azimRad)));
+        float newY = (float) (verX*(FastMath.sin(azimRad))+verY*(FastMath.cos(azimRad)));
+        
+        //ara ja el tenim "orientat", ara l'hem d'anar allargant
+        //establim vector amb coordenades pixels
+        float vPCx= this.getCentrX()+newX;
+        float vPCy= this.getCentrY()-newY;        
+        
+        log.writeNameNums("CONFIG", true, "azimDeg,azimRad,t2deg,newX,newY,vPCx,vPCy",azimDegrees,azimRad,t2deg,newX,newY,vPCx,vPCy);
+        
+        boolean found = false;
+        while (!found){
+            double currT2 = this.calc2T(vPCx, vPCy, true);
+            if (currT2>t2deg){
+                found = true;
+            }
+            vPCx = vPCx + newX;
+            vPCy = vPCy + newY;
+            if (!this.isInside(FastMath.round(vPCx), FastMath.round(vPCy))){
+                break;
+            }
+        }
+        //agafem el punt anterior
+        if (found){
+            vPCx = vPCx - newX;
+            vPCy = vPCy - newY;
+            log.writeNameNums("CONFIG", true, "FOUND vPCx,vPCy",vPCx,vPCy);
+            return new Point2D.Float(vPCx,vPCy);
+        }else{
+            log.debug("pixel from azimut and 2theta not found");;
+            return null;
+        }
+        
+    }
+    
     public float getOmeIni() {
         return omeIni;
     }
@@ -907,11 +1050,11 @@ public class Pattern2D {
         this.setOmeIni(omeInitial);
     }
 
-    public ArrayList<Point2D.Float> getPkSearchResult() {
+    public ArrayList<Peak> getPkSearchResult() {
         return pkSearchResult;
     }
 
-    public void setPkSearchResult(ArrayList<Point2D.Float> pkSearchResult) {
+    public void setPkSearchResult(ArrayList<Peak> pkSearchResult) {
         this.pkSearchResult = pkSearchResult;
     }
 
@@ -921,6 +1064,59 @@ public class Pattern2D {
 
     public static void setT2tolDegSelectedPoints(float t2tolDegSelectedPoints) {
         Pattern2D.t2tolDegSelectedPoints = t2tolDegSelectedPoints;
+    }
+
+    public int getnPkSatur() {
+        return nPkSatur;
+    }
+
+    public void setnPkSatur(int nPkSatur) {
+        this.nPkSatur = nPkSatur;
+    }
+
+    public int getIscan() {
+        return iscan;
+    }
+
+    public void setIscan(int iscan) {
+        this.iscan = iscan;
+    }
+    
+    public Peak getPeakFromCoordinates(Point2D.Float px){
+        Iterator<Peak> itrpk = this.getPkSearchResult().iterator();
+        Peak pk = null;
+        while (itrpk.hasNext()){
+            pk = itrpk.next();
+            if (pk.getPixelCentre().equals(px))break;
+        }
+        return pk;
+    }
+    
+    public Peak removePeak(Peak pk){
+        int index = this.getPkSearchResult().indexOf(pk);
+        log.config("removePeak at index="+index);
+        if (index<0)return null;
+        return this.getPkSearchResult().remove(index);
+    }
+    
+    public Peak findNearestPeak(Point2D.Float pixel, float maxDistToConsider){
+        Iterator<Peak> itrp = this.getPkSearchResult().iterator();
+        Peak closest = null;
+        double minDist = maxDistToConsider +1;
+        while (itrp.hasNext()){
+            Peak pk = (Peak)itrp.next();
+            Point2D.Float centre = pk.getPixelCentre();
+            double dist = centre.distance(pixel);
+            log.writeNameNums("FINE", true, "p(list) pixel", centre.x,centre.y,pixel.x,pixel.y);
+            log.fine("dist="+Double.toString(dist));
+            if ((dist<maxDistToConsider)){
+                if (dist<minDist){
+                    minDist = dist;
+                    closest = pk;
+                }
+            }
+        }
+        return closest;
     }
     
 }

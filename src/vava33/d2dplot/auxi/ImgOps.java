@@ -2,6 +2,7 @@ package vava33.d2dplot.auxi;
 
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -620,6 +621,12 @@ public final class ImgOps {
             pol=(float) (0.5 + 0.5 * (FastMath.cos(t2)*FastMath.cos(t2)));
         }
 
+        //cas sense oscil·lacio
+        if(iosc==0){
+            rloren=1.0f;
+            pol=1.0f;
+        }
+        
         float[] result = {(dataIn.getInten(pX, pY)*rloren)/pol,rloren,1/pol};
         return result;
     }
@@ -851,24 +858,142 @@ public final class ImgOps {
         return result;
     }
     
-    //roundToInt fa que es guardin fent un round
-    public static ArrayList<Point2D.Float> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, boolean roundToInt){
+    //when we click to a point we add the peak but calculating the things (saturated, nearmaks, etc..) as in FindPeaks
+    //neixam no ho considerem perque l'afegim apart
+    public static Peak addPeakFromCoordinates(Pattern2D patt2d, Point2D.Float pixel, int zoneRadius){
+        Ellipse2D.Float elli = new Ellipse2D.Float(pixel.x-zoneRadius,pixel.y-zoneRadius,zoneRadius*2,zoneRadius*2);
+        int ix = FastMath.round(pixel.x);
+        int iy = FastMath.round(pixel.y);
         
-        ArrayList<Point2D.Float> foundpeaks = new ArrayList<Point2D.Float>();
+        Peak pic = new Peak(pixel);
+        int sumaX=0;
+        int sumaY=0;
+        int sumaInt=0;
+        
+        //mirem nearmask, saturats i determinem millor el centre
+        for(int i=iy-zoneRadius; i<iy+(zoneRadius*2);i++){
+            for(int j=ix-zoneRadius; j<ix+(zoneRadius*2);j++){
+                if (elli.contains(j, i)){
+                    if (!patt2d.isInside(j, i)){
+                        pic.setNearMask(true);
+                        continue;
+                    }
+                    if (patt2d.isInExZone(j, i)){
+                        pic.setNearMask(true);
+                        continue;
+                    }
+                    if (patt2d.getInten(j, i)>=(patt2d.getSaturValue()-1)){
+                        pic.setnSatur(pic.getnSatur()+1);
+                    }
+                    sumaX = sumaX + patt2d.getInten(j, i)*j;
+                    sumaY = sumaY + patt2d.getInten(j, i)*i;
+                    sumaInt = sumaInt + patt2d.getInten(j, i);
+                }
+            }
+            float xpond = (float)sumaX/(float)sumaInt;
+            float ypond = (float)sumaY/(float)sumaInt;
+            pic.getPixelCentre().x=xpond;
+            pic.getPixelCentre().y=ypond;
+        }
+        return pic;
+    }
+    
+    //roundToInt fa que es guardin fent un round
+//    public static ArrayList<Point2D.Float> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, boolean roundToInt){
+    public static ArrayList<Peak> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, boolean t2dependent, int zones2t, int minpix, boolean roundToInt){      
+
+        ArrayList<Point2D.Float> foundCandidates = new ArrayList<Point2D.Float>();
         
         patt2d.calcMeanI();
         
         //jordi: IF(RO.LE.ROMEAN(IND)+DELSIG*ROSIG)GOTO 100
+        //TODO: jo crec que amb aquest llindar GENERAL podem perdre febles,
+        //      s'hauria de calcular per cada 2theta
+        float llindarGeneral = patt2d.meanI + delsig*patt2d.sdevI;
 
-        float llindar = patt2d.meanI + delsig*patt2d.sdevI;
+//        float llindar = patt2d.meanI + delsig*patt2d.sdevI;
         
-        for(int i=0; i<patt2d.getDimY();i++){
-            for(int j=0; j<patt2d.getDimX();j++){
+        //llindar per zones (algunes variables fora perque s'utilitzen mes avall)
+        int nzones = zones2t; //i.e. caldran nzones+1 valors de px (un valor de 8 va be)
+        float[] izone2t = new float[nzones+1]; //llindars de les zones en 2THETA en la direccio horitzontal (X)
+        float dbLlin[] = new float[nzones];
+
+        //primer determinem les zones: py=centre, px=divisioPelNombreDeZones
+        if (t2dependent){
+            float py=patt2d.getCentrY();
+            float angdeg = 15f; //es sobreesciura
+            
+            int lhaperture = 75;//longitudinal Half-aperture in pixels, to determine the angdeg
+            
+            float div = (patt2d.getDimX()-patt2d.getCentrX())/nzones;
+            float[] izonepx = new float[nzones+1]; //llindars de les zones en PIXELS en la direccio horitzontal (X)
+            izonepx[0]=patt2d.getCentrX();
+            izone2t[0]=0f;
+            for (int i=1;i<nzones+1;i++){
+                izonepx[i]=izonepx[i-1]+div;
+                izone2t[i]=(float) patt2d.calc2T(izonepx[i],py, true);
+            }
+            log.writeNameNums("CONFIG", true, "izonePX", izonepx[0],izonepx[1],izonepx[2],izonepx[3],izonepx[4],izonepx[5],izonepx[6],izonepx[7],izonepx[8]);
+            log.writeNameNums("CONFIG", true, "izone2t", izone2t[0],izone2t[1],izone2t[2],izone2t[3],izone2t[4],izone2t[5],izone2t[6],izone2t[7],izone2t[8]);
+            
+            //ara a quina tol2t correspon div
+            float t2a = (float) patt2d.calc2T(izonepx[nzones/2], py, true);
+            float t2b = (float) patt2d.calc2T(izonepx[nzones/2+1], py, true);
+            float tol2t = t2b-t2a;
+            
+            Patt2Dzone[] zones = new Patt2Dzone[nzones];
+            
+            for (int i=1;i<nzones+1;i++){
+                int pxcen = FastMath.round((izonepx[i]+izonepx[i-1])/2);
+                angdeg = (float) FastMath.atan(lhaperture/((izonepx[i]+izonepx[i-1])/2));
+                angdeg = (float) FastMath.toDegrees(angdeg);
+                zones[i-1] = YarcTilt(patt2d,pxcen,patt2d.getCentrYI(),tol2t,angdeg,true,0,false);
+                log.debug("angdeg="+angdeg);
+            }
+            
+            //llista dels llindars
+            for (int k=0;k<nzones;k++){
+                dbLlin[k] = zones[k].getYmean() + delsig*patt2d.sdevI;//delsig*zones[k].getYmeandesv();
+            }
+            log.writeNameNums("CONFIG", true, "dbLlin", dbLlin[0],dbLlin[1],dbLlin[2],dbLlin[3],dbLlin[4],dbLlin[5],dbLlin[6],dbLlin[7]);
+            log.writeNameNums("CONFIG", true, "LlindarGeneral", llindarGeneral);
+        }
+        
+        //de 1 a -1 per no agafar els pixels de les vores
+        for(int i=1; i<patt2d.getDimY()-1;i++){
+            for(int j=1; j<patt2d.getDimX()-1;j++){
+                
                 if (patt2d.isInExZone(j, i))continue;
                 
                 int pxInten = patt2d.getInten(j, i);
-                        
-                //1r comprovem que la intensitat supera el llindar marcat
+                
+                //prova pel vidre --> AIXO ES SIMPLE, RAPID I FUNCIONA BE.
+                //es pot fer una taula de t2p vs fons (tipus diagrama de pols) i fer-lo així variable... o demanar directament a l'usuari
+//                float t2p = (float) patt2d.calc2T(j, i,true);
+//                float llindar = llindarGeneral;
+//                if((t2p>4.5)&&(t2p<10.3))llindar = llindarGeneral*2;
+                
+                
+                //establim llindar considerant zona quadrada al voltant del pixel ---> AQUEST NO FUNCINA MALAMENT DEL TOT
+//                int meanIntZone= patt2d.calcIntSquare(j, i, 30, true);
+//                llindar = delsig*meanIntZone;
+//                if (llindar<patt2d.sdevI)llindar = llindarGeneral;
+                
+                float llindar = llindarGeneral;
+                
+                if (t2dependent){
+                    //establim el llindar segons 2th
+                    float t2p = (float) patt2d.calc2T(j, i,true);
+                    for (int k=0;k<nzones;k++){
+                        if ((t2p>=izone2t[k])&&(t2p<=izone2t[k+1])){
+                            //esta a la zona
+//                            llindar = zones[k].getYmean() + delsig*zones[k].getYmeandesv();
+                            llindar = dbLlin[k];
+                            break;
+                        }
+                    }
+                }
+                
                 if (pxInten<llindar)continue;
                 
                 boolean possiblepeak = true;
@@ -876,71 +1001,207 @@ public final class ImgOps {
                 search8neigbors:
                     for (int ii=i-1;ii<i+2;ii++){
                         for (int jj=j-1;jj<j+2;jj++){
-                        
+                            if (patt2d.isInExZone(jj, ii))continue;
                             if ((ii==i)&&(jj==j))continue; //same pixel
-                        
-                            if (pxInten< patt2d.getInten(jj, ii)){ //px no es pic
-                                possiblepeak = false;
-                                break search8neigbors;
-                            }; 
+                            try{
+                                if (pxInten< patt2d.getInten(jj, ii)){ //px no es pic
+                                    possiblepeak = false;
+                                    break search8neigbors;
+                                }; 
+                            }catch(Exception e){
+                                e.printStackTrace();
+                            }
                         
                             //si la intensitat es igual o major pot ser pic (igual pot ser saturat...)
                         
                         }
                     }
                 if (!possiblepeak)continue;
-                log.writeNameNums("CONFIG", true, "possible peak (x,y,inten)", j,i,pxInten);
+                log.writeNameNums("CONFIG", true, "possible peak (x,y,inten,llindar)", j,i,pxInten,llindar);
+                
+                boolean hasMinEnough = true;
+                if(minpix>1){
+                    if (minpix > 20) minpix=20; //restriccio que poso
+                    int npixbons = 0;
+                    for (int ii=i-2;ii<i+3;ii++){
+                        for (int jj=j-2;jj<j+3;jj++){
+                            if (!patt2d.isInside(jj, ii))continue;
+                            if (patt2d.isInExZone(jj, ii))continue;
+                            if (patt2d.getInten(jj, ii)>llindar){
+                                npixbons=npixbons+1;
+                            }
+                        }
+                    }
+                    if (npixbons<minpix) {
+                        hasMinEnough=false;
+                        log.debug("peak containing less than minpix");
+                    }
+                }
                 
                 //i estem aqui es que pot ser un pic en aquesta primera ronda, el guardem a un arraylist
-                foundpeaks.add(new Point2D.Float(j,i));
+                if (hasMinEnough) foundCandidates.add(new Point2D.Float(j,i));
             }
         }
         
-        //ara segona passada, busquem pics aprop dels altres pics (colapsem), criteris:
-        ArrayList<Point2D.Float> realPeaks = new ArrayList<Point2D.Float>();
-        // si la intensitat es major.
-        // si la intensitat es igual busquem el "punt mig"
+        if (foundCandidates.size()==0)return null;
+
+        //TODO REALMENT LA SEGONA PASSADA ES PODRIA FER DUES VEGADES SI ES VEU QUE FALTA RANG...
+        //segona passada, colapsem els pics on hi ha intensitat igual en pixels consecutius (i identifiquem els saturats?)
+        ArrayList<Point2D.Float> toRemove = new ArrayList<Point2D.Float>();
+        ArrayList<Point2D.Float> toAdd = new ArrayList<Point2D.Float>();
+        
         boolean finished = false;
         while (!finished){
-            if (foundpeaks.isEmpty()){
+            if (foundCandidates.isEmpty()){
                 finished=true;
                 continue;
             }
-            Point2D.Float pk = foundpeaks.get(0);
+            Point2D.Float pk = foundCandidates.get(0);
             int x = FastMath.round(pk.x);
             int y = FastMath.round(pk.y);
 
             float sumX = pk.x;
             float sumY = pk.y;
-            int nClosePks = 1;
-
-            foundpeaks.remove(pk); //l'eliminem
-            ArrayList<Point2D.Float> toRemove = new ArrayList<Point2D.Float>();
+            int pkinten = patt2d.getInten(x, y);
             
-            if (!foundpeaks.isEmpty()){ //per l'ultim pic que quedaria
-                Iterator<Point2D.Float> itrpks2 = foundpeaks.iterator();
-                Ellipse2D.Float elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
-                while (itrpks2.hasNext()){
-                    Point2D.Float pk2 = itrpks2.next();
-                    if (pk.equals(pk2))continue;
-                    if (elli.contains(pk2)){
+            foundCandidates.remove(pk); //l'eliminem
+            toRemove = new ArrayList<Point2D.Float>();
+
+            Rectangle2D.Float rect = new Rectangle2D.Float(x-2f, y-2f, 5.f, 5.f);
+            int niguals = 1;
+            
+            for (int i=0; i<foundCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
+                Point2D.Float pk2 = foundCandidates.get(i);
+//                Ellipse2D.Float elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
+                if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
+                if (rect.contains(pk2)){
+                    int pk2inten = patt2d.getInten(Math.round(pk2.x), Math.round(pk2.y));
+                    if (pkinten == pk2inten){
                         sumX = sumX + pk2.x;
                         sumY = sumY + pk2.y;
-                        nClosePks = nClosePks+1;
+                        niguals = niguals +1;
                         toRemove.add(pk2); //l'eliminarem al sortir del bucle
+                        log.writeNameNums("CONFIG", true, "removed candidate (x,y)=", pk2.x,pk2.y);
                     }
                 }
-                foundpeaks.removeAll(toRemove); //eliminem els que ja hem considerat
             }
-            //afegim el pic "suma"
-            float xf = sumX/nClosePks;
-            float yf = sumY/nClosePks;
-            if (roundToInt){
-                xf = FastMath.round(xf);
-                yf = FastMath.round(yf);
+            foundCandidates.removeAll(toRemove); //eliminem els que ja hem considerat
+
+            if (niguals > 1){//hi ha hagut merging
+                //afegim el pic "suma"
+                float xf = sumX/niguals;
+                float yf = sumY/niguals;
+                if (roundToInt){
+                    xf = FastMath.round(xf);
+                    yf = FastMath.round(yf);
+                }
+                toAdd.add(new Point2D.Float(xf,yf));
+                log.writeNameNums("CONFIG", true, "removed candidate (x,y)=", pk.x,pk.y);
+                log.writeNameNums("CONFIG", true, "added new candidate (from merging) (x,y)=", xf,yf);
+            }else{
+                //hem de tornar a afegir el pic que hem eliminat!
+                toAdd.add(new Point2D.Float(pk.x,pk.y));
             }
-            realPeaks.add(new Point2D.Float(xf, yf));
-            log.writeNameNums("CONFIG", true, "real peak (x,y,inten,nneigh)", sumX/nClosePks, sumY/nClosePks,patt2d.getInten(FastMath.round(sumX/nClosePks), FastMath.round(sumY/nClosePks)),nClosePks);
+            
+        }
+        if (!toAdd.isEmpty())foundCandidates.addAll(toAdd);
+
+        
+        //tercera passada busquem pics aprop dels altres (tambe col·lapsem) pero considerem eixam i ens quedem amb el major maxim.
+        //tambe identifiquem pics propers a mascara
+        ArrayList<Peak> realPeaks = new ArrayList<Peak>();
+        finished = false;
+        while (!finished){
+            if (foundCandidates.isEmpty()){
+                finished=true;
+                continue;
+            }
+            Point2D.Float pk = foundCandidates.get(0);
+            int x = FastMath.round(pk.x);
+            int y = FastMath.round(pk.y);
+
+            float bestX = pk.x;
+            float bestY = pk.y;
+            int maxInten = patt2d.getInten(x, y);
+            int nEixam = 1;
+
+            foundCandidates.remove(pk); //l'eliminem
+            toRemove = new ArrayList<Point2D.Float>();
+            Ellipse2D.Float elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
+            
+//            if (x==1371)log.writeNameNums("CONFIG", true, "x=1371 intensity", maxInten);
+//            if (x==1369)log.writeNameNums("CONFIG", true, "x=1369 intensity", maxInten);
+            
+            for (int i=0; i<foundCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
+                Point2D.Float pk2 = foundCandidates.get(i);
+                if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
+                if (elli.contains(pk2)){
+                    int pk2inten = patt2d.getInten(Math.round(pk2.x), Math.round(pk2.y));
+//                    log.config("inside contains");
+//                    if (FastMath.round(pk2.x)==1371)log.writeNameNums("CONFIG", true, "x=1371 intensity", maxInten);
+//                    if (FastMath.round(pk2.y)==1369)log.writeNameNums("CONFIG", true, "x=1369 intensity", maxInten);
+                    if (pk2inten>maxInten){
+                        //aquest es mes intens, ens el quedem
+                        bestX = pk2.x;
+                        bestY = pk2.y;
+                        maxInten = pk2inten;
+                    }
+                    nEixam = nEixam+1;
+                    toRemove.add(pk2); //l'eliminarem al sortir del bucle
+                    log.config("eixam found");
+                }
+            }
+            foundCandidates.removeAll(toRemove); //eliminem els que ja hem considerat
+
+            //afegim el pic
+            Peak pic = new Peak(bestX,bestY);
+            pic.setnVeinsEixam(nEixam);
+
+            //mirem ara els saturats i si està prop d'una mascara
+            x = FastMath.round(pic.getPixelCentre().x);
+            y = FastMath.round(pic.getPixelCentre().y);
+            
+//            elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
+            
+            for(int i=y-zoneRadius; i<y+(zoneRadius*2);i++){
+                for(int j=x-zoneRadius; j<x+(zoneRadius*2);j++){
+                    if (elli.contains(j, i)){
+                        if (!patt2d.isInside(j, i)){
+                            pic.setNearMask(true);
+                            continue;
+                        }
+                        if (patt2d.isInExZone(j, i)){
+                            pic.setNearMask(true);
+                            continue;
+                        }
+                        if (patt2d.getInten(j, i)>=(patt2d.getSaturValue()-1)){
+                            pic.setnSatur(pic.getnSatur()+1);
+                        }
+                    }
+                }
+            }
+            
+            //TEST de determinar una mica millor el màxim amb els 8 veins ---> FUNCIONA PERO HO PROVARE AMB MES VEINS PER TAMBE MIRAR EL FONS ... no, ho fare a l'integrar millor...
+            int sumaX=0;
+            int sumaY=0;
+            int sumaInt=0;
+            for (int ii=y-1;ii<y+2;ii++){
+                for (int jj=x-1;jj<x+2;jj++){
+                    if (patt2d.isInExZone(jj, ii))continue;
+                    sumaX = sumaX + patt2d.getInten(jj, ii)*jj;
+                    sumaY = sumaY + patt2d.getInten(jj, ii)*ii;
+                    sumaInt = sumaInt + patt2d.getInten(jj, ii);
+                }
+            }
+            float xpond = (float)sumaX/(float)sumaInt;
+            float ypond = (float)sumaY/(float)sumaInt;
+            pic.getPixelCentre().x=xpond;
+            pic.getPixelCentre().y=ypond;
+            
+            //ja hem acabat!!
+            
+            realPeaks.add(pic);
+            log.writeNameNums("CONFIG", true, "peak added (x,y,inten,neixam,nsatur)", pic.getPixelCentre().x, pic.getPixelCentre().y,patt2d.getInten(x,y),pic.getnVeinsEixam(),pic.getnSatur());
         }
         
         return realPeaks;
@@ -963,6 +1224,15 @@ public final class ImgOps {
 		   }
 		   return min;
 	}
+	
+	public static double findMin(double... vals) {
+	       double min = 99999999;
+
+           for (double d : vals) {
+              if (d < min) min = d;
+           }
+           return min;
+    }
 
 	public static int getBkgIter() {
 		return bkgIter;
@@ -1029,55 +1299,117 @@ public final class ImgOps {
         }
     }
     
+    public static float getTol2TFromIntRad(Pattern2D patt2d, float px, float py,int intRadPixels){
+        
+        //vector centre-pixel
+        float vPCx=px-patt2d.getCentrX();
+        float vPCy=patt2d.getCentrY()-py;
+        
+        //vector unitari
+        float modul = (float) FastMath.sqrt(vPCx*vPCx + vPCy*vPCy);
+        vPCx = vPCx/modul;
+        vPCy = vPCy/modul;
+        
+        float pixelInX = vPCx * (modul-intRadPixels/2); //in=intern
+        float pixelInY = vPCy * (modul-intRadPixels/2);
+        float pixelExX = vPCx * (modul+intRadPixels/2); //ex=extern
+        float pixelExY = vPCy * (modul+intRadPixels/2);
+        
+        pixelInX = patt2d.getCentrX() + pixelInX;
+        pixelInY = patt2d.getCentrY() - pixelInY;
+        pixelExX = patt2d.getCentrX() + pixelExX;
+        pixelExY = patt2d.getCentrY() - pixelExY;
+        
+        return (float) (patt2d.calc2T(pixelExX, pixelExY, true) - patt2d.calc2T(pixelInX, pixelInY, true));
+    }
+    
+    //igual que el de sota pero donant la IntRad en pixels i no 2theta
+    public static Patt2Dzone YarcTilt(Pattern2D patt2D, int px, int py, int intRadPixels, float azimApertureDeg, boolean self, int bkgpt, boolean debug){
 
-	
-	//tol2theta = quina tolerancia en 2theta volem integrar, es el rang TOTAL (es fara tol2t/2 en cada direccio)
-	//angle = angle TOTAL d'obertura de l'arc a integrar en GRAUS
-	//consideraElTIlt
-	public static Patt2Dzone YarcTilt(Pattern2D patt2D, int px, int py, float tol2t, float angleDeg, boolean self, int bkgpt, boolean debug){
-	    
-	    //limits tth i azim
-	    EllipsePars elli = getElliPars(patt2D, new Point2D.Float(px,py));
-	    float azimAngle = patt2D.getAzimAngle(px, py, true); //azimut des del zero
-	    float azimMax = azimAngle + angleDeg/2;
-	    float azimMin = azimAngle - angleDeg/2;
-	    if (azimMax<azimMin){
-	        //vol dir que passem pel zero
-	        azimMax = azimMax + 360;
-	    }
-	    float pixelTolerance = tol2t/0.02f;
-	    ArrayList<Point2D.Float> pixelsArc = elli.getEllipsePoints(azimMin, azimMax, 1);
-	    float t2p = (float) patt2D.calc2T(px, py, true);
-	    float t2max = (float) FastMath.min(t2p + tol2t/2.,patt2D.getMax2TdegCircle());
-	    float t2min = (float) FastMath.max(0.1, t2p - tol2t/2.);
-        log.writeNameNumPairs("FINE", true, "t2p,t2max,t2min,pixelTolerance,patt2D.getMinStepsize()",t2p,t2max,t2min,pixelTolerance,patt2D.getMinStepsize());
-	    log.writeNameNumPairs("FINE", true, "azimAngle,azimMax,azimMin", azimAngle,azimMax,azimMin);
+        float tol2t = getTol2TFromIntRad(patt2D,px,py,intRadPixels);
+        return YarcTilt(patt2D, px, py, tol2t, intRadPixels, azimApertureDeg, self, bkgpt, debug);
+    }
 
-	    //busquem el maxX, minX, maxY, minY de l'arc
-	    float[] xs = new float[pixelsArc.size()];
-	    float[] ys = new float[pixelsArc.size()];
-	    Iterator<Point2D.Float> itrp = pixelsArc.iterator();
-	    int n = 0;
-	    while (itrp.hasNext()){
-	        Point2D.Float p = itrp.next();
-	        xs[n] = p.x;
-	        ys[n] = p.y;
-	        n = n+1;
-	    }
+    public static Patt2Dzone YarcTilt(Pattern2D patt2D, int px, int py, float tol2tDeg, float azimApertureDeg, boolean self, int bkgpt, boolean debug){
+        
+            //calculem intRadPixels a partr de la 2theta per tenir-ne el valor
+            float t2i = (float)patt2D.calc2T(px, py, true);
+            float azim = patt2D.getAzimAngle(px, py, true);
+            Point2D.Float extern = patt2D.getPixelFromAzimutAnd2T(azim, t2i+(tol2tDeg/2));
+            Point2D.Float intern = patt2D.getPixelFromAzimutAnd2T(azim, t2i-(tol2tDeg/2));
+            float sumX=0.0f;
+            float sumY=0.0f;
+            if ((extern!=null)&&(intern!=null)){
+                sumX = extern.x-intern.x;
+                sumY = extern.y-intern.y;
+            }else{
+                if (extern==null){
+                    sumX = patt2D.getDimX()-intern.x;
+                    sumY = patt2D.getDimY()-intern.y;
+                }else{ //intern is null
+                    sumX = extern.x;
+                    sumY = extern.y;
+                }
+            }
+            int intRadPixels = FastMath.round((float) FastMath.sqrt(sumX*sumX+sumY*sumY));
+            
+            return YarcTilt(patt2D, px, py, tol2tDeg, intRadPixels, azimApertureDeg, self, bkgpt, debug);
+
+    }
+    
+    //tol2theta = quina tolerancia en 2theta volem integrar, es el rang TOTAL (es fara tol2t/2 en cada direccio)
+    //angle = angle TOTAL d'obertura de l'arc a integrar en GRAUS
+    //consideraElTIlt
+    private static Patt2Dzone YarcTilt(Pattern2D patt2D, int px, int py, float tol2tDeg, int intRadPixels, float azimApertureDeg, boolean self, int bkgpt, boolean debug){
+        //limits tth i azim
+        EllipsePars elli = getElliPars(patt2D, new Point2D.Float(px,py));
+        float azimAngle = patt2D.getAzimAngle(px, py, true); //azimut des del zero
+        float azimMax = azimAngle + azimApertureDeg/2;
+        float azimMin = azimAngle - azimApertureDeg/2;
+        if (azimMax<azimMin){
+            //vol dir que passem pel zero
+            azimMax = azimMax + 360;
+        }
+//      float pixelTolerance = tol2t/0.02f;
+        //calclulem be la pixelTolerance, quants pixels hi ha en aquest increment de 2theta (no cal que sigui exacte) i realment s'hauria de fer servir la meitat
+        float step = patt2D.calcMinStepsizeBy2Theta4Directions();
+//      float stepFast = patt2D.calcMinStepsizeEstimateWithPixSizeAndDistMD();
+//      log.debug("step="+step+" stepfast="+stepFast);
+        float pixelTolerance = tol2tDeg/(step/1.5f); //no faig servir la meitat per precaucio
+        
+        
+        ArrayList<Point2D.Float> pixelsArc = elli.getEllipsePoints(azimMin, azimMax, 1);
+        float t2p = (float) patt2D.calc2T(px, py, true);
+        float t2max = (float) FastMath.min(t2p + tol2tDeg/2.,patt2D.getMax2TdegCircle());
+        float t2min = (float) FastMath.max(0.1, t2p - tol2tDeg/2.);
+        log.writeNameNumPairs("FINE", true, "t2p,t2max,t2min,pixelTolerance,step",t2p,t2max,t2min,pixelTolerance,step);
+        log.writeNameNumPairs("FINE", true, "azimAngle,azimMax,azimMin", azimAngle,azimMax,azimMin);
+
+        //busquem el maxX, minX, maxY, minY de l'arc
+        float[] xs = new float[pixelsArc.size()];
+        float[] ys = new float[pixelsArc.size()];
+        Iterator<Point2D.Float> itrp = pixelsArc.iterator();
+        int n = 0;
+        while (itrp.hasNext()){
+            Point2D.Float p = itrp.next();
+            xs[n] = p.x;
+            ys[n] = p.y;
+            n = n+1;
+        }
         int maxX = FastMath.round(findMax(xs)+pixelTolerance);
         int minX = FastMath.round(findMin(xs)-pixelTolerance);
         int maxY = FastMath.round(findMax(ys)+pixelTolerance);
         int minY = FastMath.round(findMin(ys)-pixelTolerance);
-	    maxX = FastMath.min(maxX,patt2D.dimX-1);
-	    maxY = FastMath.min(maxY,patt2D.dimY-1);
+        maxX = FastMath.min(maxX,patt2D.dimX-1);
+        maxY = FastMath.min(maxY,patt2D.dimY-1);
         minX = FastMath.max(minX,0);
         minY = FastMath.max(minY,0);
         log.writeNameNumPairs("FINE", true, "minX,maxX,minY,maxY", minX,maxX,minY,maxY);
 
-	    //iniciacions valors
-	    int npix=0;
-	    int ysum=0;
-	    int ymax=0;
+        //iniciacions valors
+        int npix=0;
+        int ysum=0;
+        int ymax=0;
         ArrayList<Integer> minint = new ArrayList<Integer>(bkgpt); //vector amb les bkgpt intensitats menors
         ArrayList<Integer> intensitats = new ArrayList<Integer>(); //vector on guardarem les intensitats per calcular desv.estd
         float ymean=0;
@@ -1090,15 +1422,15 @@ public final class ImgOps {
             minint.add(patt2D.getSaturValue());
         }
         
-	    //ara ja tenim el quadrat on hem de buscar
-	    for (int j=minY;j<=maxY;j++){
-	       for (int i=minX;i<=maxX;i++){
+        //ara ja tenim el quadrat on hem de buscar
+        for (int j=minY;j<=maxY;j++){
+           for (int i=minX;i<=maxX;i++){
                //si esta fora la imatge o es mascara el saltem
                if(!patt2D.isInside(i, j))continue;
                if(patt2D.isInExZone(i, j))continue;
                //ell mateix?
-               if ((i==px)&&(j==py)&&(!self))continue;	           
-	           
+               if ((i==px)&&(j==py)&&(!self))continue;             
+               
                //comprovacions
                t2p = (float)patt2D.calc2T(i, j, true);
                azimAngle = patt2D.getAzimAngle(i, j, true); //azimut des del zero
@@ -1109,7 +1441,7 @@ public final class ImgOps {
                }else{//cas normal
                    if((azimAngle>azimMax)||(azimAngle<azimMin))continue;    
                }
-	              
+                  
                //si hem arribat aqu� es que hem se sumar la intensitat del pixel
                ysum=ysum+patt2D.getInten(i, j);
                if(ymax<patt2D.getInten(i, j))ymax=patt2D.getInten(i, j);
@@ -1127,41 +1459,397 @@ public final class ImgOps {
                
                //debug
                if(debug)patt2D.setInten(i, j, -1);
-	       }
-	    }
-	    
-	    if(npix>0){
-	        //calcul desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
-	        ymean=(float)(ysum)/(float)(npix);
-	        sumdesv=0;
-	        Iterator<Integer> it = intensitats.iterator();
-	        while (it.hasNext()){
-	            int inten = it.next();
-	            sumdesv=sumdesv + ((float)(inten)-ymean)*((float)(inten)-ymean);
-	        }
-	        if(npix<2)npix=2;
-	        ymeandesv=(float) FastMath.sqrt(sumdesv/(float)(npix-1));
-	        //calcul del valor de fons i la desviacio
-	        bkgsum=0;
-	        int nbkgpt=FastMath.min(bkgpt, npix);
-	        for (int i=0; i<nbkgpt;i++){
-	            bkgsum = bkgsum + minint.get(i);
-	        }
-	        ybkg = (float)(bkgsum)/(float)(nbkgpt);
-	        sumdesv=0;
-	        for (int i=0; i<nbkgpt;i++){
-	            sumdesv = sumdesv + ((float)(minint.get(i))-ybkg)*((float)(minint.get(i))-ybkg);
-	        }
-	        ybkgdesv=(float) FastMath.sqrt(sumdesv/(float)(nbkgpt-1));
-	    }
-	    return new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
+           }
+        }
+        
+        if(npix>0){
+            //calcul desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
+            ymean=(float)(ysum)/(float)(npix);
+            sumdesv=0;
+            Iterator<Integer> it = intensitats.iterator();
+            while (it.hasNext()){
+                int inten = it.next();
+                sumdesv=sumdesv + ((float)(inten)-ymean)*((float)(inten)-ymean);
+            }
+            if(npix<2)npix=2;
+            ymeandesv=(float) FastMath.sqrt(sumdesv/(float)(npix-1));
+            //calcul del valor de fons i la desviacio
+            bkgsum=0;
+            int nbkgpt=FastMath.min(bkgpt, npix);
+            int neffectiveBkgPt = 0; //afegit 160920
+            for (int i=0; i<nbkgpt;i++){
+                if (minint.get(i)>ymean)continue;
+                bkgsum = bkgsum + minint.get(i);
+                neffectiveBkgPt = neffectiveBkgPt +1;
+            }
+//          ybkg = (float)(bkgsum)/(float)(nbkgpt);
+            ybkg = (float)(bkgsum)/(float)(neffectiveBkgPt);
+            sumdesv=0;
+            for (int i=0; i<nbkgpt;i++){
+                if (minint.get(i)>ymean)continue;
+                sumdesv = sumdesv + ((float)(minint.get(i))-ybkg)*((float)(minint.get(i))-ybkg);
+            }
+//          ybkgdesv=(float) FastMath.sqrt(sumdesv/(float)(nbkgpt-1));
+            ybkgdesv=(float) FastMath.sqrt(sumdesv/(float)(neffectiveBkgPt-1));
+        }
+        
+        Patt2Dzone pz = new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
+        pz.setIntradPix(intRadPixels);
+        pz.setAzimAngle(azimApertureDeg);
+        pz.setBkgpt(bkgpt);
+        pz.setCentralPoint(new Point2D.Float(px,py));
+        pz.setPatt2d(patt2D);
+        return pz;
+    }
+    
+	
+    public static int ArcNPix(Pattern2D patt2D, int px, int py, int intRadPixels, float angleDeg){
+        //vector centre-pixel
+        float vPCx=px-patt2D.getCentrX();
+        float vPCy=patt2D.getCentrY()-py;
+        
+        //vector unitari
+        float modul = (float) FastMath.sqrt(vPCx*vPCx + vPCy*vPCy);
+        vPCx = vPCx/modul;
+        vPCy = vPCy/modul;
+        
+        float pixelInX = vPCx * (modul-intRadPixels/2); //in=intern
+        float pixelInY = vPCy * (modul-intRadPixels/2);
+        float pixelExX = vPCx * (modul+intRadPixels/2); //ex=extern
+        float pixelExY = vPCy * (modul+intRadPixels/2);
+        
+        pixelInX = patt2D.getCentrX() + pixelInX;
+        pixelInY = patt2D.getCentrY() - pixelInY;
+        pixelExX = patt2D.getCentrX() + pixelExX;
+        pixelExY = patt2D.getCentrY() - pixelExY;
+        
+        float tol2t = (float) (patt2D.calc2T(pixelExX, pixelExY, true) - patt2D.calc2T(pixelInX, pixelInY, true));
+        
+        return ArcNPix(patt2D, px, py, tol2t, angleDeg);
+
+    }
+
+    
+    //tol2theta = quina tolerancia en 2theta volem integrar, es el rang TOTAL (es fara tol2t/2 en cada direccio)
+    //angle = angle TOTAL d'obertura de l'arc a integrar en GRAUS
+    //consideraElTIlt
+    public static int ArcNPix(Pattern2D patt2D, int px, int py, float tol2t, float angleDeg){
+        //limits tth i azim
+        EllipsePars elli = getElliPars(patt2D, new Point2D.Float(px,py));
+        float azimAngle = patt2D.getAzimAngle(px, py, true); //azimut des del zero
+        float azimMax = azimAngle + angleDeg/2;
+        float azimMin = azimAngle - angleDeg/2;
+        if (azimMax<azimMin){
+            //vol dir que passem pel zero
+            azimMax = azimMax + 360;
+        }
+        //calclulem be la pixelTolerance, quants pixels hi ha en aquest increment de 2theta (no cal que sigui exacte) i realment s'hauria de fer servir la meitat
+        float step = patt2D.calcMinStepsizeBy2Theta4Directions();
+        float pixelTolerance = tol2t/(step/1.5f); //no faig servir la meitat per precaucio
+        
+        ArrayList<Point2D.Float> pixelsArc = elli.getEllipsePoints(azimMin, azimMax, 1);
+
+        //busquem el maxX, minX, maxY, minY de l'arc
+        float[] xs = new float[pixelsArc.size()];
+        float[] ys = new float[pixelsArc.size()];
+        Iterator<Point2D.Float> itrp = pixelsArc.iterator();
+        int n = 0;
+        while (itrp.hasNext()){
+            Point2D.Float p = itrp.next();
+            xs[n] = p.x;
+            ys[n] = p.y;
+            n = n+1;
+        }
+        int maxX = FastMath.round(findMax(xs)+pixelTolerance);
+        int minX = FastMath.round(findMin(xs)-pixelTolerance);
+        int maxY = FastMath.round(findMax(ys)+pixelTolerance);
+        int minY = FastMath.round(findMin(ys)-pixelTolerance);
+        maxX = FastMath.min(maxX,patt2D.dimX-1);
+        maxY = FastMath.min(maxY,patt2D.dimY-1);
+        minX = FastMath.max(minX,0);
+        minY = FastMath.max(minY,0);
+        
+        //ara ja tenim el quadrat on hem de buscar
+        int npix = 0;
+        for (int j=minY;j<=maxY;j++){
+           for (int i=minX;i<=maxX;i++){
+               //si esta fora la imatge o es mascara el saltem
+               if(!patt2D.isInside(i, j))continue;
+               if(patt2D.isInExZone(i, j))continue;
+               npix = npix +1;
+           }
+        }
+        return npix;
+    }	
+	public static float azimAngleOfAPeak(Pattern2D patt2D, float px, float py){
+	    int ipx = FastMath.round(px);
+	    int ipy = FastMath.round(py);
+        EllipsePars elli = getElliPars(patt2D, new Point2D.Float(px,py));
+        float azimAngle = patt2D.getAzimAngle(ipx, ipy, true); //azimut des del zero
+        Point2D.Float central = elli.getEllipsePoint(azimAngle);
+        
+        log.debug(String.format("haurien de coincidir px,py= %f,%f entrats amb CentralSegonsAzimut %f,%f",px,py,central.x,central.y));
+        
+        //farem com amb intrad
+        int maxPixels = 150;
+        float halfleft = 0;
+        float halfright = 0;
+        
+        //ara anirem mirant pixel per pixel en el radi la desviacio de la intensitat
+        //primer cap a l'interior:
+        int centralPixelIntensity = patt2D.getInten(ipx,ipy); 
+        int previousIntensity = centralPixelIntensity;
+        int minI = centralPixelIntensity;
+        int previousX = ipx;
+        int previousY = ipy;
+        int pixcount = 1;
+        int countdown = 0;
+        float azimStep = 0.02f; //revisar el valor o calcular perque sigui l'equivalent a aprox. 1pixel en angles alts
+        float currentAzimut = azimAngle;
+        boolean finished = false;
+        while (!finished){
+            log.debug("countLeft="+pixcount+" currentAzim="+currentAzimut);
+            
+//            NO SE SI S'HAURIA DE CORREGIR EL FET QUE FEM UN -1 o alguna cosa així...
+//            float azimMax = azimAngle + azimApertureDeg/2;
+//            float azimMin = azimAngle - azimApertureDeg/2;
+//            if (azimMax<azimMin){
+//                //vol dir que passem pel zero
+//                azimMax = azimMax + 360;
+//            }
+            currentAzimut = currentAzimut + azimStep;
+            Point2D.Float newPoint = elli.getEllipsePoint(currentAzimut);
+            
+            int npx = FastMath.round(newPoint.x);//new pixel x
+            int npy = FastMath.round(newPoint.y);
+            
+            if ((npx==previousX)&&(npy==previousY)){
+                continue;
+            }
+            
+            int inten = patt2D.getInten(npx,npy);
+            
+            if (inten<previousIntensity){
+                if (inten<minI){
+                    //anem baixant encara
+                    minI=inten;
+                }else{
+                    countdown=countdown+1; //penalitzem
+                }
+            }else{//intensitat es major a l'anterior
+                countdown=countdown+1; //AIXO POTSER HO HAURIA DE DESACTIVAR PEL TEMA DELS MOSAICS
+            }
+            
+            previousIntensity = inten;
+            pixcount = pixcount +1;
+            maxPixels = maxPixels -1;
+            previousX = npx;
+            previousY = npy;
+            
+            if (maxPixels < 0)break;
+
+            if (countdown>=3){
+                finished=true;
+            }
+        }
+        halfleft = currentAzimut - azimAngle;
+        
+        //ara cap a l'exterior:
+        previousIntensity = centralPixelIntensity;
+        minI = centralPixelIntensity;
+        previousX = ipx;
+        previousY = ipy;
+        pixcount = 1;
+        countdown = 0;
+        currentAzimut = azimAngle;
+        finished = false;
+        while (!finished){
+            log.debug("countRight="+pixcount+" currentAzim="+currentAzimut);
+            
+            currentAzimut = currentAzimut - azimStep;
+            Point2D.Float newPoint = elli.getEllipsePoint(currentAzimut);
+            
+            int npx = FastMath.round(newPoint.x);//new pixel x
+            int npy = FastMath.round(newPoint.y);
+            
+            if ((npx==previousX)&&(npy==previousY)){
+                continue;
+            }
+            
+            int inten = patt2D.getInten(npx,npy);
+            
+            if (inten<previousIntensity){
+                if (inten<minI){
+                    //anem baixant encara
+                    minI=inten;
+                }else{
+                    countdown=countdown+1; //penalitzem
+                }
+            }else{//intensitat es major a l'anterior
+                countdown=countdown+1; //AIXO POTSER HO HAURIA DE DESACTIVAR PEL TEMA DELS MOSAICS
+            }
+            
+            previousIntensity = inten;
+            pixcount = pixcount +1;
+            maxPixels = maxPixels -1;
+            previousX = npx;
+            previousY = npy;
+            
+            if (maxPixels < 0)break;
+
+            if (countdown>=3){
+                finished=true;
+            }
+        }
+        halfright = azimAngle - currentAzimut;
+        
+        return 2*FastMath.max(halfleft, halfright);
 	}
 	
+    public static int intRadPixelsOfAPeak(Pattern2D patt2D, float px, float py){
+        //vector centre-pixel
+        float vPCx=px-patt2D.getCentrX();
+        float vPCy=patt2D.getCentrY()-py;
+        
+        //vector unitari
+        float modul = (float) FastMath.sqrt(vPCx*vPCx + vPCy*vPCy);
+        vPCx = vPCx/modul;
+        vPCy = vPCy/modul;
+        
+        int maxPixels = 30;
+        int halfinterna = 0;
+        int halfexterna = 0;
+
+        //ara anirem mirant pixel per pixel en el radi la desviacio de la intensitat
+        //primer cap a l'interior:
+        int centralPixelIntensity = patt2D.getInten(FastMath.round(px), FastMath.round(py)); 
+        int previousIntensity = centralPixelIntensity;
+        int minI = centralPixelIntensity;
+        int previousX = FastMath.round(px);
+        int previousY = FastMath.round(py);
+        int pixcount = 1;
+        int countdown = 0;
+        boolean finished = false;
+        while (!finished){
+            log.debug("count="+pixcount);
+            float fpx = FastMath.round(vPCx * (modul-pixcount)); //new pixel x float
+            float fpy = FastMath.round(vPCy * (modul-pixcount));
+            
+            int npx = FastMath.round(patt2D.getCentrX() + fpx);//new pixel x
+            int npy = FastMath.round(patt2D.getCentrY() - fpy);
+            
+            if ((npx==previousX)&&(npy==previousY)){
+                pixcount=pixcount+1;
+                continue;
+            }
+            
+            int inten = patt2D.getInten(npx,npy);
+            
+//            if (inten==minI){
+//                countdown = countdown+1;
+//            }
+//            
+////            if (inten<=(minI+(minI*0.05))){
+////                countdown = countdown+1;
+////            }
+//            
+//            if (inten<minI){
+//                minI=inten;
+//            }
+//            
+            if (inten<previousIntensity){
+                if (inten<minI){
+                    //anem baixant encara
+                    minI=inten;
+                }else{
+                    countdown=countdown+1; //penalitzem
+                }
+            }else{//intensitat es major a l'anterior
+                countdown=countdown+1;
+            }
+            
+            previousIntensity = inten;
+            pixcount = pixcount +1;
+            maxPixels = maxPixels -1;
+            previousX = npx;
+            previousY = npy;
+            
+            if (maxPixels < 0)break;
+
+            if (countdown>=3){
+                finished=true;
+            }
+        }
+        halfinterna = pixcount;
+        
+        //ara cap a l'exterior:
+        centralPixelIntensity = patt2D.getInten(FastMath.round(px), FastMath.round(py)); 
+        previousIntensity = centralPixelIntensity;
+        minI = centralPixelIntensity;
+        previousX = FastMath.round(px);
+        previousY = FastMath.round(py);
+        pixcount = 1;
+        countdown = 0;
+        finished = false;
+        while (!finished){
+            float fpx = FastMath.round(vPCx * (modul-pixcount)); //new pixel x float
+            float fpy = FastMath.round(vPCy * (modul-pixcount));
+            
+            int npx = FastMath.round(patt2D.getCentrX() + fpx);//new pixel x
+            int npy = FastMath.round(patt2D.getCentrY() - fpy);
+            
+            if ((npx==previousX)&&(npy==previousY)){
+                pixcount=pixcount+1;
+                continue;
+            }
+            
+            int inten = patt2D.getInten(npx,npy);
+            
+//            if (inten==minI){
+//                countdown = countdown+1;
+//            }
+//            
+//            if (inten<minI){
+//                minI=inten;
+//            }
+//            
+//            if (inten<previousIntensity){
+//                //no fer res
+//            }
+            
+            if (inten<previousIntensity){
+                if (inten<minI){
+                    //anem baixant encara
+                    minI=inten;
+                }else{
+                    countdown=countdown+1; //penalitzem
+                }
+            }else{//intensitat es major a l'anterior
+                countdown=countdown+1;
+            }
+            
+            previousIntensity = inten;
+            pixcount = pixcount +1;
+            maxPixels = maxPixels -1;
+            previousX = npx;
+            previousY = npy;
+            
+            if (maxPixels < 0)break;
+
+            if (countdown>=3){
+                finished=true;
+            }
+        }
+        halfexterna = pixcount;
+        
+        return 2*FastMath.max(halfinterna, halfexterna);
+    }
+    
 	//ATENCIO AQUI ES CALCULA "IN SITU" LA 2THETA DELS PIXELS (repetit de patt2D.calc2T) TODO: VIGILAR SI ES FAN CANVIS, en aquest es pot decidir si fer servir o no tilt.
 	//sino sempre es pot fer servir la variant slower, que fa servir Pattern2D
 	public static Pattern1D radialIntegration(Pattern2D patt2D,float t2ini, float t2fin, float step, float cakeIn, float cakeOut, boolean useTilt, boolean corrLP, boolean corrIAng){
 	    //comprovacions previes
-	    if (step < 0) {step = patt2D.getMinStepsize();}
+	    if (step < 0) {step = patt2D.calcMinStepsizeBy2Theta4Directions();}
 	    if (cakeIn < 0){cakeIn = 0.0f;}
 	    if (cakeOut < 0){cakeOut = 360.f;}
 	    boolean fullCake = false;
@@ -1306,7 +1994,7 @@ public final class ImgOps {
 
 	public static Pattern1D radialIntegrationSlower(Pattern2D patt2D,float t2ini, float t2fin, float step, float cakeIn, float cakeOut, boolean corrLP, boolean corrIAng){
 	    //comprovacions previes
-	    if (step < 0) {step = patt2D.getMinStepsize();}
+	    if (step < 0) {step = patt2D.calcMinStepsizeBy2Theta4Directions();}
 	    if (cakeIn < 0){cakeIn = 0.0f;}
 	    if (cakeOut < 0){cakeOut = 360.f;}
 	    boolean fullCake = false;
@@ -1396,13 +2084,105 @@ public final class ImgOps {
 	    return out;
 	}
 
+    public static Pattern1D radialIntegrationSlowerPARTIALIMG(Pattern2D patt2D, int rowIni, int rowFin, int colIni, int colFin, float t2ini, float t2fin, float step, float cakeIn, float cakeOut, boolean corrLP, boolean corrIAng){
+        //comprovacions previes
+        if (step < 0) {step = patt2D.calcMinStepsizeBy2Theta4Directions();}
+        if (cakeIn < 0){cakeIn = 0.0f;}
+        if (cakeOut < 0){cakeOut = 360.f;}
+        boolean fullCake = false;
+        if (cakeIn==0.0 && cakeOut==360.0){
+            fullCake = true;
+        }
+
+        log.debug("step ="+step+" t2ini="+t2ini+" t2fin="+t2fin);
+        Pattern1D out = new Pattern1D(t2ini,t2fin,step);
+
+        //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
+        for (int i = rowIni; i < rowFin; i++) { // per cada fila (Y)
+            for (int j = colIni; j < colFin; j++) { // per cada columna (X)
+                //mask o zero el descartem
+                if(patt2D.isInExZone(j, i))continue;
+
+                //HEM DE MIRAR SI EL VECTOR ESTA DINTRE EL CAKE
+                if (!fullCake){
+                    float azim = patt2D.getAzimAngle(j, i, true);
+                    //debug
+                    if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()-100)log.fine("x,y,azim="+j+","+i+","+azim);
+                    if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()+100)log.fine("x,y,azim="+j+","+i+","+azim);
+                    if(j==patt2D.getCentrXI()+100 && i==patt2D.getCentrYI())log.fine("x,y,azim="+j+","+i+","+azim);
+                    if(j==patt2D.getCentrXI()-100 && i==patt2D.getCentrYI())log.fine("x,y,azim="+j+","+i+","+azim);
+
+                    if (cakeOut<cakeIn){
+                        //va al reves
+                        if ((azim < cakeIn) && (azim > cakeOut))continue; 
+                    }else{
+                        if ((azim < cakeIn) || (azim > cakeOut))continue;    
+                    }
+                }
+                //2theta del pixel en la imatge
+                double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+
+                if(t2p<t2ini||t2p>t2fin)continue;
+
+                //position to the vector
+                int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
+                float factN=1;
+                float pond=1;
+                float facLor = 1;
+                float facPol = 1;
+                float facIAng = 1;
+                //!!CANVIAR PER PODER APLICAR LES DUES!!
+                if (corrLP) {
+                    float[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, 2, false);
+                    facLor = facLP[1];
+                    facPol = facLP[2];
+                }
+                if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
+                float inten = pond * patt2D.getInten(j,i) * patt2D.getScale() * (1.0f/factN) * facLor * facPol * facIAng;
+                out.sumPoint(p, FastMath.round(inten), 1);
+            }
+        }
+
+        //ara ja hauriem de tenir al vector el diagrama de pols.
+
+        //tornem a fer una passada per calcular la desviacio estandar sqrt((sum(xi-xmean)^2)/N-1)
+        for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+            for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+                //mask o zero el descartem
+                if(patt2D.isInExZone(j, i))continue;
+                double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+                if(t2p<t2ini||t2p>t2fin)continue;
+                //mirem a quina posicio del vector (diagrama pols) ha d'anar
+                int p=(int) (FastMath.round(t2p/step)-FastMath.round(t2ini/step));
+                //i ara acumulem la desv
+                float xmean=(float)(out.getPoint(p).getCounts())/(float)(out.getPoint(p).getNpix());
+                float des = (patt2D.getInten(j, i)*patt2D.getScale()-xmean)*(patt2D.getInten(j, i)*patt2D.getScale()-xmean);
+                out.getPoint(p).addDesv(des);
+            }
+        }
+
+        //Calcul final desviacio
+        Iterator<PointPatt1D> it = out.getPoints().iterator();
+        while(it.hasNext()){
+            PointPatt1D punt = it.next();
+            if (punt.getNpix()<2){
+                punt.setDesv(0);
+                continue;
+            }
+            float des = (float) FastMath.sqrt(punt.getDesv()/(float)(punt.getNpix()-1));
+            punt.setDesv(des);
+        }
+
+        return out;
+    }
+	
 	//Retorna el promig d'intensitat d'un anell centrat en t2 i considerant una amplada tol2t
 	//considera tilt/rot
 	public static float radialIntegrationSingle2th(Pattern2D patt2D, float t2,float tol2tdeg,boolean corrLP, boolean corrIAng){
 	    if (tol2tdeg < 0) { //default value
 	        tol2tdeg = 0.1f;
 	    }
-	    float step = patt2D.getMinStepsize();
+	    float step = patt2D.calcMinStepsizeBy2Theta4Directions();
 	    float sum = 0; //valor de intensitat suma
 	    int npix = 0;
 
@@ -1442,7 +2222,7 @@ public final class ImgOps {
         if (tol2tdeg < 0) { //default value
             tol2tdeg = 0.1f;
         }
-        float step = patt2D.getMinStepsize();
+        float step = patt2D.calcMinStepsizeBy2Theta4Directions();
         if (step>tol2tdeg){return null;}
         
         float[] sum = new float[t2.length]; //valor de intensitat suma
@@ -1556,6 +2336,7 @@ public final class ImgOps {
     //from pixel or twoteta calculate the ellipse considering pattern calibratino
     public static EllipsePars getElliPars(Pattern2D patt2D, Point2D.Float pixel){
         double twothRad = patt2D.calc2T(pixel, false);
+        log.fine(String.format("TWO THETA CLICK = %f",FastMath.toDegrees(twothRad)));
         return getElliPars(patt2D,twothRad);
     }
     
@@ -1581,8 +2362,12 @@ public final class ImgOps {
         double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
         double zdis = (fmes-fmenys)/2;
 
+        //OLD, no funcionava en eix Y per això el canvi de signe
+//        double ellicentX = patt2D.getCentrX()+zdis * FastMath.sin(phiRad);
+//        double ellicentY = patt2D.getCentrY()-zdis * FastMath.cos(phiRad); 
+        
         double ellicentX = patt2D.getCentrX()+zdis * FastMath.sin(phiRad);
-        double ellicentY = patt2D.getCentrY()-zdis * FastMath.cos(phiRad);
+        double ellicentY = patt2D.getCentrY()+zdis * FastMath.cos(phiRad); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
 
         return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,phiRad);
     }
@@ -1666,7 +2451,7 @@ public final class ImgOps {
             
             for(int i=0; i<dimY;i++){
                 for(int j=0; j<dimX;j++){
-                    pattsum.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)*fscale));
+                    pattsum.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)/fscale));
                 }
             }
             this.setProgress(100);
