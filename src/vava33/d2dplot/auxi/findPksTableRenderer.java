@@ -20,10 +20,11 @@ public class findPksTableRenderer extends DefaultTableCellRenderer {
             
             if (value instanceof Float){
                 
-                if (((Float)value*10.)<1){
-                    value = FileUtils.dfX_4.format((Number)value);
-                }else{
+//                if (((Float)value*10.)<1){
+                if (((Float)value)<10.0){
                     value = FileUtils.dfX_2.format((Number)value);
+                }else{
+                    value = FileUtils.dfX_1.format((Number)value);
                 }
             }
             setHorizontalAlignment(SwingConstants.CENTER);

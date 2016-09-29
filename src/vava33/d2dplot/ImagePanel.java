@@ -40,8 +40,8 @@ import vava33.d2dplot.auxi.ImgOps;
 import vava33.d2dplot.auxi.OrientSolucio;
 import vava33.d2dplot.auxi.PDCompound;
 import vava33.d2dplot.auxi.PDReflection;
-import vava33.d2dplot.auxi.Patt2Dzone;
 import vava33.d2dplot.auxi.Pattern2D;
+import vava33.d2dplot.auxi.Peak;
 import vava33.d2dplot.auxi.PolyExZone;
 import vava33.d2dplot.auxi.PuntClick;
 import vava33.d2dplot.auxi.PuntSolucio;
@@ -502,20 +502,27 @@ public class ImagePanel extends JPanel {
             // afegim o treiem punts a la llista pksearch
             if (e.getButton() == CLICAR) {
                 Point2D.Float pix = this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y));
-                Patt2Dzone pz = PKsearch.integratePk(pix);
-                patt2D.getPkSearchResult().add(pix);
-                PKsearch.getPkinteg().add(pz);
+                Peak pic = ImgOps.addPeakFromCoordinates(patt2D, pix, PKsearch_frame.zoneR);
+                PKsearch.integratePk(pic);
+//AIXO HO HE MOGUT A DINS DE integrate pk
+                //Patt2Dzone pz = PKsearch.integratePk(pix);
+//                Peak pk = new Peak(pix);
+//                pk.setZona(pz);
+//                patt2D.getPkSearchResult().add(new Peak(pix));
+////                PKsearch.getPkinteg().add(pz);
             }
             if (e.getButton() == ZOOM_BORRAR) {
-                Point2D.Float pktodel = PKsearch.findNearestPeak(this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y)),10);
-                if (pktodel != null) PKsearch.removePeak(pktodel);
-                if (pktodel != null){
+                Peak pktodel = patt2D.findNearestPeak(this.getPixel(new Point2D.Float(e.getPoint().x, e.getPoint().y)),10);
+                if (pktodel != null) {
+//                    patt2D.removePeak(pktodel);
+//                    PKsearch.updateTable();
+                    PKsearch.removePeak(pktodel);
                     log.debug(pktodel.toString());
                 }else{
                     log.debug("pktodel is null");
                 }
             }
-            PKsearch.updateTable();
+//            PKsearch.updateTable();
             return;
         }
         
@@ -571,6 +578,12 @@ public class ImagePanel extends JPanel {
         p = this.getPixel(p);
         patt2D.addPuntCercle(p, inten);
     }
+    
+    // donat un punt clicat mirarem si hi ha cercle a aquest pixel i en cas que aixi sigui el borrarem
+    public void removePuntCercle(Point2D.Float clic) {
+        patt2D.removePuntCercle(this.getPixel(clic)); // el passem a pixels
+    }
+    
     
     protected void setLabelValues(float pX, float pY, float tth, float dsp, int inten){
         lblCoordX.setText("x="+FileUtils.dfX_1.format(pX));
@@ -1099,11 +1112,6 @@ public class ImagePanel extends JPanel {
     public boolean getPaintExZ(){
         return this.paintExZ;
     }
-    
-    // donat un punt clicat mirarem si hi ha cercle a aquest pixel i en cas que aixi sigui el borrarem
-    public void removePuntCercle(Point2D.Float clic) {
-        patt2D.removePuntCercle(this.getPixel(clic)); // el passem a pixels
-    }
 
     public void resetView() {
         this.originX = 0;
@@ -1169,6 +1177,10 @@ public class ImagePanel extends JPanel {
 
     public void setMainFrame(MainFrame mf) {
         this.mainf = mf;
+    }
+    
+    public MainFrame getMainFrame() {
+        return this.mainf;
     }
     
     public void setImage(BufferedImage image) {
@@ -1638,9 +1650,9 @@ public class ImagePanel extends JPanel {
         
         private void drawPksearch(Graphics2D g1) {
             if (getPatt2D().getPkSearchResult()!=null){
-                Iterator<Point2D.Float> itrpk = getPatt2D().getPkSearchResult().iterator();
+                Iterator<Peak> itrpk = getPatt2D().getPkSearchResult().iterator();
                 while (itrpk.hasNext()){
-                    Point2D.Float pk = itrpk.next();
+                    Point2D.Float pk = ((Peak)itrpk.next()).getPixelCentre();
                     g1.setPaint(colorPeakSearch);
                     BasicStroke stroke = new BasicStroke(1.0f);
                     g1.setStroke(stroke);
@@ -1656,19 +1668,28 @@ public class ImagePanel extends JPanel {
                 BasicStroke stroke = new BasicStroke(1.0f);
                 g1.setStroke(stroke);
                 
-                Point2D.Float[] selpunts = PKsearch.getSelectedPeaks();
-                if (selpunts==null)return;
+                Peak[] selpeaks = PKsearch.getSelectedPeaks();
+                if (selpeaks==null)return;
                 
-                float angdeg = PKsearch.getCurrentAngDeg();
-                float tol2t = PKsearch.getCurrentTol2T();
-                if (angdeg<=0)return;
-                if (tol2t<=0)return;
+//                float angdeg = PKsearch.getCurrentAngDeg();
+//                float tol2t = PKsearch.getCurrentTol2T();
+//                float[] tol2ths = PKsearch.getSelectedPeaksIntRadConvertedTo2Theta();
+//                if (angdeg<=0)return;
+//                if (tol2t<=0)return;
                 
-                for (int i=0;i<selpunts.length;i++){
-                    if (selpunts[i]==null)continue;
+                for (int i=0;i<selpeaks.length;i++){
+                    if (selpeaks[i]==null)continue;
+                    float px = selpeaks[i].getPixelCentre().x;
+                    float py = selpeaks[i].getPixelCentre().y;
+                    float angdeg = selpeaks[i].getZona().getAzimAngle();
+                    float tol2t = ImgOps.getTol2TFromIntRad(patt2D, px, py, selpeaks[i].getZona().getIntradPix());
                     
-                    double t2rad = patt2D.calc2T(selpunts[i], false);
-                    float azim = patt2D.getAzimAngle(FastMath.round(selpunts[i].x), FastMath.round(selpunts[i].y), true);
+                    if (tol2t<=0)continue;
+                    if (angdeg<=0)continue;
+                    
+                    double t2rad = patt2D.calc2T(selpeaks[i].getPixelCentre(), false);
+                    float azim = patt2D.getAzimAngle(FastMath.round(px), FastMath.round(py), true);
+                    
                     
                     EllipsePars eOut = ImgOps.getElliPars(patt2D, (t2rad+FastMath.toRadians(tol2t/2)));
                     EllipsePars eIn= ImgOps.getElliPars(patt2D, (t2rad-FastMath.toRadians(tol2t/2)));
@@ -1716,12 +1737,22 @@ public class ImagePanel extends JPanel {
                 Iterator<PuntSolucio> itrS = os.getSol().iterator();
                 while (itrS.hasNext()) {
                     PuntSolucio s = itrS.next();
+                    Ellipse2D.Float e = null;
                     g1.setPaint(s.getColorPunt());
-                    BasicStroke stroke = new BasicStroke(3.0f);
+                    BasicStroke stroke = new BasicStroke(PuntSolucio.getDincoSolPointStrokeSize());
                     g1.setStroke(stroke);
-                    Ellipse2D.Float e = ellipseToFrameCoords(s.getEllipseAsDrawingPoint());
+                    if (dincoFrame.getSelectedPuntSolucio()!=null){
+                        if (dincoFrame.getSelectedPuntSolucio().equals(s)){
+//                            g1.setPaint(s.getColorPunt().brighter().brighter());
+                            g1.setPaint(D2Dplot_global.getComplimentColor(s.getColorPunt()));
+                            stroke = new BasicStroke(PuntSolucio.getDincoSolPointStrokeSize()+1);
+                            g1.setStroke(stroke);
+                        }
+                    }
+                    e = ellipseToFrameCoords(s.getEllipseAsDrawingPoint());
                     g1.draw(e);
-                    g1.fill(e);
+
+                    //g1.fill(e);
                     if (estaDincoShowHKL()){
                         Font font = new Font("Dialog", Font.PLAIN,hklfontSize+1);
 //                        if(s.getOscil()>swinglim){

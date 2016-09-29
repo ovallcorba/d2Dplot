@@ -14,6 +14,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.Iterator;
+
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -32,11 +33,11 @@ import javax.swing.event.DocumentListener;
 
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
-
 import vava33.d2dplot.auxi.ImgFileUtils;
 import vava33.d2dplot.auxi.Pattern2D;
 import vava33.d2dplot.auxi.PolyExZone;
 import net.miginfocom.swing.MigLayout;
+
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 
@@ -75,7 +76,8 @@ public class ExZones_dialog extends JDialog {
     private JButton btnReadExzFile;
     
     private MainFrame mf;
-    
+    private JButton btnWriteMaskbin;
+
     /**
      * Create the dialog.
      */
@@ -90,7 +92,7 @@ public class ExZones_dialog extends JDialog {
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 409, 450);
+        setBounds(x, y, 540, 450);
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[grow]", "[grow]"));
@@ -269,7 +271,7 @@ public class ExZones_dialog extends JDialog {
                     do_okButton_actionPerformed(arg0);
                 }
             });
-            buttonPane.setLayout(new MigLayout("", "[grow][][54px][54px]", "[28px]"));
+            buttonPane.setLayout(new MigLayout("", "[grow][][][54px][54px]", "[28px]"));
             {
                 btnReadExzFile = new JButton("Read EXZ file");
                 btnReadExzFile.addActionListener(new ActionListener() {
@@ -296,10 +298,19 @@ public class ExZones_dialog extends JDialog {
                         do_btnApply_actionPerformed(arg0);
                     }
                 });
-                buttonPane.add(btnApply, "cell 2 0,alignx right,aligny top");
+                {
+                    btnWriteMaskbin = new JButton("Write MASK.BIN");
+                    btnWriteMaskbin.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                            do_btnWriteMaskbin_actionPerformed(e);
+                        }
+                    });
+                    buttonPane.add(btnWriteMaskbin, "cell 2 0");
+                }
+                buttonPane.add(btnApply, "cell 3 0,alignx right,aligny top");
             }
             okButton.setActionCommand("OK");
-            buttonPane.add(okButton, "cell 3 0,alignx right,aligny center");
+            buttonPane.add(okButton, "cell 4 0,alignx right,aligny center");
             getRootPane().setDefaultButton(okButton);
         }
 
@@ -479,5 +490,25 @@ public class ExZones_dialog extends JDialog {
         }
     }
     
-    
+    protected void do_btnWriteMaskbin_actionPerformed(ActionEvent e) {
+        //i si el salvem directament sense preguntar, preguntem nomes en el cas que no hi hagi fitxer obert
+        File imgFile = patt2D.getImgfile();
+        File maskfile = null;
+        if (imgFile!=null){
+            String currDir = imgFile.getAbsolutePath();
+            maskfile = new File(currDir+D2Dplot_global.separator+"MASK.BIN");
+        }else{
+            File selectedDir = FileUtils.fchooserOpenDir(this, new File(D2Dplot_global.workdir), "Directory to save MASK.BIN");
+            if (selectedDir != null){
+                maskfile = new File(selectedDir.getAbsolutePath()+D2Dplot_global.separator+"MASK.BIN");
+            }
+        }
+        if (maskfile!=null){
+            ImgFileUtils.writeBIN(maskfile, new Pattern2D(this.patt2D,false,true));
+            D2Dplot_global.setWorkdir(maskfile);
+            tAOut.ln(maskfile.toString()+" written!");
+        }else{
+            tAOut.ln("Error writting MASK.BIN");
+        }
+    }
 }

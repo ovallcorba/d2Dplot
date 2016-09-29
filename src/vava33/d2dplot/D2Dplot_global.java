@@ -1,6 +1,5 @@
 package vava33.d2dplot;
 
-
 import java.awt.Color;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -20,7 +19,8 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String welcomeMSG = "d2Dplot v1511 (151125) by OV";
+    public static final String welcomeMSG = "d2Dplot v1609 (160929) by OV";
+//    public static final String welcomeMSG = "d2Dplot v1609 (160928) by OV == DEVELOPMENT VERSION, use at your own risk ==";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     public static final String userDir = System.getProperty("user.dir");
@@ -38,7 +38,7 @@ public final class D2Dplot_global {
 //*** parametres que es poden canviar a les opcions *****
     //global 
     public static boolean logging = true;
-    public static String loglevel = "info"; //info, config, etc...
+    public static String loglevel = "config"; //info, config, etc...
     public static String workdir = System.getProperty("user.dir");
     public static boolean sideControls = true;
 
@@ -78,8 +78,10 @@ public final class D2Dplot_global {
     private static Integer clickPointSize;
     
     //dinco
-    private static Integer dincoSolPointSize; 
+    private static Integer dincoSolPointSize;
+    private static Float dincoSolPointStrokeSize; 
     private static Boolean dincoSolPointSizeByFc;
+    private static Boolean dincoSolPointFill;
     
 //***    
     
@@ -133,6 +135,8 @@ public final class D2Dplot_global {
         //dinco
         dincoSolPointSize=null; 
         dincoSolPointSizeByFc=null;
+        dincoSolPointStrokeSize=null;
+        dincoSolPointFill=null;
     }
     
     public static void initPars(){
@@ -236,6 +240,17 @@ public final class D2Dplot_global {
         }else{
             PuntSolucio.setDincoSolPointSizeByFc(dincoSolPointSizeByFc.booleanValue());
         }
+        if (dincoSolPointStrokeSize == null){
+            dincoSolPointStrokeSize = PuntSolucio.getDincoSolPointStrokeSize();
+        }else{
+            PuntSolucio.setDincoSolPointStrokeSize(dincoSolPointStrokeSize.floatValue());
+        }
+        if (dincoSolPointFill == null){
+            dincoSolPointFill = PuntSolucio.isDincoSolPointFill();
+        }else{
+            PuntSolucio.setDincoSolPointFill(dincoSolPointFill.booleanValue());
+        }
+        
     }
     
     public static void checkDBs(){
@@ -501,6 +516,16 @@ public final class D2Dplot_global {
                         
                     }
                 }
+                if (FileUtils.containsIgnoreCase(line, "dincoSolPointStrokeSize")){
+                    String value = (line.substring(iigual, line.trim().length()).trim());
+                    Float fvalue = parseFloat(value);
+                    if(fvalue!=null)dincoSolPointStrokeSize = fvalue.floatValue();
+                }
+                if (FileUtils.containsIgnoreCase(line, "dincoSolPointFill")){
+                    String value = (line.substring(iigual, line.trim().length()).trim());
+                    Boolean bvalue = parseBoolean(value);
+                    if (bvalue!=null)dincoSolPointFill=bvalue.booleanValue();
+                }
             }
             scParFile.close();
         }catch(Exception e){
@@ -549,7 +574,9 @@ public final class D2Dplot_global {
             output.println(String.format("%s = %d", "hklfontSize",hklfontSize));
             output.println("dincoSolPointSizeByFc = "+Boolean.toString(dincoSolPointSizeByFc));
             output.println(String.format("%s = %d", "dincoSolPointSize",dincoSolPointSize));
-            
+            output.println(String.format("%s = %.1f", "dincoSolPointStrokeSize",dincoSolPointStrokeSize));
+            output.println("dincoSolPointFill = "+Boolean.toString(dincoSolPointFill));
+
             output.println("# Calib");
             output.println(String.format("%s = %.3f", "outliersFactSD",outliersFactSD));
             output.println(String.format("%s = %.2f", "searchElliLimitFactor",searchElliLimitFactor));
@@ -672,6 +699,27 @@ public final class D2Dplot_global {
         }
         return false;
     }
+    
+    /**
+     * Returns the complimentary (opposite) color.
+     * @param color int RGB color to return the compliment of
+     * @return int RGB of compliment color
+     */
+    public static Color getComplimentColor(Color color) {
+      // get existing colors
+      int alpha = color.getAlpha();
+      int red = color.getRed();
+      int blue = color.getBlue();
+      int green = color.getGreen();
+      
+      // find compliments
+      red = (~red) & 0xff;
+      blue = (~blue) & 0xff;
+      green = (~green) & 0xff;
+      
+      return new Color(red, green, blue,alpha);
+    }
+
 }
 
 //EXAMPLE (may be incomplete...)

@@ -140,18 +140,22 @@ public class EllipsePars {
     }
     
     //give an angle in degrees from the vertical up (0) to clockwise (+) to get the point of the ellipse (from parametric ecuation)
-    public Point2D.Float getEllipsePoint(float angle, double rM, double rm){
+    public Point2D.Float getEllipsePoint(float angleDeg, double rM, double rm){
         if (!isFit) return null;
 
         float zero = (float) ((-this.angrot) -(Math.PI/2)); //value of the vertical zero according d2dplot convention and the parametric eq below
-        float drawpoint = (float) (zero + FastMath.toRadians(angle));
+        float drawpoint = (float) (zero + FastMath.toRadians(angleDeg));
         float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*Math.cos(this.angrot) - rM*Math.sin(drawpoint)*Math.sin(this.angrot));
         float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*Math.sin(this.angrot) + rM*Math.sin(drawpoint)*Math.cos(this.angrot));
         return new Point2D.Float(ex,ey);
+//ORIGINAL        
+//        float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*Math.cos(this.angrot) - rM*Math.sin(drawpoint)*Math.sin(this.angrot));
+//        float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*Math.sin(this.angrot) + rM*Math.sin(drawpoint)*Math.cos(this.angrot));
+
     }
     
-    public Point2D.Float getEllipsePoint(float angle){
-        return this.getEllipsePoint(angle,this.getRmax(),this.getRmin());
+    public Point2D.Float getEllipsePoint(float angleDeg){
+        return this.getEllipsePoint(angleDeg,this.getRmax(),this.getRmin());
     }
     
     //retorna arraylist amb els punts d'una ellipse per un rang donat (0-360 per tota), step es icrement angular (-1 per default)

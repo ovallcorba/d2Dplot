@@ -20,6 +20,7 @@ public class OrientSolucio implements Comparable<Object>{
     public static int hasFc; // variable de classe que indica si s'especifiquen els factors d'estructura (0=no, 1=si)
     public static int numSolucions; // variable de classe que indica el numero de solucions que hi ha
     public static boolean isPXY = false; //ens diu si la "solucio" prové d'un fitxer SOL (dinco) o d'un fitxer PXY (tts_reduc)
+    public static boolean isPCS = false;
     
     public static int getGrainIdent() {return grainIdent;}
     public static int getHasFc() {return hasFc;}
@@ -33,7 +34,9 @@ public class OrientSolucio implements Comparable<Object>{
     private int numReflexions;
     private int numSolucio;
     private ArrayList<PuntSolucio> sol; // contindra els punts de la solucio
-    private float valorFrot; // valor de la funcio de rotacio de la solucio en questio
+    private ArrayList<Peak> peaksPCS; // contindra els pics en cas que sigui un PCS
+    private float numRefCoincidents; // valor de la funcio de rotacio de la solucio en questio -->ARA JA NO, ES EL NOMBRE DE REFLEXIONS COINCIDENTS
+    private float angR_lon,angS_lat,angT_spin;
     private static VavaLogger log = D2Dplot_global.log;
 
 //  private boolean showSol; // mostra la solucio o no la mostra
@@ -46,6 +49,9 @@ public class OrientSolucio implements Comparable<Object>{
         // El color de la solucio dependra del numero, en tindrem 10 de
         // diferents... suposo que es suficient
         this.assignaColorSol();
+        this.angR_lon=-1;
+        this.angS_lat=-1;
+        this.angT_spin=-1;
     }
 
     // afegeix un punt solucio donats els seus PIXELS x,y
@@ -184,8 +190,8 @@ public class OrientSolucio implements Comparable<Object>{
         return sol;
     }
 
-    public float getValorFrot() {
-        return valorFrot;
+    public float getNrefsCoincidents() {
+        return numRefCoincidents;
     }
 
     public void setGrainNr(int grainNr) {
@@ -204,8 +210,8 @@ public class OrientSolucio implements Comparable<Object>{
         this.sol = sol;
     }
 
-    public void setValorFrot(float valorFrot) {
-        this.valorFrot = valorFrot;
+    public void setNrefCoincidents(float nrefs) {
+        this.numRefCoincidents = nrefs;
     }
     
     public Color getColorSolucio() {
@@ -215,6 +221,39 @@ public class OrientSolucio implements Comparable<Object>{
         this.colorSolucio = colorSolucio;
     }
     
+    public float getAngR_lon() {
+        return angR_lon;
+    }
+    public void setAngR_lon(float angR_lon) {
+        this.angR_lon = angR_lon;
+    }
+    public float getAngS_lat() {
+        return angS_lat;
+    }
+    public void setAngS_lat(float angS_lat) {
+        this.angS_lat = angS_lat;
+    }
+    public float getAngT_spin() {
+        return angT_spin;
+    }
+    public void setAngT_spin(float angT_spin) {
+        this.angT_spin = angT_spin;
+    }
+    public static boolean isPCS() {
+        return isPCS;
+    }
+    public static void setPCS(boolean isPCS) {
+        OrientSolucio.isPCS = isPCS;
+    }
+    public ArrayList<Peak> getPeaksPCS() {
+        if (peaksPCS==null){
+            this.peaksPCS = new ArrayList<Peak>();
+        }
+        return peaksPCS;
+    }
+    public void setPeaksPCS(ArrayList<Peak> peaksPCS) {
+        this.peaksPCS = peaksPCS;
+    }
     public void renumberSOLpoints(){
         Iterator<PuntSolucio> itrps = sol.iterator();
         while (itrps.hasNext()){
@@ -264,15 +303,22 @@ public class OrientSolucio implements Comparable<Object>{
         }
         return nearestPS;
     }
-    
-    public int compareTo(Object arg0) {
+
+    public int compareTo(Object arg0) { //EN TOT CAS HAURIEM D'ORDENAR PER VALOR FROT (nrefs coincidents) pero ara al SOL ja surt ordenat
         try{
             OrientSolucio os=(OrientSolucio)arg0;
-            if(this.getNumReflexions()>os.getNumReflexions()){
+            if(this.getNrefsCoincidents()>os.getNrefsCoincidents()){
               return 1;
             }
-            if(this.getNumReflexions()<os.getNumReflexions()){
+            if(this.getNrefsCoincidents()<os.getNrefsCoincidents()){
               return -1;
+            }
+            //si son iguals mirem el num de solucio
+            if(this.getNumSolucio()>os.getNumSolucio()){
+                return -1;
+            }
+            if(this.getNumSolucio()<os.getNumSolucio()){
+                return 1;
             }
             return 0;
         }catch(Exception e){
@@ -284,6 +330,11 @@ public class OrientSolucio implements Comparable<Object>{
     
     @Override
     public String toString(){
-        return String.format("%3d %5d   %.2f", this.getGrainNr(), this.getNumReflexions(), this.getValorFrot());
+        if (this.angR_lon>-1){
+            return String.format("%3d %5d  %.0f alon=%.3f alat=%.3f aspin=%.3f ", this.getGrainNr(), this.getNumReflexions(), this.getNrefsCoincidents(), this.getAngR_lon(),this.getAngS_lat(),this.getAngT_spin());
+        }else{
+            return String.format("%3d %5d  %.0f", this.getGrainNr(), this.getNumReflexions(), this.getNrefsCoincidents());    
+        }
+        
     }
 }

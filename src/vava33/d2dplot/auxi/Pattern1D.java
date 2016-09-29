@@ -128,6 +128,25 @@ public class Pattern1D {
             log.warning("error writting xy file");
         }
     }
+    
+    public float getDesvForA2Trange(float t2ini, float t2fin){
+        Iterator<PointPatt1D> itp = this.getPoints().iterator();
+        int npoints = 0;
+        float sumSD = 0;
+        while(itp.hasNext()){
+            PointPatt1D p = itp.next();
+            if ((p.t2>=t2ini)&&(p.t2<=t2fin)){
+                if (p.npix<=0) continue;
+                sumSD = sumSD + (p.desv/p.npix);
+                npoints=npoints+1;
+            }
+        }
+        if (npoints>0){
+            return sumSD/npoints;            
+        }else{
+            return 0;
+        }
+    }
 	
 	public float getT2i() {
 		return t2i;

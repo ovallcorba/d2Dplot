@@ -238,7 +238,7 @@ public class IntegracioRadial extends JFrame {
             return;
         }
         //comprovacio que el minim stepsize no sigui inferior al entrepixels
-        float minstep = this.patt2D.getMinStepsize();
+        float minstep = this.patt2D.calcMinStepsizeBy2Theta4Directions();
         if (stepsize < minstep){
             stepsize = minstep;
         }

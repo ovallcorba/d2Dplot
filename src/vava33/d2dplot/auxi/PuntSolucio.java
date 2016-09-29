@@ -9,13 +9,16 @@ import org.apache.commons.math3.util.FastMath;
 public class PuntSolucio {
 
     private static int dincoSolPointSize = 2; //mida defecte, attribut de CLASSE
+    private static float dincoSolPointStrokeSize = 3.0f; //mida defecte, attribut de CLASSE
     private static boolean dincoSolPointSizeByFc = false;
+    private static boolean dincoSolPointFill = true;
     
     Color colorPunt; // no el faig estatic perque ho podriem assignar segons intensitat...
     float coordX, coordY;
     float fc;
     int h, k, l;
     int midaPunt; //AQUESTA ES LA MIDA PER INSTANCIA!!! (factor estructura!)
+//    float puntStrokeSize;
     float oscil; // valor d'oscilacio
     int refNumID; //el num que es llegeix del fitxer
     int seqNumber; //el num sequencial de la solucio a la llista de solucions (per si es borren, etc...)
@@ -30,7 +33,8 @@ public class PuntSolucio {
         }else{
             midaPunt = dincoSolPointSize;
         }
-
+//        puntStrokeSize = dincoSolPointStrokeSize;
+        
         manuallyAdded = false; //default false
         
         // dades solucio
@@ -170,6 +174,22 @@ public class PuntSolucio {
 
     public static void setDincoSolPointSizeByFc(boolean dincoSolPointSizeByFc) {
         PuntSolucio.dincoSolPointSizeByFc = dincoSolPointSizeByFc;
+    }
+
+    public static float getDincoSolPointStrokeSize() {
+        return dincoSolPointStrokeSize;
+    }
+
+    public static void setDincoSolPointStrokeSize(float dincoSolPointStrokeSize) {
+        PuntSolucio.dincoSolPointStrokeSize = dincoSolPointStrokeSize;
+    }
+
+    public static boolean isDincoSolPointFill() {
+        return dincoSolPointFill;
+    }
+
+    public static void setDincoSolPointFill(boolean dincoSolPointFill) {
+        PuntSolucio.dincoSolPointFill = dincoSolPointFill;
     }
 
     @Override

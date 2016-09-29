@@ -20,6 +20,7 @@ import javax.swing.JList;
 import javax.swing.JScrollPane;
 import javax.swing.JLabel;
 import javax.swing.ListCellRenderer;
+import javax.swing.SwingUtilities;
 
 import vava33.d2dplot.auxi.ImgFileUtils;
 import vava33.d2dplot.auxi.OrientSolucio;
@@ -31,6 +32,9 @@ import com.vava33.jutils.VavaLogger;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.util.Collections;
 import java.util.Iterator;
@@ -42,6 +46,8 @@ import javax.swing.JSplitPane;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+
+import javax.swing.ListSelectionModel;
 
 public class Dinco_frame extends JFrame {
 
@@ -101,7 +107,7 @@ public class Dinco_frame extends JFrame {
         splitPane.setRightComponent(panel);
         panel.setLayout(new MigLayout("fill, insets 5", "[grow]", "[][grow]"));
         
-        JLabel lblPeakList = new JLabel("Peak List:");
+        JLabel lblPeakList = new JLabel("Peak List (Nr pX pY h k l Fc Swing):");
         panel.add(lblPeakList, "cell 0 0");
         lblPeakList.setToolTipText("");
         
@@ -109,6 +115,7 @@ public class Dinco_frame extends JFrame {
         panel.add(scrollPane_1, "cell 0 1,grow");
         
         listEdit = new JList();
+        listEdit.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         ListCellRenderer renderer = new PointSolutionRenderer();
         listEdit.setCellRenderer(renderer);
         
@@ -118,7 +125,7 @@ public class Dinco_frame extends JFrame {
         splitPane.setLeftComponent(panel_1);
         panel_1.setLayout(new MigLayout("fill, insets 5", "[grow][grow][grow]", "[][grow][]"));
         
-        JLabel lblSolutionList = new JLabel("Solution list (solNum numOfRef sumFunc):");
+        JLabel lblSolutionList = new JLabel("Solution list (Nsol Nref_total Nref_matching):");
         panel_1.add(lblSolutionList, "cell 0 0 3 1");
         
         JScrollPane scrollPane = new JScrollPane();
@@ -165,6 +172,31 @@ public class Dinco_frame extends JFrame {
         });
         contentPane.add(btnClose, "cell 2 2,alignx right");
         
+        //TEST DESELECT BY CLICK
+        MouseListener[] mls = listEdit.getMouseListeners();
+        for (MouseListener ml : mls)
+            listEdit.removeMouseListener(ml);
+        listEdit.addMouseListener(new MouseAdapter()
+        {
+           public void mousePressed(MouseEvent evt)
+           {
+              java.awt.Point point = evt.getPoint();
+              final int index = listEdit.locationToIndex(point);
+              if (listEdit.isSelectedIndex(index))
+                 SwingUtilities.invokeLater(new Runnable()
+                 {
+                    public void run()
+                    {
+                        listEdit.removeSelectionInterval(index, index);
+                    }
+                 });
+           }
+        });
+        for (MouseListener ml : mls)
+            listEdit.addMouseListener(ml);
+        
+        
+        
         this.ip=ip;
         this.setPatt2D(ip.getPatt2D());
         this.inicia();
@@ -209,13 +241,27 @@ public class Dinco_frame extends JFrame {
         }
     }
     
-    public void openSOL(){
-        FileNameExtensionFilter[] filter = new FileNameExtensionFilter[1];
-        filter[0] = new FileNameExtensionFilter("DINCO SOL/PXY files (*.SOL *.PXY)","SOL","sol","PXY","pxy");
-        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.workdir), filter, 0);
+    public void loadSOLFileDirectly(File fsol){
         if (fsol!=null){
             this.getPatt2D().clearSolutions();
             fsol = ImgFileUtils.readSOL(fsol, this.getPatt2D());
+            this.addSolutionsToList();
+            D2Dplot_global.setWorkdir(fsol);
+        }
+    }
+    
+    public void openSOL(){
+        FileNameExtensionFilter[] filter = new FileNameExtensionFilter[2];
+        filter[0] = new FileNameExtensionFilter("INCO SOL/PXY files (*.SOL *.PXY)","SOL","sol","PXY","pxy");
+        filter[1] = new FileNameExtensionFilter("INCO/D2DPlot PCS files (*.PCS *.PXY)","PCS","pcs");
+        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.workdir), filter, 0);
+        if (fsol!=null){
+            this.getPatt2D().clearSolutions();
+            if (FileUtils.getExtension(fsol).equalsIgnoreCase("PCS")){
+                fsol = ImgFileUtils.readPCSasSOL(fsol,patt2D);
+            }else{
+                fsol = ImgFileUtils.readSOL(fsol, this.getPatt2D());
+            }
             if (fsol == null) {
                 log.debug("No SOL file opened");
             }else{
@@ -244,7 +290,7 @@ public class Dinco_frame extends JFrame {
     private void addSolutionsToList(){
         // afegim les solucions a la llista
         DefaultListModel lm = new DefaultListModel();
-        // ordenem arraylist
+        // ordenem arraylist ---> EL SOL JA ESTA ORDENAT A LA DARRERA VERSIO DE INCO, NO CAL
         Collections.sort(this.getPatt2D().getSolucions(),Collections.reverseOrder());
         Iterator<OrientSolucio> iteros = this.getPatt2D().getSolucions().iterator();
         while (iteros.hasNext()){
@@ -273,9 +319,14 @@ public class Dinco_frame extends JFrame {
         return (OrientSolucio) listSol.getSelectedValue();
     }
     
-    public Object[] getActiveOrientSols(){
+    public OrientSolucio[] getActiveOrientSols(){
         if ((listSol.getSelectedValues()==null) || (listSol.getSelectedValues().length==0))return null;
-        return listSol.getSelectedValues();
+        Object[] oosobj = listSol.getSelectedValues();
+        OrientSolucio[] oos = new OrientSolucio[oosobj.length];
+        for (int i=0; i<oos.length; i++){
+            oos[i] = (OrientSolucio)oosobj[i];
+        }
+        return oos;
     }
     
     public void loadPeakList(){
@@ -317,8 +368,6 @@ public class Dinco_frame extends JFrame {
         this.loadPeakList();
     }
     
-    
-    
     public boolean hasSolutionsLoaded(){
         if (listSol.getModel().getSize()>0){
             return true;
@@ -341,6 +390,11 @@ public class Dinco_frame extends JFrame {
         }
     }
     
+    public PuntSolucio getSelectedPuntSolucio(){
+        if (listEdit.getSelectedIndex()<0) return null;
+        PuntSolucio ps = (PuntSolucio) listEdit.getModel().getElementAt(listEdit.getSelectedIndex());
+        return ps;
+    }
     
     
     /**
@@ -369,7 +423,7 @@ public class Dinco_frame extends JFrame {
         this.setAlwaysOnTop(chckbxOnTop.isSelected());
     }
     protected void do_btnExtractIntensities_actionPerformed(ActionEvent arg0) {
-        PKsearch_frame pksframe = new PKsearch_frame(this.getPatt2D(),true,this);
+        PKsearch_frame pksframe = new PKsearch_frame(this.getPatt2D(),true,this,ip);
         ip.setPKsearch(pksframe);
         pksframe.setVisible(true);
     }
