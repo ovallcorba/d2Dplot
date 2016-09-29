@@ -65,6 +65,7 @@ public class MainFrame extends JFrame {
     
     private Pattern2D patt2D;
     private boolean fileOpened = false;
+    private static boolean findSOL = false; //prova d'obrir 2 alhora
     private File openedFile;
     
     private ImagePanel panelImatge;    
@@ -145,6 +146,7 @@ public class MainFrame extends JFrame {
     private JButton btnTtsdincoSol;
     private JMenuItem mntmSubtractImages;
     private JCheckBox chckbxPaintExz;
+    private JButton btnPeakSearchint;
     
     public static String getBinDir() {return D2Dplot_global.binDir;}
     public static String getSeparator() {return D2Dplot_global.separator;}
@@ -183,8 +185,20 @@ public class MainFrame extends JFrame {
         for (int i = 0; i < args.length; i++) {
             path.append(args[i]).append(" ");
         }
-        if (args.length > 0)
-            D2Dplot_global.workdir = path.toString().trim();
+        if (args.length > 0){
+            //prova FITXER + SOL
+            String pathS = path.toString();
+            log.debug("pathS="+pathS);
+            if (pathS.trim().endsWith("SOL")){
+                log.debug("ends with SOL");
+                findSOL = true;
+                pathS = pathS.replace("SOL", "");
+            }
+            log.debug("pathS_replaced="+pathS);
+//            D2Dplot_global.workdir = path.toString().trim();
+            D2Dplot_global.workdir = pathS.trim();
+        }
+
 
         EventQueue.invokeLater(new Runnable() {
             @Override
@@ -193,6 +207,7 @@ public class MainFrame extends JFrame {
 //                    workdir = "/home/ovallcorba/ovallcorba/Dades_difraccio/2D_INCO/WORK_140925/ov/proves_integ";
                     MainFrame frame = new MainFrame();
                     frame.inicialitza();
+                    frame.checkArguments();
                     frame.setLocationRelativeTo(null);
                     frame.setVisible(true);
                 } catch (Exception e) {
@@ -368,7 +383,7 @@ public class MainFrame extends JFrame {
         mnGrainAnalysis.setMnemonic('g');
         menuBar.add(mnGrainAnalysis);
         
-        mntmDincoSol = new JMenuItem("Load tts-INCO/REDUC files");
+        mntmDincoSol = new JMenuItem("Load tts-INCO SOL/PCS files");
         mntmDincoSol.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmDincoSol_actionPerformed(e);
@@ -384,7 +399,7 @@ public class MainFrame extends JFrame {
         });
         mnGrainAnalysis.add(mntmLoadXdsFile);
         
-        mntmFindPeaks = new JMenuItem("Find Peaks");
+        mntmFindPeaks = new JMenuItem("Find/Integrate Peaks");
         mntmFindPeaks.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_mntmFindPeaks_actionPerformed(arg0);
@@ -638,15 +653,15 @@ public class MainFrame extends JFrame {
         panel_1 = new JPanel();
         panel_1.setBorder(new TitledBorder(null, "Shortcuts", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel_controls.add(panel_1, "cell 0 4,grow");
-        panel_1.setLayout(new MigLayout("fill, insets 0", "[grow]", "[][]"));
+        panel_1.setLayout(new MigLayout("fill, insets 0", "[grow]", "[][][][]"));
         
-        btnRadIntegr = new JButton("Rad. Integr");
-        btnRadIntegr.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                do_btnRadIntegr_actionPerformed(e);
+        btnPeakSearchint = new JButton("Peak Search");
+        btnPeakSearchint.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnPeakSearchint_actionPerformed(arg0);
             }
         });
-        panel_1.add(btnRadIntegr, "cell 0 0,growx,aligny center");
+        panel_1.add(btnPeakSearchint, "cell 0 0,growx,aligny center");
         
         btnTtsdincoSol = new JButton("tts-INCO");
         btnTtsdincoSol.addActionListener(new ActionListener() {
@@ -654,7 +669,15 @@ public class MainFrame extends JFrame {
                 do_btnTtsdincoSol_actionPerformed(e);
             }
         });
-        panel_1.add(btnTtsdincoSol, "cell 0 1,growx,aligny center");
+        panel_1.add(btnTtsdincoSol, "flowy,cell 0 1,growx,aligny center");
+        
+        btnRadIntegr = new JButton("Rad. Integr");
+        btnRadIntegr.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnRadIntegr_actionPerformed(e);
+            }
+        });
+        panel_1.add(btnRadIntegr, "cell 0 2,growx,aligny center");
         chckbxShowRings.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent arg0) {
                 do_chckbxShowRings_itemStateChanged(arg0);
@@ -665,16 +688,60 @@ public class MainFrame extends JFrame {
                 do_btnDbdialog_actionPerformed(arg0);
             }
         });
-        
-        //si el workdir apunta a un fitxer, s'obrir� automaticament, altrament
+    }
+    
+    private void checkArguments(){
+      //si el workdir apunta a un fitxer, s'obrir� automaticament, altrament
         //mantenim el workdir que sera el directori inicial als filechooser
         File f = new File(getWorkdir());
         if(f.exists()){
-        	if (f.isFile()){//l'obrim
+            if (f.isFile()){//l'obrim
                 this.updatePatt2D(f);
 //                D2Dplot_global.setWorkdir(f);
 //                log.info("workdir:"+getWorkdir()); //ja es fa dins updatePatt2d
-        	}
+                if (findSOL){
+                    boolean trobat = false;
+                    //provarem 2 coses, un sol tal qual amb el mateix nom que f i un sense numeros
+                    File fsol = FileUtils.canviExtensio(f, ".SOL");
+                    if (fsol.exists()){
+                        trobat = true;
+                    }
+                    if (!trobat){
+                        fsol = FileUtils.canviExtensio(f, ".sol");
+                        if (fsol.exists()){
+                            trobat = true;
+                        }
+                    }
+                    if (!trobat){
+                        String fn1 = FileUtils.getFNameNoExt(f);
+//                        String dr = f.getParent().toString();
+//                        String fs = dr+D2Dplot_global.separator+fn1.substring(0, fn1.length()-5)+".SOL";
+                        String fs = fn1.substring(0, fn1.toString().length()-5)+".SOL";
+                        fsol = new File(fs);
+                        log.debug("fsol="+fsol.toString());
+                        if (fsol.exists()){
+                            trobat = true;
+                        }
+                    }
+                    if (!trobat){
+                        fsol = FileUtils.canviExtensio(fsol, "sol");
+                        if (fsol.exists()){
+                            trobat = true;
+                        }                        
+                    }
+                    
+                    if (trobat){
+                        //OBRIM dialeg INCO directament amb un fitxer SOL
+                        if (dincoFrame == null) {
+                            dincoFrame = new Dinco_frame(this.getPanelImatge());
+                        }
+                        dincoFrame.setSOLMode();
+                        dincoFrame.loadSOLFileDirectly(fsol);
+                        dincoFrame.setVisible(true);
+                        panelImatge.setDinco(dincoFrame);
+                    }
+                }
+            }
         }
     }
 
@@ -722,6 +789,9 @@ public class MainFrame extends JFrame {
         this.fileOpened = false;
         this.panelImatge.setImagePatt2D(null);
         this.patt2D = null;
+    }
+    
+    private void closePanels(){
         if (this.d2DsubWin != null) {
             this.d2DsubWin.dispose();
             this.d2DsubWin = null;
@@ -739,12 +809,14 @@ public class MainFrame extends JFrame {
             this.dincoFrame = null;
         }
         if (this.pksframe != null) {
-            this.pksframe.dispose();
-            this.dincoFrame = null;
+//            this.pksframe.dispose();
+//            this.pksframe = null;
+            this.pksframe.updateData(this.patt2D);
         }
         if (this.paramDialog != null) {
-            this.paramDialog.dispose();
-            this.paramDialog = null;
+//            this.paramDialog.dispose();
+//            this.paramDialog = null;
+            this.updateIparameters();
         }
         if (this.dbDialog != null) {
             this.dbDialog.dispose();
@@ -948,8 +1020,9 @@ public class MainFrame extends JFrame {
             if (calibration != null)
                 calibration.dispose();
             if (pksframe == null) {
-                pksframe = new PKsearch_frame(patt2D,false,null);
+                pksframe = new PKsearch_frame(patt2D,false,null,this.panelImatge);
             }
+//            pksframe.setPatt2D(patt2D);
             pksframe.setVisible(true);
             panelImatge.setPKsearch(pksframe);
         }
@@ -1026,15 +1099,40 @@ public class MainFrame extends JFrame {
         String fextCurrent = FileUtils.getExtension(patt2D.getImgfile());
         log.debug("fnameCurrent (no Ext): "+fnameCurrent);
         log.debug("fextCurrent: "+fextCurrent);
+        
         //agafem ultims 4 digits (index), sumem 1 i el tornem a posar com a fitxer a veure què
-        log.debug("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
-        int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
-        imgNum = imgNum+1;
-        String fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        String fnameExtNew = "";
+        try{
+            log.debug("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+            int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+            imgNum = imgNum+1;
+            fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        }catch(Exception e){
+            log.debug("trying to get the file numbering");
+            int indexGuio = fnameCurrent.lastIndexOf("_");
+            if (indexGuio>0){
+                log.debug("index guio="+indexGuio);
+                int imgNum = Integer.parseInt(fnameCurrent.substring(indexGuio+1, fnameCurrent.length()));
+                imgNum = imgNum+1;
+                int lenformat = fnameCurrent.length()-indexGuio-1;
+                log.debug("lenformat="+lenformat);
+                String format = "%0"+lenformat+"d";
+                log.debug("format="+format);
+                fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-lenformat)+String.format(format, imgNum)+"."+fextCurrent;
+                log.debug("fnameExtNew="+fnameExtNew);
+            }
+        }
+//        log.debug("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+//        int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+//        imgNum = imgNum+1;
+//        String fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        if (fnameExtNew.isEmpty())return;
+        
         File d2File = new File(fnameExtNew);
         if (d2File.exists()){
             this.reset();
             this.updatePatt2D(d2File);
+            this.closePanels();
         }else{
             tAOut.stat("No file found with fname "+fnameExtNew);
         }
@@ -1046,14 +1144,38 @@ public class MainFrame extends JFrame {
         log.debug("fnameCurrent (no Ext): "+fnameCurrent);
         log.debug("fextCurrent: "+fextCurrent);
         //agafem ultims 4 digits (index), sumem 1 i el tornem a posar com a fitxer a veure què
-        log.debug("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
-        int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
-        imgNum = imgNum-1;
-        String fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        
+        String fnameExtNew = "";
+        try{
+            log.debug("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+            int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+            imgNum = imgNum-1;
+            fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        }catch(Exception ex){
+            log.debug("trying to get the file numbering");
+            int indexGuio = fnameCurrent.lastIndexOf("_");
+            if (indexGuio>0){
+                log.debug("index guio="+indexGuio);
+                int imgNum = Integer.parseInt(fnameCurrent.substring(indexGuio+1, fnameCurrent.length()));
+                imgNum = imgNum-1;
+                int lenformat = fnameCurrent.length()-indexGuio-1;
+                log.debug("lenformat="+lenformat);
+                String format = "%0"+lenformat+"d";
+                log.debug("format="+format);
+                fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-lenformat)+String.format(format, imgNum)+"."+fextCurrent;
+                log.debug("fnameExtNew="+fnameExtNew);
+            }
+        }
+//        log.debug("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+//        int imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+//        imgNum = imgNum+1;
+//        String fnameExtNew = fnameCurrent.substring(0, fnameCurrent.length()-4)+String.format("%04d", imgNum)+"."+fextCurrent;
+        if (fnameExtNew.isEmpty())return;
         File d2File = new File(fnameExtNew);
         if (d2File.exists()){
             this.reset();
             this.updatePatt2D(d2File);
+            this.closePanels();
         }else{
             tAOut.stat("No file found with fname "+fnameExtNew);
         }
@@ -1342,6 +1464,7 @@ public class MainFrame extends JFrame {
         // resetejem
         this.reset();
         this.updatePatt2D(d2File);
+        this.closePanels();
     }
     
     private void saveImgFile(){
@@ -1356,6 +1479,7 @@ public class MainFrame extends JFrame {
                     if (n == JOptionPane.YES_OPTION) {
                         this.reset();
                         this.updatePatt2D(outf);
+                        this.closePanels();
                     }
                 }else{
                     tAOut.stat("Error saving file");
@@ -1390,4 +1514,7 @@ public class MainFrame extends JFrame {
         return this.chckbxIndex.isSelected();
     }
 
+    protected void do_btnPeakSearchint_actionPerformed(ActionEvent arg0) {
+        mntmFindPeaks.doClick();
+    }
 }
