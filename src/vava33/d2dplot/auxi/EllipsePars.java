@@ -26,7 +26,7 @@ public class EllipsePars {
     private ArrayList<Point2D.Float> estimPoints;
     private boolean isFit;
     private int lab6ring;
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(EllipsePars.class.getName());
 
     public EllipsePars(){
         this.estimPoints = new ArrayList<Point2D.Float>();
@@ -83,7 +83,7 @@ public class EllipsePars {
 
         //ROTACIO
         float angr = (float) (0.5*Math.atan(2*b/(a-c)));
-        
+        log.debug("angr directe="+FastMath.toDegrees(angr));
         this.isFit = true;
         
         /*
@@ -148,9 +148,6 @@ public class EllipsePars {
         float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*Math.cos(this.angrot) - rM*Math.sin(drawpoint)*Math.sin(this.angrot));
         float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*Math.sin(this.angrot) + rM*Math.sin(drawpoint)*Math.cos(this.angrot));
         return new Point2D.Float(ex,ey);
-//ORIGINAL        
-//        float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*Math.cos(this.angrot) - rM*Math.sin(drawpoint)*Math.sin(this.angrot));
-//        float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*Math.sin(this.angrot) + rM*Math.sin(drawpoint)*Math.cos(this.angrot));
 
     }
     
@@ -214,9 +211,9 @@ public class EllipsePars {
             D.setRowVector(i, row);
         }
         
-        log.debug("xv="+xv);
-        log.debug("yv="+yv);
-        log.debug("D="+D);
+        log.fine("xv="+xv);
+        log.fine("yv="+yv);
+        log.fine("D="+D);
         
         RealMatrix S = D.transpose().multiply(D);
         
@@ -245,7 +242,7 @@ public class EllipsePars {
             }
             
             RealVector sol = EV.getEigenvector(index);
-            log.debug("sol="+sol);
+            log.fine("sol="+sol);
             
             double a = sol.getEntry(0);
             double b = sol.getEntry(1)/2;
@@ -254,7 +251,7 @@ public class EllipsePars {
             double e = sol.getEntry(4)/2;
             double f = sol.getEntry(5);
             
-            this.setPars(a,b,c,d,e,f);
+            this.setPars(a,b,c,d,e,f); //AQUI DINS ES POSA EL ISFIT a TRUE SI TOT HA ANAT BE
             
         }catch(Exception e){
             log.warning("Error during ellipse fitting");

@@ -19,15 +19,13 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String welcomeMSG = "d2Dplot v1609 (160929) by OV";
-//    public static final String welcomeMSG = "d2Dplot v1609 (160928) by OV == DEVELOPMENT VERSION, use at your own risk ==";
+    public static final String welcomeMSG = "d2Dplot v1611 (161118) by OV";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     public static final String userDir = System.getProperty("user.dir");
     public static final String configFilePath = System.getProperty("user.dir") + separator + "d2dconfig.cfg";
     public static final String usersGuidePath = System.getProperty("user.dir") + separator + "d2Dplot_userguide.pdf";
     public static Boolean configFileReaded = null; //true=readed false=errorReading null=notFound
-//    public static ArrayList<PDCompound> quicklist;
 
     //symbols and characters
     public static final String theta = "\u03B8";
@@ -35,11 +33,15 @@ public final class D2Dplot_global {
 
     public static VavaLogger log;
 
+    public static boolean keepCalibration = false;
+    public static float distMD, centX, centY, tilt, rot;
+    
 //*** parametres que es poden canviar a les opcions *****
     //global 
-    public static boolean logging = true;
-    public static String loglevel = "config"; //info, config, etc...
-    public static String workdir = System.getProperty("user.dir");
+    public static boolean logging = false;
+    public static String loglevel = "info"; //info, config, etc...
+    private static final boolean overrideLogLevelConfigFile = false;
+    private static String workdir = System.getProperty("user.dir");
     public static boolean sideControls = true;
 
     //DB
@@ -48,12 +50,6 @@ public final class D2Dplot_global {
     private static Float minDspacingToSearch;
 
     //Calib
-    private static Float outliersFactSD;
-    private static Boolean showAltCenter;
-    private static Boolean considerGlobalRot;
-    private static Boolean forceGlobalRot;
-    private static Boolean rejectOutliers;
-    private static Float searchElliLimitFactor;
 
     //ImagePanel and pattern2D
     private static Float t2tolDegClickPoints; //in patt2d
@@ -61,7 +57,7 @@ public final class D2Dplot_global {
     private static Float maxScaleFit;
     private static Float minScaleFit;
     private static Integer hklfontSize;
-    private static Float factSliderMax;
+    private static Float factorAutoContrast;
     private static Color colorCallibEllipses;
     private static Color colorGuessPointsEllipses;
     private static Color colorFittedEllipses;
@@ -88,11 +84,9 @@ public final class D2Dplot_global {
     
     public static void initEarlyPars(){
         //init logger during reading pars in config mode
-        initLogger("d2dplot"); //during the par reading
+        initLogger(D2Dplot_global.class.getName()); //during the par reading
         
         //global
-        logging = true;
-        loglevel = "info"; //info, config, etc...
         workdir = System.getProperty("user.dir");
         sideControls = true;
         
@@ -103,12 +97,6 @@ public final class D2Dplot_global {
         minDspacingToSearch=null;
 
         //Calib
-        outliersFactSD = null;
-        showAltCenter = null;
-        considerGlobalRot = null;
-        forceGlobalRot = null;
-        rejectOutliers = null;
-        searchElliLimitFactor = null;
         
         //ImagePanel and pattern2D
         t2tolDegClickPoints = null; //in patt2d
@@ -116,7 +104,7 @@ public final class D2Dplot_global {
         maxScaleFit=null;
         minScaleFit=null;
         hklfontSize=null;
-        factSliderMax=null;
+        factorAutoContrast=null;
         colorCallibEllipses = null;
         colorGuessPointsEllipses = null;
         colorFittedEllipses = null;
@@ -149,36 +137,6 @@ public final class D2Dplot_global {
         }
 
         //Calib
-        if (outliersFactSD == null){
-            outliersFactSD = Calib_dialog.getOutliersFactSD();
-        }else{
-            Calib_dialog.setOutliersFactSD(outliersFactSD.floatValue());
-        }
-        if (showAltCenter == null){
-            showAltCenter = Calib_dialog.isShowAltCenter();
-        }else{
-            Calib_dialog.setShowAltCenter(showAltCenter.booleanValue());
-        }
-        if (considerGlobalRot == null){
-            considerGlobalRot = Calib_dialog.isConsiderGlobalRot();
-        }else{
-            Calib_dialog.setConsiderGlobalRot(considerGlobalRot.booleanValue());
-        }        
-        if (forceGlobalRot == null){
-            forceGlobalRot = Calib_dialog.isForceGlobalRot();
-        }else{
-            Calib_dialog.setForceGlobalRot(forceGlobalRot.booleanValue());
-        }
-        if (rejectOutliers == null){
-            rejectOutliers = Calib_dialog.isRejectOutliers();
-        }else{
-            Calib_dialog.setRejectOutliers(rejectOutliers.booleanValue());
-        }
-        if (searchElliLimitFactor == null){
-            searchElliLimitFactor = Calib_dialog.getSearchElliLimitFactor();
-        }else{
-            Calib_dialog.setSearchElliLimitFactor(searchElliLimitFactor.floatValue());
-        }
         
         //ImagePanel and pattern2D
         if (t2tolDegClickPoints == null){
@@ -206,10 +164,10 @@ public final class D2Dplot_global {
         }else{
             ImagePanel.setHklfontSize(hklfontSize.intValue());
         }          
-        if (factSliderMax == null){
-            factSliderMax = ImagePanel.getFactSliderMax();
+        if (factorAutoContrast == null){
+            factorAutoContrast = ImagePanel.getFactorAutoContrast();
         }else{
-            ImagePanel.setFactSliderMax(factSliderMax.floatValue());
+            ImagePanel.setFactorAutoContrast(factorAutoContrast.floatValue());
         }  
         
         //puntClick
@@ -315,12 +273,6 @@ public final class D2Dplot_global {
         }
     }
     
-    public static void initDefaultDBs(){
-        DBfile = PDDatabase.getLocalDB();
-        QLfile = PDDatabase.getLocalQL();
-    }
-    
-    
     //POSEM SEMPRE LA COMPROVACIO DE SI EL VALOR PARSEJAT ES NULL PERQUÈ EN AQUEST CAS FEM SERVIR EL QUE VE DE INITPARS
     // QUE PODRIA NO SER NULL!!!
     public static boolean readParFile(){
@@ -351,17 +303,20 @@ public final class D2Dplot_global {
                     String sDBfile = (line.substring(iigual, line.trim().length()).trim());
                     if (new File(sDBfile).exists())DBfile = sDBfile;
                 }
-                
-                if (FileUtils.containsIgnoreCase(line, "logging")){
-                    String logstr = (line.substring(iigual, line.trim().length()).trim());
-                    Boolean bvalue = parseBoolean(logstr);
-                    if(bvalue!=null)logging = bvalue.booleanValue();
-                }
-                if (FileUtils.containsIgnoreCase(line, "loglevel")){
-                    String loglvl = (line.substring(iigual, line.trim().length()).trim());
-                    if (FileUtils.containsIgnoreCase(loglvl, "debug")||FileUtils.containsIgnoreCase(loglvl, "config"))loglevel = "config";
-                    if (FileUtils.containsIgnoreCase(loglvl, "fine"))loglevel = "fine";
-                    if (FileUtils.containsIgnoreCase(loglvl, "warning"))loglevel = "warning";
+
+                if(!overrideLogLevelConfigFile){
+                    if (FileUtils.containsIgnoreCase(line, "logging")){
+                        String logstr = (line.substring(iigual, line.trim().length()).trim());
+                        Boolean bvalue = parseBoolean(logstr);
+                        if(bvalue!=null)logging = bvalue.booleanValue();
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "loglevel")){
+                        String loglvl = (line.substring(iigual, line.trim().length()).trim());
+                        if (FileUtils.containsIgnoreCase(loglvl, "debug")||FileUtils.containsIgnoreCase(loglvl, "config"))loglevel = "config";
+                        if (FileUtils.containsIgnoreCase(loglvl, "fine"))loglevel = "fine";
+                        if (FileUtils.containsIgnoreCase(loglvl, "warning"))loglevel = "warning";
+                        if (FileUtils.containsIgnoreCase(loglvl, "info"))loglevel = "info";
+                    }
                 }
                 
                 if (FileUtils.containsIgnoreCase(line, "sideControls")){
@@ -467,43 +422,12 @@ public final class D2Dplot_global {
                     Integer ivalue = parseInteger(value);
                     if(ivalue!=null)hklfontSize = ivalue.intValue();
                 }
-                if (FileUtils.containsIgnoreCase(line, "factSliderMax")){
+                if (FileUtils.containsIgnoreCase(line, "factorAutoContrast")){
                     String value = (line.substring(iigual, line.trim().length()).trim());
                     Float fvalue = parseFloat(value);
-                    if(fvalue!=null)factSliderMax = fvalue.floatValue();
+                    if(fvalue!=null)factorAutoContrast = fvalue.floatValue();
                 }
                 
-                if (FileUtils.containsIgnoreCase(line, "outliersFactSD")){
-                    String value = (line.substring(iigual, line.trim().length()).trim());
-                    Float fvalue = parseFloat(value);
-                    if(fvalue!=null)outliersFactSD = fvalue.floatValue();
-                }
-                if (FileUtils.containsIgnoreCase(line, "searchElliLimitFactor")){
-                    String value = (line.substring(iigual, line.trim().length()).trim());
-                    Float fvalue = parseFloat(value);
-                    if(fvalue!=null)searchElliLimitFactor = fvalue.floatValue();
-                }
-                
-                if (FileUtils.containsIgnoreCase(line, "showAltCenter")){
-                    String value = (line.substring(iigual, line.trim().length()).trim());
-                    Boolean bvalue = parseBoolean(value);
-                    if (bvalue!=null)showAltCenter=bvalue.booleanValue();
-                }
-                if (FileUtils.containsIgnoreCase(line, "considerGlobalRot")){
-                    String value = (line.substring(iigual, line.trim().length()).trim());
-                    Boolean bvalue = parseBoolean(value);
-                    if (bvalue!=null)considerGlobalRot=bvalue.booleanValue();
-                }
-                if (FileUtils.containsIgnoreCase(line, "forceGlobalRot")){
-                    String value = (line.substring(iigual, line.trim().length()).trim());
-                    Boolean bvalue = parseBoolean(value);
-                    if (bvalue!=null)forceGlobalRot=bvalue.booleanValue();
-                }
-                if (FileUtils.containsIgnoreCase(line, "rejectOutliers")){
-                    String value = (line.substring(iigual, line.trim().length()).trim());
-                    Boolean bvalue = parseBoolean(value);
-                    if (bvalue!=null)rejectOutliers=bvalue.booleanValue();
-                }
                 if (FileUtils.containsIgnoreCase(line, "dincoSolPointSize")){
                     if (FileUtils.containsIgnoreCase(line, "ByFc")){
                         String value = (line.substring(iigual, line.trim().length()).trim());
@@ -527,6 +451,8 @@ public final class D2Dplot_global {
                     if (bvalue!=null)dincoSolPointFill=bvalue.booleanValue();
                 }
             }
+            //per si ha canviat el loglevel/logging
+            initLogger(D2Dplot_global.class.getName()); //during the par reading
             scParFile.close();
         }catch(Exception e){
             if (D2Dplot_global.isDebug())e.printStackTrace();
@@ -561,7 +487,7 @@ public final class D2Dplot_global {
             output.println(String.format("%s = %.4f", "incZoom",incZoom));
             output.println(String.format("%s = %.3f", "maxScaleFit",maxScaleFit));
             output.println(String.format("%s = %.3f", "minScaleFit",minScaleFit));
-            output.println(String.format("%s = %.3f", "factSliderMax",factSliderMax));
+            output.println(String.format("%s = %.3f", "factorAutoContrast",factorAutoContrast));
             
             output.println("# Compound DB");
             output.println("defQuickListDB = "+QLfile);
@@ -578,11 +504,6 @@ public final class D2Dplot_global {
             output.println("dincoSolPointFill = "+Boolean.toString(dincoSolPointFill));
 
             output.println("# Calib");
-            output.println(String.format("%s = %.3f", "outliersFactSD",outliersFactSD));
-            output.println(String.format("%s = %.2f", "searchElliLimitFactor",searchElliLimitFactor));
-            output.println("showAltCenter = "+Boolean.toString(showAltCenter));
-            output.println("considerGlobalRot = "+Boolean.toString(considerGlobalRot));
-            output.println("forceGlobalRot = "+Boolean.toString(forceGlobalRot));
             output.println("colorCallibEllipses = "+getColorName(colorCallibEllipses));
             output.println("colorGuessPointsEllipses = "+getColorName(colorGuessPointsEllipses));
             output.println("colorFittedEllipses = "+getColorName(colorFittedEllipses));
@@ -606,8 +527,15 @@ public final class D2Dplot_global {
     
     public static void initLogger(String name){
         log = new VavaLogger(name);
-        log.enableLogger(logging);
         log.setLogLevel(loglevel);
+        log.enableLogger(logging);
+    }
+    
+    public static VavaLogger getVavaLogger(String name){
+        VavaLogger l = new VavaLogger(name);
+        l.setLogLevel(loglevel);
+        l.enableLogger(logging);
+        return l;
     }
     
     public static String getWorkdir() {
@@ -621,6 +549,7 @@ public final class D2Dplot_global {
     
     public static void setWorkdir(File workDirOrFile) {
         D2Dplot_global.workdir = workDirOrFile.getParent();
+        if (D2Dplot_global.workdir==null)D2Dplot_global.workdir=".";
     }
     
     public static Boolean isConfigFileReaded() {
@@ -720,6 +649,107 @@ public final class D2Dplot_global {
       return new Color(red, green, blue,alpha);
     }
 
+    public static boolean isKeepCalibration() {
+        return D2Dplot_global.keepCalibration;
+    }
+
+    public static void setKeepCalibration(boolean keepCalib) {
+        D2Dplot_global.keepCalibration = keepCalib;
+    }
+
+    public static float getDistMD() {
+        return distMD;
+    }
+
+    public static void setDistMD(float distMD) {
+        D2Dplot_global.distMD = distMD;
+    }
+
+    public static float getCentX() {
+        return centX;
+    }
+
+    public static void setCentX(float centX) {
+        D2Dplot_global.centX = centX;
+    }
+
+    public static float getCentY() {
+        return centY;
+    }
+
+    public static void setCentY(float centY) {
+        D2Dplot_global.centY = centY;
+    }
+
+    public static float getTilt() {
+        return tilt;
+    }
+
+    public static void setTilt(float tilt) {
+        D2Dplot_global.tilt = tilt;
+    }
+
+    public static float getRot() {
+        return rot;
+    }
+
+    public static void setRot(float rot) {
+        D2Dplot_global.rot = rot;
+    }
+    
+    public static void setCalib(float dist, float cX, float cY, float tilt, float rot){
+        setRot(rot);
+        setTilt(tilt);
+        setCentX(cX);
+        setCentY(cY);
+        setDistMD(dist);
+    }
+
+    
+    public static void printAllOptions(String loglevel){
+        log.printmsg(loglevel,"*************************** CURRENT CONFIGURATION ***************************");
+        log.printmsg(loglevel,"# Global");
+        log.printmsg(loglevel,"workdir = "+workdir);
+        log.printmsg(loglevel,"logging = "+Boolean.toString(logging));
+        log.printmsg(loglevel,"loglevel = "+D2Dplot_global.loglevel);
+        log.printmsg(loglevel,"sideControls = "+Boolean.toString(sideControls));
+
+        log.printmsg(loglevel,"# General plotting");
+        log.printmsg(loglevel,"colorClickPoints = "+getColorName(colorClickPoints));
+        log.printmsg(loglevel,"colorClickPointsCircle = "+getColorName(colorClickPointsCircle));
+        log.printmsg(loglevel,String.format("%s = %d", "clickPointSize",clickPointSize));
+        log.printmsg(loglevel,String.format("%s = %.4f", "t2tolDegClickPoints",t2tolDegClickPoints));
+        log.printmsg(loglevel,String.format("%s = %.4f", "incZoom",incZoom));
+        log.printmsg(loglevel,String.format("%s = %.3f", "maxScaleFit",maxScaleFit));
+        log.printmsg(loglevel,String.format("%s = %.3f", "minScaleFit",minScaleFit));
+        log.printmsg(loglevel,String.format("%s = %.3f", "factorAutoContrast",factorAutoContrast));
+
+        log.printmsg(loglevel,"# Compound DB");
+        log.printmsg(loglevel,"defQuickListDB = "+QLfile);
+        log.printmsg(loglevel,"defCompoundDB = "+DBfile);
+        log.printmsg(loglevel,String.format("%s = %.4f", "minDspacingToSearch",minDspacingToSearch));
+        log.printmsg(loglevel,"colorQLcomp = "+getColorName(colorQLcomp));
+        log.printmsg(loglevel,"colorDBcomp = "+getColorName(colorDBcomp));
+
+        log.printmsg(loglevel,"# DINCO");
+        log.printmsg(loglevel,String.format("%s = %d", "hklfontSize",hklfontSize));
+        log.printmsg(loglevel,"dincoSolPointSizeByFc = "+Boolean.toString(dincoSolPointSizeByFc));
+        log.printmsg(loglevel,String.format("%s = %d", "dincoSolPointSize",dincoSolPointSize));
+        log.printmsg(loglevel,String.format("%s = %.1f", "dincoSolPointStrokeSize",dincoSolPointStrokeSize));
+        log.printmsg(loglevel,"dincoSolPointFill = "+Boolean.toString(dincoSolPointFill));
+
+        log.printmsg(loglevel,"# Calib");
+        log.printmsg(loglevel,"colorCallibEllipses = "+getColorName(colorCallibEllipses));
+        log.printmsg(loglevel,"colorGuessPointsEllipses = "+getColorName(colorGuessPointsEllipses));
+        log.printmsg(loglevel,"colorFittedEllipses = "+getColorName(colorFittedEllipses));
+        log.printmsg(loglevel,"colorBoundariesEllipses = "+getColorName(colorPeakSearchSelected));
+
+        log.printmsg(loglevel,"# PeakSearch and Excluded Zones");
+        log.printmsg(loglevel,"colorPeakSearch = "+getColorName(colorPeakSearch));
+        log.printmsg(loglevel,"colorPeakSearchSelected = "+getColorName(colorPeakSearchSelected));
+        log.printmsg(loglevel,"colorExcludedZones = "+getColorName(colorCallibEllipses));         
+        log.printmsg(loglevel,"*****************************************************************************");
+    }
 }
 
 //EXAMPLE (may be incomplete...)

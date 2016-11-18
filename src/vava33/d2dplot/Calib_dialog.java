@@ -14,7 +14,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 
 import javax.swing.JButton;
@@ -28,14 +33,21 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
 
-import org.apache.commons.math3.stat.descriptive.moment.Mean;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.apache.commons.math3.optim.InitialGuess;
+import org.apache.commons.math3.optim.MaxEval;
+import org.apache.commons.math3.optim.PointValuePair;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.NelderMeadSimplex;
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.SimplexOptimizer;
 import org.apache.commons.math3.util.FastMath;
+import org.apache.commons.math3.analysis.*;
 
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
+import vava33.d2dplot.auxi.CalibOps;
 import vava33.d2dplot.auxi.CircleFitter;
 import vava33.d2dplot.auxi.EllipsePars;
 import vava33.d2dplot.auxi.Pattern2D;
@@ -49,10 +61,6 @@ public class Calib_dialog extends JDialog {
 
     private static final long serialVersionUID = -5947817749730984383L;
 
-    private static float[] LaB6_d = { 0.0f, 4.156878635f, 2.939357609f, 2.399975432f, 2.078432243f, 1.859004281f,
-            1.697043447f, 1.469674856f, 1.385628455f, 1.314520218f, 1.25335391f, 1.199991704f, 1.152911807f,
-            1.110975349f, 1, .039218708f, 1.008191043f };
-     
     private JButton btnApply;
     private JCheckBox cbox_onTop;
     private JCheckBox chckbxCalibrate;
@@ -94,38 +102,36 @@ public class Calib_dialog extends JDialog {
     //CALIBRATION PARAMETERS
     private static int findElliPointsTolPix = 10;
     private static int findElliPointsMinPixLine = findElliPointsTolPix;
-    private static int findElliPointsArcSizemm = 1;
-    private static int factESDIntensityThreshold = 5;
+    private static int findElliPointsArcSizemm = 3;
+    private static int factESDIntensityThreshold = 8;
     private static int radiPunt = 2;
-    private static boolean useCircle = false;
-    private static float outliersFactSD = 1.5f;
-    private static boolean rejectOutliers = true;
-    private static boolean showAltCenter = false;
-    private static boolean considerGlobalRot = true;
-    private static boolean forceGlobalRot = false;
     private static float searchElliLimitFactor = 1.2f;
     private static ArrayList<Integer> ommitRings = new ArrayList<Integer>();
+    private static int maxLaB6ring = 9;
 
     public ArrayList<Line2D.Float> cerques;
     public ArrayList<EllipsePars> ellicerques;
     
-    private static VavaLogger log = D2Dplot_global.log;
-        
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(Calib_dialog.class.getName());
+    private JButton btnAuto;
+    
+    private ImagePanel ip;
+    private JButton btnWriteCalFile;
+    
     /**
      * Create the dialog.
      */
-    public Calib_dialog(Pattern2D pattern) {
-        this.patt2D = pattern;
+    public Calib_dialog(ImagePanel ipanel) {
+        this.setIpanel(ipanel);
         setIconImage(Toolkit.getDefaultToolkit().getImage(Calib_dialog.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("LaB6 Calibration (ON DEVELOPMENT)");
-        // setBounds(100, 100, 660, 730);
+        setTitle("LaB6 Calibration");
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 522, 580);
+        setBounds(x, y, 629, 580);
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("insets 0", "[grow]", "[grow]"));
@@ -137,7 +143,7 @@ public class Calib_dialog extends JDialog {
                 this.panel_left = new JPanel();
                 this.splitPane.setLeftComponent(this.panel_left);
                 {
-                    panel_left.setLayout(new MigLayout("", "[grow][grow][]", "[26px][][][][grow]"));
+                    panel_left.setLayout(new MigLayout("", "[grow][][]", "[26px][][][][grow]"));
                 }
                 {
                     this.cbox_onTop = new JCheckBox("on top");
@@ -169,13 +175,13 @@ public class Calib_dialog extends JDialog {
                         }
                     }
                 }
-                btnAutoCalibration = new JToggleButton("Start Calibration");
+                btnAutoCalibration = new JToggleButton("Start Manual Calibration");
                 btnAutoCalibration.addItemListener(new ItemListener() {
                     public void itemStateChanged(ItemEvent e) {
                         do_btnAutoCalibration_itemStateChanged(e);
                     }
                 });
-                panel_left.add(btnAutoCalibration, "flowy,cell 0 2 2 1,grow");
+                panel_left.add(btnAutoCalibration, "flowy,cell 0 2,grow");
                 {
                     this.lbllist = new JLabel("?");
                     this.lbllist.addMouseListener(new MouseAdapter() {
@@ -194,6 +200,15 @@ public class Calib_dialog extends JDialog {
                             do_lbllist_mouseReleased(e);
                         }
                     });
+                    {
+                        btnAuto = new JButton("Autocalibration");
+                        btnAuto.addActionListener(new ActionListener() {
+                            public void actionPerformed(ActionEvent arg0) {
+                                do_btnAuto_actionPerformed(arg0);
+                            }
+                        });
+                        panel_left.add(btnAuto, "cell 1 2");
+                    }
                     this.lbllist.setFont(new Font("Tahoma", Font.BOLD, 14));
                     this.panel_left.add(this.lbllist, "cell 2 2,alignx right,aligny center");
                 }
@@ -205,19 +220,34 @@ public class Calib_dialog extends JDialog {
                         panel = new JPanel();
                         panel_1.add(panel, "cell 0 0,grow");
                         panel.setBorder(new TitledBorder(null, "Display settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-                        panel.setLayout(new MigLayout("", "[grow]", "[][][]"));
+                        panel.setLayout(new MigLayout("", "[grow]", "[][][][]"));
                         {
                             chckbxShowGuessPoints = new JCheckBox("Show Guess Points");
+                            chckbxShowGuessPoints.addItemListener(new ItemListener() {
+                                public void itemStateChanged(ItemEvent arg0) {
+                                    do_chckbxShowGuessPoints_itemStateChanged(arg0);
+                                }
+                            });
                             chckbxShowGuessPoints.setSelected(true);
                             panel.add(chckbxShowGuessPoints, "flowy,cell 0 0,alignx left");
                         }
                         {
                             chckbxShowFittedEllipses = new JCheckBox("Show Fitted Ellipses");
+                            chckbxShowFittedEllipses.addItemListener(new ItemListener() {
+                                public void itemStateChanged(ItemEvent e) {
+                                    do_chckbxShowFittedEllipses_itemStateChanged(e);
+                                }
+                            });
                             chckbxShowFittedEllipses.setSelected(true);
                             panel.add(chckbxShowFittedEllipses, "flowx,cell 0 1,alignx left");
                         }
                         {
                             chckbxShowSearchEllipses = new JCheckBox("Show search boundaries");
+                            chckbxShowSearchEllipses.addItemListener(new ItemListener() {
+                                public void itemStateChanged(ItemEvent e) {
+                                    do_chckbxShowSearchEllipses_itemStateChanged(e);
+                                }
+                            });
                             chckbxShowSearchEllipses.setActionCommand("Show search ellipses boundaries");
                             panel.add(chckbxShowSearchEllipses, "cell 0 2,alignx left");
                         }
@@ -316,7 +346,7 @@ public class Calib_dialog extends JDialog {
                         do_btnNewButton_actionPerformed(arg0);
                     }
                 });
-                buttonPane.setLayout(new MigLayout("", "[][][grow]", "[25px]"));
+                buttonPane.setLayout(new MigLayout("", "[][][][grow]", "[25px]"));
                 btnImageParameters = new JButton("Image Parameters");
                 buttonPane.add(btnImageParameters, "cell 0 0");
                 btnImageParameters.addActionListener(new ActionListener() {
@@ -326,18 +356,40 @@ public class Calib_dialog extends JDialog {
                 });
                 buttonPane.add(this.btnApply, "cell 1 0,alignx center,aligny center");
             }
+            {
+                btnWriteCalFile = new JButton("Write CAL file");
+                btnWriteCalFile.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        do_btnWriteCalFile_actionPerformed(e);
+                    }
+                });
+                buttonPane.add(btnWriteCalFile, "cell 2 0");
+            }
             okButton.setActionCommand("OK");
-            buttonPane.add(okButton, "cell 2 0,alignx right,aligny center");
+            buttonPane.add(okButton, "cell 3 0,alignx right,aligny center");
             getRootPane().setDefaultButton(okButton);
         }
 
+        this.setAlwaysOnTop(true);
+
+        tAOut.ln("** LaB6 instrumental parameters calibration **");
         inicia();
+        
         
     }
 
+    public void setIpanel(ImagePanel ipanel){
+        this.ip = ipanel;
+    }
+    
+    public ImagePanel getIPanel() {
+        return ip;
+    }
+
     protected void inicia(){
-        tAOut.ln("** The LaB6 calibration is an experimental feature, use with caution **");
-        this.setAlwaysOnTop(true);
+        this.patt2D = this.getIPanel().getPatt2D();
+        this.pointsRing1circle=null; //perque no funcioni el recalc
+
         refCX=0;
         refCY=0;
         refMD=0;
@@ -353,6 +405,7 @@ public class Calib_dialog extends JDialog {
     @Override
     public void dispose() {
         this.chckbxCalibrate.setSelected(false);
+        this.getIPanel().actualitzarVista();
         super.dispose();
     }
 
@@ -364,6 +417,7 @@ public class Calib_dialog extends JDialog {
             patt2D.setTiltDeg(refTiltDeg);
             patt2D.setRotDeg(refRotDeg);
             tAOut.ln("Values set as image calibration parameters");
+            this.getIPanel().actualitzarVista();
             return;
         }
         tAOut.ln("Please perform a calculation first");
@@ -375,6 +429,7 @@ public class Calib_dialog extends JDialog {
 
     protected void do_chckbxCalibrate_itemStateChanged(ItemEvent arg0) {
         this.calibrating = chckbxCalibrate.isSelected();
+        this.getIPanel().actualitzarVista();
     }
 
     protected void do_lbllist_mouseEntered(MouseEvent e) {
@@ -388,34 +443,104 @@ public class Calib_dialog extends JDialog {
     protected void do_lbllist_mouseReleased(MouseEvent e) {
       tAOut.ln("");
       tAOut.ln("** CALIBRATION HELP **");
-      tAOut.ln(" 1) Click Start Calibration\n"
+      tAOut.ln(" 1) Click Start Manual Calibration\n"
               + " 2) Click 5 or more points within the inner ring\n"
-              + " 3) Click Finish -- ellipses will be fitted to peaks\n"
-              + " 4) Click on recalc if you change the parameters\n"
+              + " 3) Click Finish -- ellipses will be fitted to the peak rings\n"
+              + " 4) Click on recalc if you change the parameters (without clicking points again)\n"
               + " 5) To keep final parameters click on apply\n"
+              + " \n"
+              + "OR\n"
+              + " 1) Click on autocalibration\n"
+              + " (it need aprox. initial parameters and the first ring should be close to a circle)\n"
               + "\n");
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
+        this.getIPanel().actualitzarVista();
         this.dispose();
     }
     
     protected void do_btnImageParameters_actionPerformed(ActionEvent arg0) {
         if (patt2D != null) {
             if (paramDialog == null){
-                paramDialog = new Param_dialog(patt2D);
+                paramDialog = new Param_dialog(this.ip,this.patt2D);
             }
+            paramDialog.inicia();;
             paramDialog.setVisible(true);
         }
+    }
+    
+    private void readFindElliPars(){
+        try{
+            findElliPointsTolPix = Integer.parseInt(txtPixtol.getText());   
+            findElliPointsMinPixLine = findElliPointsTolPix;
+        }catch(Exception ex){
+            log.config("using default value for findElliPointsTolPix");
+        }
+        try{
+            findElliPointsArcSizemm = Integer.parseInt(txtArcsize.getText());   
+        }catch(Exception ex){
+            log.config("using default value for findElliPointsArcSizemm");
+        }
+        try{
+            factESDIntensityThreshold = Integer.parseInt(txtEsdfact.getText());   
+        }catch(Exception ex){
+            log.config("using default value for factESDIntensityThreshold");
+        }
+        try{
+            String ommitstr = txtOmmitrings.getText().trim().replace(',', ' ');
+            log.config(ommitstr);
+            String[] ommitlist = ommitstr.trim().split("\\s+");
+            ommitRings = new ArrayList<Integer>();
+            for (int i=0; i< ommitlist.length;i++){
+                ommitRings.add(Integer.parseInt(ommitlist[i]));
+                log.config(Integer.toString(ommitRings.get(i)));    
+            }
+        }catch(Exception ex){
+            ommitRings = new ArrayList<Integer>();
+            log.config("using default value for ommitRings");
+        }       
+    }
+    
+    //omplim automaticament els pointsRing1circle segons distMD i dspacing 1r pic LaB6 (considerem CERCLE)
+    public void do_btnAuto_actionPerformed(ActionEvent arg0) {
+        
+        solutions = new ArrayList<EllipsePars>(); //BORREM ANTERIORS SOLUCIONS
+        
+        if(!checkWavePixSDist(true))return;
+        
+        this.readFindElliPars();
+        
+        //ara cal buscar el suposat radi del primer pic de LaB6 considerant els param instrumentals actuals
+        circleRadius = (float) ((patt2D.getDistMD()/patt2D.getPixSx()) * FastMath.tan(2*FastMath.asin(patt2D.getWavel()/(2*CalibOps.LaB6_d[1]))));
+        circleCenter = new Point2D.Float(patt2D.getCentrX(),patt2D.getCentrY());
+        log.writeNameNumPairs("config", true, "circleRadius", circleRadius);
+        this.pointsRing1circle = findRingPoints(this.getCircleRadius(),findElliPointsTolPix);
+        
+        //busquem ellipses (ja llegirem els parametres dins, abans ho feiem aqui pero calcEllipses tambe es pot cridar amb recalc)
+        this.calcEllipses();
+        
+        //calculem parametres instrumentals
+        if (solutions.size()>0){
+            this.calcInstrumFromEllipses();
+        }
+        this.getIPanel().actualitzarVista();
+    }
+    
+    private boolean checkWavePixSDist(boolean showParams){
+        if((!patt2D.checkIfWavel() || !patt2D.checkIfPixSize() || !patt2D.checkIfDistMD())){
+            tAOut.afegirText(true, true, "Please provide pixel size, sample-detector distance and wavelength");
+            if(showParams)btnImageParameters.doClick();
+            return false;
+        }
+        return true;
     }
     
     protected void do_btnAutoCalibration_itemStateChanged(ItemEvent e) {
         
         if (this.btnAutoCalibration.isSelected()){
             //comprovem que hi hagin els valors de pixsize i wavelength
-            if((!patt2D.checkIfWavel() || !patt2D.checkIfPixSize())){
-                tAOut.afegirText(true, true, "Please provide pixel size and wavelength");
-                btnImageParameters.doClick();
+            if(!checkWavePixSDist(true)){
                 this.btnAutoCalibration.setSelected(false);
                 return;
             }
@@ -426,8 +551,8 @@ public class Calib_dialog extends JDialog {
         }else{
             this.btnAutoCalibration.setText("Start Calibration");
             this.setSetting1stPeakCircle(false);
-            
             //busquem ellipses (ja llegirem els parametres dins, abans ho feiem aqui pero calcEllipses tambe es pot cridar amb recalc)
+            this.readFindElliPars();
             this.calcEllipses();
             
             //calculem parametres instrumentals
@@ -435,446 +560,48 @@ public class Calib_dialog extends JDialog {
                 this.calcInstrumFromEllipses();
             }
         }
+        this.getIPanel().actualitzarVista();
     }
     
-    
-    private float estimMDdist(EllipsePars e, int lab6peak){
-        float wave = patt2D.getWavel();
-        float twoth = (float) (2*FastMath.asin(wave/(2*LaB6_d[lab6peak])));
-        float estMD = (float) ((e.getRmin()*e.getRmin())/(FastMath.tan(twoth)*e.getRmax()));
-        return estMD;
-    }
-    
-    private float estimMDdist(float r1, float r2, int lab6peak){
-        float wave = patt2D.getWavel();
-        float twoth = (float) (2*FastMath.asin(wave/(2*LaB6_d[lab6peak])));
-        float estMD = (float) ((r2*r2)/(FastMath.tan(twoth)*r1));
-        return estMD;
-    }
-    
-    public EllipsePars getEllipseForLaB6ring(int ringN){
-        Iterator<EllipsePars> itre = solutions.iterator();
-        while (itre.hasNext()){
-            EllipsePars e = itre.next();
-            if (e.getLab6ring()==ringN){
-                return e;
-            }
-        }
-        return null;
-    }
-    
-    private void calcInstrumFromEllipses(){
-        
-        //farem recta que millor s'ajusta als centres
-        SimpleRegression sr = new SimpleRegression();
-        Iterator<EllipsePars> itre = solutions.iterator();
-        while (itre.hasNext()){
-            EllipsePars e = itre.next();
-                sr.addData(e.getXcen(), e.getYcen());    
-        }
-        
-        //millorem la recta
-        double rsqr = sr.getRSquare();
-        int niter = 0;
-        float factErr=1.5f;
-        int minPoints = 3;
-        while (rsqr<0.8 && niter<=3){
-            itre = solutions.iterator();
-            ArrayList<Point2D.Double> toRemove = new ArrayList<Point2D.Double>();
-            double ssqerr = sr.getSumSquaredErrors();
-            double slopesqerr = sr.getSlopeStdErr();
-            double meansqerr = sr.getMeanSquareError();
-            double regrsumsq = sr.getRegressionSumSquares(); 
-            log.writeNameNumPairs("config", true, "ssqerr,slopesqerr,meansqerr,rsqr,regrsumsq", ssqerr,slopesqerr,meansqerr,rsqr,regrsumsq);
-            while (itre.hasNext()){
-                EllipsePars e = itre.next();
-                    Double pry = sr.predict(e.getXcen());
-                    log.writeNameNumPairs("config", true, "px, py, pry",e.getXcen(),e.getYcen(), pry);
-                    if (FastMath.abs(pry-e.getYcen())>(factErr*ssqerr)){
-                        toRemove.add(new Point2D.Double(e.getXcen(),e.getYcen()));
-                    }
-            }
-            for(int i=0;i<toRemove.size();i++){
-                if (sr.getN()<=minPoints)break;
-                sr.removeData(toRemove.get(i).getX(),toRemove.get(i).getY());
-                log.config("removing (x y)= "+toRemove.get(i).getX()+" "+toRemove.get(i).getY());
-            }
-            rsqr = sr.getRSquare();            
-            niter=niter+1;
-        }
-        
-        double slope = 0;
-        double intercept = 0;
-        try{
-            slope = sr.getSlope();
-            intercept = sr.getIntercept();
-            log.writeNameNumPairs("CONFIG",true,"slope intercept niter rsqr npoints", slope, intercept,niter,rsqr,sr.getN());            
-        }catch(Exception ex){
-            if (D2Dplot_global.isDebug())ex.printStackTrace();
-            log.warning("error calculating intrumental parameters from ellipses");
-            return;
-        }
-        
-        //angle entre la recta i l'eix Y === rot
-        //dos punts de la recta (punt 0,intercept) i un altre
-        double x1 = 1;
-        double y1 = slope * x1 + intercept;
-        double vx = x1-0;
-        double vy = y1-intercept;
-        //eix Y cap amunt es vector (0,-1)
-        double mod1 = FastMath.sqrt(vx*vx + vy*vy);
-        double mod2 = FastMath.sqrt(1);
-        double rotRegression = FastMath.acos((vx*0+vy*-1)/(mod1*mod2));
-        log.writeNameNumPairs("CONFIG",true,"ROT(regr)=", FastMath.toDegrees(rotRegression));
-        
-        boolean useGlobalRot = false;
-        if(forceGlobalRot)useGlobalRot=true;
-        if(considerGlobalRot){
-            if (rsqr>=0.998 && sr.getN()>=5)useGlobalRot = true;    
-        }
-
-        ArrayList<Double> distsMD = new ArrayList<Double>();
-        ArrayList<Double> tilts = new ArrayList<Double>();
-        ArrayList<Double> rots = new ArrayList<Double>();
-        ArrayList<Point2D.Float> centresMenys = new ArrayList<Point2D.Float>();
-        ArrayList<Point2D.Float> centresMes = new ArrayList<Point2D.Float>();
-        //we do it for all the rings that we have
-        for (int i=1; i<LaB6_d.length; i++){
-
-            if (ommitRings.contains(i))continue;
-
-            EllipsePars e = this.getEllipseForLaB6ring(i);
-            if (e==null){continue;}
-            
-            float wave = patt2D.getWavel();
-            double tth = 2*FastMath.asin(wave/(2*LaB6_d[i]));
-            double tantth = FastMath.tan(tth);
-
-            //estimate of tilt,distMD 
-            double exen = FastMath.sqrt(FastMath.max(0.,1.-((e.getRmin()*e.getRmin())/(e.getRmax()*e.getRmax()))));
-            double tilt = FastMath.asin(exen*FastMath.cos(tth));
-            double distMD = (e.getRmin()*e.getRmin())/(tantth*e.getRmax());
-            //distance from the ellipse center to the beam center
-            double c = e.getRmax()*tantth*FastMath.tan(tilt);
-
-            //aquesta tampoc esta malament.
-//            double num = 2*distMD*FastMath.sin(tilt)*sintth*sintth;
-//            double den = FastMath.cos(2*tilt)+FastMath.cos(2*tth);
-//            c = num/den;
-            
-            double rot = e.getAngrot();
-            if(useGlobalRot){
-                rot = rotRegression;
-                log.config("using ROT from regression");
-            }
-            
-            //angrot es l'angle "azimut" respecte les 12h (+cw) que ens diu quan està rotat Rmaj
-            //agafem punt 0,0 el centre de l'ellipse (relatiu) i apliquem la rotacio de "c"
-            //l'angle el faig negatiu perque sigui una rotacio clockwise tal com defineix angrot
-            double xmes = 0*FastMath.cos(-rot) - c*FastMath.sin(-rot);
-            double ymes = 0*FastMath.sin(-rot) + c*FastMath.cos(-rot);
-            double xmenys = 0*FastMath.cos(-rot) - (-c)*FastMath.sin(-rot);
-            double ymenys = 0*FastMath.sin(-rot) + (-c)*FastMath.cos(-rot);
-            
-            //ara ja tinc en relatiu (centre ellipse) les dues possibles posicions del beam, hem de tornar-ho a pixels absoluts:
-            //atencio, es -y perque tenim l'origen a dalt a l'esquerra
-            double centreXmes = e.getXcen()+xmes;
-            double centreYmes = e.getYcen()-ymes;
-            double centreXmenys = e.getXcen()+xmenys;
-            double centreYmenys = e.getYcen()-ymenys;
-            
-            //logging debug
-            log.config("---- RING nr."+i+" 2theta="+FastMath.toDegrees(tth));
-            log.writeNameNumPairs("CONFIG",true,"angRotDeg,tiltDeg,distMD",FastMath.toDegrees(e.getAngrot()), FastMath.toDegrees(tilt), distMD);
-            log.writeNameNumPairs("FINE",true,"c,xmes,ymes,xmenys,ymenys", c,xmes,ymes,xmenys,ymenys);
-            log.writeNameNumPairs("CONFIG",true,"centreX+,centreY+,centreX-,centreY-", centreXmes,centreYmes,centreXmenys,centreYmenys);
-            
-            distsMD.add(distMD*patt2D.getPixSx());
-            tilts.add(tilt);
-            centresMenys.add(new Point2D.Float((float)centreXmenys,(float)centreYmenys));
-            centresMes.add(new Point2D.Float((float)centreXmes,(float)centreYmes));
-            rots.add(e.getAngrot());
-        }
-        
-        double meanMD=0;
-        double meanTilt=0;
-        double meanRot=0;
-        double meanCXm=0;
-        double meanCYm=0;
-        double meanCXp=0;
-        double meanCYp=0;
-        
-        //detectem "outliers"
-        double[] tiltsAll = new double[tilts.size()];
-        for(int i=0;i<tilts.size();i++){
-            tiltsAll[i] = tilts.get(i);
-        }
-        double[] tiltsClean = FileUtils.deleteOutliersFromList(tiltsAll, outliersFactSD);
-        
-        double[] rotsAll = new double[rots.size()];
-        for(int i=0;i<rots.size();i++){
-            rotsAll[i] = rots.get(i);
-        }
-        double[] rotsClean = FileUtils.deleteOutliersFromList(rotsAll, outliersFactSD);        
-        
-        double[] distsMDAll = new double[distsMD.size()];
-        for(int i=0;i<distsMD.size();i++){
-            distsMDAll[i] = distsMD.get(i);
-        }
-        double[] distsMDClean = FileUtils.deleteOutliersFromList(distsMDAll, outliersFactSD);
-        
-        double[] cXmesAll = new double[centresMes.size()];
-        for(int i=0;i<centresMes.size();i++){
-            cXmesAll[i] = centresMes.get(i).getX();
-        }
-        double[] cXmesClean = FileUtils.deleteOutliersFromList(cXmesAll, outliersFactSD);
-
-        double[] cYmesAll = new double[centresMes.size()];
-        for(int i=0;i<centresMes.size();i++){
-            cYmesAll[i] = centresMes.get(i).getY();
-        }
-        double[] cYmesClean = FileUtils.deleteOutliersFromList(cYmesAll, outliersFactSD);
-        
-        double[] cXmenysAll = new double[centresMenys.size()];
-        for(int i=0;i<centresMenys.size();i++){
-            cXmenysAll[i] = centresMenys.get(i).getX();
-        }
-        double[] cXmenysClean = FileUtils.deleteOutliersFromList(cXmenysAll, outliersFactSD);
-
-        double[] cYmenysAll = new double[centresMenys.size()];
-        for(int i=0;i<centresMenys.size();i++){
-            cYmenysAll[i] = centresMenys.get(i).getY();
-        }
-        double[] cYmenysClean = FileUtils.deleteOutliersFromList(cYmenysAll, outliersFactSD);
-        
-        boolean rejOutliers=isRejectOutliers();
-        if(tiltsClean.length<3)rejOutliers=false;
-        if(rotsClean.length<3)rejOutliers=false;
-        if(distsMDClean.length<3)rejOutliers=false;
-        if(cXmesClean.length<3)rejOutliers=false;
-        if(cYmesClean.length<3)rejOutliers=false;
-        if(cXmenysClean.length<3)rejOutliers=false;
-        if(cYmenysClean.length<3)rejOutliers=false;
-        
-        if (rejOutliers){
-            log.config("rejectOutliers true");
-            Mean meanCalc = new Mean();
-            meanTilt = meanCalc.evaluate(tiltsClean);
-            meanCalc.clear();
-            meanRot = meanCalc.evaluate(rotsClean);
-            meanCalc.clear();
-            meanMD = meanCalc.evaluate(distsMDClean);
-            meanCalc.clear();
-            meanCXm = meanCalc.evaluate(cXmenysClean);
-            meanCalc.clear();
-            meanCYm = meanCalc.evaluate(cYmenysClean);
-            meanCalc.clear();
-            meanCXp = meanCalc.evaluate(cXmesClean);
-            meanCalc.clear();
-            meanCYp = meanCalc.evaluate(cYmesClean);
-            meanCalc.clear();
-            
-            log.config("Rot regr (º)="+FastMath.toDegrees(rotRegression));
-            log.config("Rot mean (º)="+FastMath.toDegrees(meanRot));
-            log.config("tilt (º)="+FastMath.toDegrees(meanTilt));
-            //CHOOSE THE BEST CENTER
-            //as initial guess I will chose the closest to the first ellipse center (ho fem al quadrat per exigerar)
-            double bestCX=0;
-            double bestCY=0;
-            double altCX=0;
-            double altCY=0;
-            EllipsePars e = this.getEllipseForLaB6ring(1);
-            double ex = e.getXcen();
-            double ey = e.getXcen();
-            double diffPlus = FastMath.abs(ex-meanCXp)*FastMath.abs(ex-meanCXp) + FastMath.abs(ey-meanCYp)*FastMath.abs(ey-meanCYp);
-            double diffMinus = FastMath.abs(ex-meanCXm)*FastMath.abs(ex-meanCXm) + FastMath.abs(ey-meanCYm)*FastMath.abs(ey-meanCYm);
-            if (diffMinus < diffPlus){
-                bestCX=meanCXm;
-                bestCY=meanCYm;
-                altCX=meanCXp;
-                altCY=meanCYp;
-            }else{
-                bestCX=meanCXp;
-                bestCY=meanCYp;
-                altCX=meanCXm;
-                altCY=meanCYm;
-            }
-            log.config("Center option 1 (pX pY)="+meanCXm+" "+meanCYm);
-            log.config("Center option 2 (pX pY)="+meanCXp+" "+meanCYp);
-            log.config("Best? Center (pX pY)="+bestCX+" "+bestCY);
-            log.config("DistMD (mm)="+meanMD);
-
-            tAOut.afegirText(true, true,"Calibration results ================");
-            tAOut.ln(" Distance Sample-Det (mm) ="+FileUtils.dfX_3.format(meanMD));
-            tAOut.ln(" Beam Center (best) (pX pY) ="+FileUtils.dfX_3.format(bestCX)+" "+FileUtils.dfX_3.format(bestCY));
-            if(showAltCenter)tAOut.ln(" Beam Center (alt) (pX pY) ="+FileUtils.dfX_3.format(altCX)+" "+FileUtils.dfX_3.format(altCY));
-            if(useGlobalRot){
-                tAOut.ln(" Detecctor rot. (regr) (deg) = "+FileUtils.dfX_2.format(FastMath.toDegrees(rotRegression)));                
-            }else{
-                tAOut.ln(" Detecctor rot. (ind) (deg) = "+FileUtils.dfX_2.format(FastMath.toDegrees(meanRot)));                
-            }
-            tAOut.ln(" Detector tilt (deg) = "+FileUtils.dfX_3.format(FastMath.toDegrees(meanTilt)));    
-            tAOut.ln("=================================");
-            
-            this.setRefCX((float) bestCX);
-            this.setRefCY((float) bestCY);
-            this.setRefMD((float) meanMD);
-            this.setRefTiltDeg((float) FastMath.toDegrees(meanTilt));
-            if(useGlobalRot){
-                this.setRefRotDeg((float) FastMath.toDegrees(rotRegression));
-            }else{
-                this.setRefRotDeg((float) FastMath.toDegrees(meanRot));
-            }
-            
-        }else{//use all points
-            log.config("rejectOutliers false");
-            for (int i=0;i<distsMD.size();i++){
-                log.writeNameNumPairs("config", true, "MD CXM CYM CXP CXP Tilt )", distsMD.get(i),centresMenys.get(i).x,centresMenys.get(i).y,centresMes.get(i).x,centresMes.get(i).y,FastMath.toDegrees(tilts.get(i)));
-                meanMD=meanMD+distsMD.get(i);
-                meanTilt=meanTilt+tilts.get(i);
-                meanRot=meanRot+rots.get(i);
-                meanCXm=meanCXm+centresMenys.get(i).x;
-                meanCYm=meanCYm+centresMenys.get(i).y;
-                meanCXp=meanCXp+centresMes.get(i).x;
-                meanCYp=meanCYp+centresMes.get(i).y;
-            }
-            int n = distsMD.size();
-            meanMD=meanMD/n;
-            meanTilt=meanTilt/n;
-            meanRot=meanRot/n;
-            meanCXm=meanCXm/n;
-            meanCYm=meanCYm/n;
-            meanCXp=meanCXp/n;
-            meanCYp=meanCYp/n;
-
-            log.config("Rot regr (º)="+FastMath.toDegrees(rotRegression));
-            log.config("Rot mean (º)="+FastMath.toDegrees(meanRot));
-            log.config("tilt (º)="+FastMath.toDegrees(meanTilt));
-            //CHOOSE THE BEST CENTER
-            //as initial guess I will chose the closest to the first ellipse center
-            double bestCX=0;
-            double bestCY=0;
-            double altCX=0;
-            double altCY=0;
-            EllipsePars e = this.getEllipseForLaB6ring(1);
-            double ex = e.getXcen();
-            double ey = e.getXcen();
-            double diffPlus = FastMath.abs(ex-meanCXp)*FastMath.abs(ex-meanCXp) + FastMath.abs(ey-meanCYp)*FastMath.abs(ey-meanCYp);
-            double diffMinus = FastMath.abs(ex-meanCXm)*FastMath.abs(ex-meanCXm) + FastMath.abs(ey-meanCYm)*FastMath.abs(ey-meanCYm);
-            if (diffMinus < diffPlus){
-                bestCX=meanCXm;
-                bestCY=meanCYm;
-                altCX=meanCXp;
-                altCY=meanCYp;
-            }else{
-                bestCX=meanCXp;
-                bestCY=meanCYp;
-                altCX=meanCXm;
-                altCY=meanCYm;
-            }
-            log.config("Center option 1 (pX pY)="+meanCXm+" "+meanCYm);
-            log.config("Center option 2 (pX pY)="+meanCXp+" "+meanCYp);
-            log.config("Best? Center (pX pY)="+bestCX+" "+bestCY);
-            log.config("DistMD (mm)="+meanMD);
-
-            tAOut.afegirText(true, true,"Calibration results ================");
-            tAOut.ln(" Distance Sample-Det (mm) ="+FileUtils.dfX_3.format(meanMD));
-            tAOut.ln(" Beam Center (best) (pX pY) ="+FileUtils.dfX_3.format(bestCX)+" "+FileUtils.dfX_3.format(bestCY));
-            if(showAltCenter)tAOut.ln(" Beam Center (alt) (pX pY) ="+FileUtils.dfX_3.format(altCX)+" "+FileUtils.dfX_3.format(altCY));
-            if(useGlobalRot){
-                tAOut.ln(" Detecctor rot. (regr) (deg) = "+FileUtils.dfX_2.format(FastMath.toDegrees(rotRegression)));                
-            }else{
-                tAOut.ln(" Detecctor rot. (ind) (deg) = "+FileUtils.dfX_2.format(FastMath.toDegrees(meanRot)));                
-            }
-            tAOut.ln(" Detector tilt (deg) = "+FileUtils.dfX_3.format(FastMath.toDegrees(meanTilt)));    
-            tAOut.ln("=================================");
-            
-            this.setRefCX((float) bestCX);
-            this.setRefCY((float) bestCY);
-            this.setRefMD((float) meanMD);
-            this.setRefTiltDeg((float) FastMath.toDegrees(meanTilt));
-            if(useGlobalRot){
-                this.setRefRotDeg((float) FastMath.toDegrees(rotRegression));
-            }else{
-                this.setRefRotDeg((float) FastMath.toDegrees(meanRot));
-            }
-            
-        }
-        
-    }
-    
-    protected void calcEllipses(){
+    private void calcEllipses(){
         if ((this.pointsRing1circle!=null)){
             
             //INICIALITZEM I CHECKEJEM ELS PARAMETRES ABANS DE CALCULAR/BUSCAR ELLIPSES
             this.cerques=new ArrayList<Line2D.Float>();
             this.ellicerques=new ArrayList<EllipsePars>();
             
-            try{
-                findElliPointsTolPix = Integer.parseInt(txtPixtol.getText());   
-                findElliPointsMinPixLine = findElliPointsTolPix;
-            }catch(Exception ex){
-                log.config("using default value for findElliPointsTolPix");
-            }
-            try{
-                findElliPointsArcSizemm = Integer.parseInt(txtArcsize.getText());   
-            }catch(Exception ex){
-                log.config("using default value for findElliPointsArcSizemm");
-            }
-            try{
-                factESDIntensityThreshold = Integer.parseInt(txtEsdfact.getText());   
-            }catch(Exception ex){
-                log.config("using default value for factESDIntensityThreshold");
-            }
-            try{
-                String ommitstr = txtOmmitrings.getText().trim().replace(',', ' ');
-                log.config(ommitstr);
-                String[] ommitlist = ommitstr.trim().split("\\s+");
-                ommitRings = new ArrayList<Integer>();
-                for (int i=0; i< ommitlist.length;i++){
-                    ommitRings.add(Integer.parseInt(ommitlist[i]));
-                    log.config(Integer.toString(ommitRings.get(i)));    
-                }
-            }catch(Exception ex){
-                ommitRings = new ArrayList<Integer>();
-                log.config("using default value for ommitRings");
-            }        
-            
             //ARA JA PODEM FER LA CERCA
             
             //first we fit a circle and calculate the aprox. Center and distMD, we assume the wavelength known
             Point2D.Float[] d = new Point2D.Float[pointsRing1circle.size()];
-//            double[] xs = new double[pointsRing1circle.size()];
-//            double[] ys = new double[pointsRing1circle.size()];
             for (int i=0; i<pointsRing1circle.size();i++){
                 d[i] = pointsRing1circle.get(i);
-//                xs[i] = pointsRing1circle.get(i).getX();
-//                ys[i] = pointsRing1circle.get(i).getY();
             }
             pointsRing1circle.toArray(d);
-            
-            if (useCircle){
-                this.fitCircle(d);
-                if (this.getCircleRadius()<=0){
-                    log.info("Error in circle fit");
-                    return;
-                }
-            }
 
             solutions = new ArrayList<EllipsePars>();
-            
-            //we fit an ellipse to the first ring using the previous aprox. cirlce fit or using directly the click points
+
+            //ARA PROVEM DE FITTEJAR UNA ELLIPSE i SI NO FUNCIONA DONCS UN CERCLE
             EllipsePars p = new EllipsePars();
             p.setLab6ring(1);
-            if(useCircle){
-                p.setEstimPoints(findRingPoints(this.getCircleRadius(),findElliPointsTolPix));  
-            }else{
-                p.setEstimPoints(pointsRing1circle);                
-            }
+            p.setEstimPoints(pointsRing1circle);
             p.fitElli();
+            if (!p.isFit()){
+                log.warning("Error fitting ellipse for 1st ring, trying 1st with circle...");
+                //try with a circle
+                this.fitCircle(d);
+                if (this.getCircleRadius()<=0){
+                    log.warning("Error also in circle fit, try to add more points and/or check image parameters");
+                    tAOut.stat("Impossible to fit lab6 peak number 1. Please check image parameters and/or add more points");
+                    return;
+                }
+                p.setEstimPoints(findRingPoints(this.getCircleRadius(),findElliPointsTolPix)); //posem punts del cercle
+            }else{
+                p.setEstimPoints(findRingPoints(p,findElliPointsTolPix)); //busquem mes punts de l'elipse
+            }
             
-            //NEW: now we try a better fit.
-            p.setEstimPoints(findRingPoints(p,findElliPointsTolPix));
+            //aqui tindrem o bé els punts del cercle o de l'elipse a estimpoints
+            //fem ara el fit definitiu d'una ellipse amb tots els punts
             p.fitElli();
             
             if (p.isFit()){
@@ -882,21 +609,18 @@ public class Calib_dialog extends JDialog {
                 solutions.add(p);                
             }else{
                 log.warning("Impossible to fit ellipse number 1. Please check.");
+                tAOut.stat("Impossible to fit lab6 peak number 1. Please check image parameters and/or add more points");
                 return;
             }
 
             //distMD en pixels...
             float estMD = -1;
-            if(useCircle){
-                estMD = estimMDdist(this.getCircleRadius(), this.getCircleRadius(), 1);//estimacio distMD primer pic                
-            }else{
-                estMD = estimMDdist(p, 1);//estimacio distMD primer pic
-            }
+            estMD = estimMDdist(p, 1);//estimacio distMD primer pic
             float wave = patt2D.getWavel();
             
             //now we use the previous ellipse to fit the next one
             int fitCount = 1; //number of rings fitted
-            for (int i=2;i<LaB6_d.length;i++){
+            for (int i=2;i<maxLaB6ring;i++){
                 
                 log.config("ring no."+i);
                 
@@ -904,10 +628,10 @@ public class Calib_dialog extends JDialog {
                 
                 EllipsePars p0 = solutions.get(fitCount-1);
                 
-                float twoth = (float) (2*FastMath.asin(wave/(2*LaB6_d[i])));
+                float twoth = (float) (2*FastMath.asin(wave/(2*CalibOps.LaB6_d[i])));
                 float radiPix = (float) (FastMath.tan(twoth)*estMD);
                 
-                float twothP0 = (float) (2*FastMath.asin(wave/(2*LaB6_d[p0.getLab6ring()])));
+                float twothP0 = (float) (2*FastMath.asin(wave/(2*CalibOps.LaB6_d[p0.getLab6ring()])));
                 float radiPixP0 = (float) (FastMath.tan(twothP0)*estMD);
                 
                 float factRP0maj = (float) (p0.getRmax()/radiPixP0);
@@ -917,8 +641,6 @@ public class Calib_dialog extends JDialog {
 
                 float r1 = (float) (p0.getRmax()); 
                 float r2 = (float) (p0.getRmin());                
-//                float factRmax = r1/((r1+r2)/2);
-//                float factRmin = r2/((r1+r2)/2);
                 float factRmax = factRP0maj;
                 float factRmin = factRP0men;
                 
@@ -933,7 +655,6 @@ public class Calib_dialog extends JDialog {
                 EllipsePars pN = new EllipsePars();
                 pN.setEstimPoints(this.findRingPoints(p1, findElliPointsTolPix));
                 //test with circle...
-//                pN.setEstimPoints(this.findRingPoints(radiPix,findElliPointsTolPix));
                 pN.setLab6ring(i);
                 pN.fitElli();
                 if(pN.isFit()){
@@ -956,10 +677,7 @@ public class Calib_dialog extends JDialog {
         //x  =  h + r cos(t)
         //y  =  k + r sin(t)
         ArrayList<Point2D.Float> ringPoints = new ArrayList<Point2D.Float>();
-        //to estimate 30 points per ellipse
-//        float angstep = (float) FastMath.toRadians(360f / 100f);
-        //TODO:angstep dependra del radi per tenir una distribucio homogenia
-        //ANGULAR STEP in order to have an arc of aprox 1mm
+        //Per determinar el num de punts, l'unic parametre es la separacio en pixels entre els punts (arcpix)
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
         log.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
@@ -970,14 +688,22 @@ public class Calib_dialog extends JDialog {
             float maxI=0;
             float meanI=0;
             int npix = 0;
-            for (float r = cradi-tol; r<=cradi+tol; r = r+1){
+            for (float r = cradi-tol; r<=cradi+tol; r = r+0.5f){ //161103 canvi +1 per +0.5
                 float xpix = (float) (this.getCircleCenter().x + r * FastMath.cos(a));
                 float ypix = (float) (this.getCircleCenter().y + r * FastMath.sin(a));
-                float inten = this.patt2D.getInten(FastMath.round(xpix), FastMath.round(ypix));
-                if (inten>maxI){
-                    maxI = inten;
-                    xmaxI = xpix;
-                    ymaxI = ypix;
+                //agafem aquest com a pic central i ara analitzem una zona quadrada de nxn pixels. e.g. n=3?
+                float inten = 0;
+                for (int i = -1; i<2; i++){
+                    int px = (int)(xpix)+i;
+                    int py = (int)(ypix)+i;
+                    if (!this.patt2D.isInside(px, py))continue;
+                    if (this.patt2D.isInExZone(px, py))continue;
+                    inten = this.patt2D.getInten(px, py);
+                    if (inten>maxI){
+                        maxI = inten;
+                        xmaxI = px;
+                        ymaxI = py;
+                    }
                 }
                 meanI = meanI + inten;
                 npix = npix + 1;
@@ -991,20 +717,11 @@ public class Calib_dialog extends JDialog {
         return ringPoints;
     }
     
-    public ArrayList<EllipsePars> getElliCerques(){
-        return ellicerques;
-    }
-    
     //busca punts al voltant d'una ellipse amb un rang +-tol (del radi)
     //unitats PIXELS
     private ArrayList<Point2D.Float> findRingPoints(EllipsePars elli,float tol){
-        //parametric circle
-        //x  =  h + r cos(t)
-        //y  =  k + r sin(t)
+
         ArrayList<Point2D.Float> ringPoints = new ArrayList<Point2D.Float>();
-        //to estimate 30 points per ellipse
-//        float angstep = (float) FastMath.toRadians(360f / 180f);
-        //TODO:angstep dependra del radi per tenir una distribucio homogenia
         
         float cradi = (float) ((elli.getRmax()+elli.getRmin())/2);
         float facRmax = (float) (elli.getRmax()/cradi);
@@ -1014,8 +731,6 @@ public class Calib_dialog extends JDialog {
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
         log.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
-        
-//        float angstep = (float) FastMath.toRadians(360f / 180f);
         
         //debug Posem les max i min elli de la cerca
         ellicerques.add(new EllipsePars((cradi-tol)*facRmax, (cradi-tol)*facRmin, elli.getXcen(),elli.getYcen(),elli.getAngrot()));
@@ -1031,17 +746,24 @@ public class Calib_dialog extends JDialog {
 //            if (a==FastMath.PI/4) cerques.add(new Line2D.Float(x1, y1, x2, y2))
             for (float r = cradi-tol; r<=cradi+tol; r = r+1){
                 Point2D.Float p = elli.getEllipsePoint((float)FastMath.toDegrees(a), r*facRmax, r*facRmin);
-                if (!this.patt2D.isInside(FastMath.round(p.x), FastMath.round(p.y))){
-                    continue;
-                }
-                if (this.patt2D.isInExZone(FastMath.round(p.x), FastMath.round(p.y))){
-                    continue;
-                }
-                float inten = this.patt2D.getInten(FastMath.round(p.x), FastMath.round(p.y));
-                if (inten>maxI){
-                    maxI = inten;
-                    xmaxI = p.x;
-                    ymaxI = p.y;
+                float inten = 0;
+                //cerca en un quadrat de aresta 3
+                for (int i = -1; i<2; i++){
+                    int px = (int)(p.x)+i;
+                    int py = (int)(p.y)+i;
+                    if (!this.patt2D.isInside(px,py)){
+                        continue;
+                    }
+                    if (this.patt2D.isInExZone(px,py)){
+                        continue;
+                    }
+                    inten = this.patt2D.getInten(px,py);
+                    log.writeNameNumPairs("fine", true, "ang,radi,px,py,inten,maxI,xmaxI,ymaxI", FastMath.toDegrees(a),r,px,py,inten,maxI,xmaxI,ymaxI);
+                    if (inten>maxI){
+                        maxI = inten;
+                        xmaxI = px;
+                        ymaxI = py;
+                    }
                 }
                 meanI = meanI + inten;
                 npix = npix + 1;
@@ -1062,18 +784,180 @@ public class Calib_dialog extends JDialog {
         return ringPoints;
     }
     
+    
+    private float estimMDdist(EllipsePars e, int lab6peak){
+        float wave = patt2D.getWavel();
+        float twoth = (float) (2*FastMath.asin(wave/(2*CalibOps.LaB6_d[lab6peak])));
+        float estMD = (float) ((e.getRmin()*e.getRmin())/(FastMath.tan(twoth)*e.getRmax()));
+        return estMD;
+    }
+    
+    
+    public EllipsePars getEllipseForLaB6ring(int ringN){
+        Iterator<EllipsePars> itre = solutions.iterator();
+        while (itre.hasNext()){
+            EllipsePars e = itre.next();
+            if (e.getLab6ring()==ringN){
+                return e;
+            }
+        }
+        return null;
+    }
+    
+    private void calcInstrumFromEllipses(){
+        
+        ArrayList<Double> distsMD = new ArrayList<Double>();
+        ArrayList<Double> tilts = new ArrayList<Double>();
+        ArrayList<Double> rots = new ArrayList<Double>();
+        ArrayList<Point2D.Float> centresMenys = new ArrayList<Point2D.Float>();
+        ArrayList<Point2D.Float> centresMes = new ArrayList<Point2D.Float>();
+        //we do it for all the rings up to maxLaB6 rings ecept the ommitted
+        for (int i=1; i<maxLaB6ring; i++){
+
+            if (ommitRings.contains(i))continue;
+
+            EllipsePars e = this.getEllipseForLaB6ring(i);
+            if (e==null){continue;}
+            
+            float wave = patt2D.getWavel();
+            double tth = 2*FastMath.asin(wave/(2*CalibOps.LaB6_d[i]));
+            double tantth = FastMath.tan(tth);
+
+            //estimate of tilt,distMD 
+            double exen = FastMath.sqrt(FastMath.max(0.,1.-((e.getRmin()*e.getRmin())/(e.getRmax()*e.getRmax()))));
+            double tilt = FastMath.asin(exen*FastMath.cos(tth));
+            double distMD = (e.getRmin()*e.getRmin())/(tantth*e.getRmax());
+            //distance from the ellipse center to the beam center
+            double c = e.getRmax()*tantth*FastMath.tan(tilt); 
+
+            double rot = e.getAngrot();
+
+            //angrot es l'angle "azimut" respecte les 12h (+cw) que ens diu quan està rotat Rmaj
+            //agafem punt 0,0 el centre de l'ellipse (relatiu) i apliquem la rotacio de "c"
+            //l'angle el faig negatiu perque sigui una rotacio clockwise tal com defineix angrot
+            double xmes = 0*FastMath.cos(-rot) - c*FastMath.sin(-rot);
+            double ymes = 0*FastMath.sin(-rot) + (-c)*FastMath.cos(-rot);
+            double xmenys = 0*FastMath.cos(-rot) - (-c)*FastMath.sin(-rot);
+            double ymenys = 0*FastMath.sin(-rot) + c*FastMath.cos(-rot);
+            
+            //ara ja tinc en relatiu (centre ellipse) les dues possibles posicions del beam, hem de tornar-ho a pixels absoluts:
+            //atencio, es -y perque tenim l'origen a dalt a l'esquerra
+            log.writeNameNumPairs("config", true, "xmes,ymes,xmenys,ymenys,e.getXcen(),e.getYcen()", xmes,ymes,xmenys,ymenys,e.getXcen(),e.getYcen());
+            double centreXmes = e.getXcen()+xmes;
+            double centreYmes = e.getYcen()-ymes;
+            double centreXmenys = e.getXcen()+xmenys;
+            double centreYmenys = e.getYcen()-ymenys;
+            
+            //logging debug
+            log.config("---- RING nr."+i+" 2theta="+FastMath.toDegrees(tth));
+            log.writeNameNumPairs("CONFIG",true,"angRotDeg,tiltDeg,distMD",FastMath.toDegrees(rot), FastMath.toDegrees(tilt), distMD);
+            log.writeNameNumPairs("FINE",true,"c,xmes,ymes,xmenys,ymenys", c,xmes,ymes,xmenys,ymenys);
+            log.writeNameNumPairs("CONFIG",true,"centreX+,centreY+,centreX-,centreY-", centreXmes,centreYmes,centreXmenys,centreYmenys);
+            
+            distsMD.add(distMD*patt2D.getPixSx());
+            tilts.add(tilt);
+            centresMenys.add(new Point2D.Float((float)centreXmenys,(float)centreYmenys));
+            centresMes.add(new Point2D.Float((float)centreXmes,(float)centreYmes));
+            rots.add(rot);
+        }
+        
+        double meanMD=0;
+        double meanTilt=0;
+        double meanRot=0;
+        double meanCXm=0;
+        double meanCYm=0;
+        double meanCXp=0;
+        double meanCYp=0;
+        
+        for (int i=0;i<distsMD.size();i++){
+            log.writeNameNumPairs("config", true, "MD CXM CYM CXP CXP Tilt", distsMD.get(i),centresMenys.get(i).x,centresMenys.get(i).y,centresMes.get(i).x,centresMes.get(i).y,FastMath.toDegrees(tilts.get(i)));
+            meanMD=meanMD+distsMD.get(i);
+            meanTilt=meanTilt+tilts.get(i);
+            meanRot=meanRot+rots.get(i);
+            meanCXm=meanCXm+centresMenys.get(i).x;
+            meanCYm=meanCYm+centresMenys.get(i).y;
+            meanCXp=meanCXp+centresMes.get(i).x;
+            meanCYp=meanCYp+centresMes.get(i).y;
+        }
+        int n = distsMD.size();
+        meanMD=meanMD/n;
+        meanTilt=meanTilt/n;
+        meanRot=meanRot/n;
+        meanCXm=meanCXm/n;
+        meanCYm=meanCYm/n;
+        meanCXp=meanCXp/n;
+        meanCYp=meanCYp/n;
+
+        log.config("Rot guess (º)="+FastMath.toDegrees(meanRot));
+        log.config("tilt guess(º)="+FastMath.toDegrees(meanTilt));
+        
+        //CHOOSE THE BEST CENTER
+        //as initial guess I will chose the closest to the first ellipse center
+        double bestCX=0;
+        double bestCY=0;
+        EllipsePars e = this.getEllipseForLaB6ring(1);
+        double ex = e.getXcen();
+        double ey = e.getXcen();
+        double diffPlus = FastMath.abs(ex-meanCXp)*FastMath.abs(ex-meanCXp) + FastMath.abs(ey-meanCYp)*FastMath.abs(ey-meanCYp);
+        double diffMinus = FastMath.abs(ex-meanCXm)*FastMath.abs(ex-meanCXm) + FastMath.abs(ey-meanCYm)*FastMath.abs(ey-meanCYm);
+        if (diffMinus < diffPlus){
+            bestCX=meanCXm;
+            bestCY=meanCYm;
+        }else{
+            bestCX=meanCXp;
+            bestCY=meanCYp;
+        }
+        log.config("Center guess option 1 (pX pY)="+meanCXm+" "+meanCYm);
+        log.config("Center guess option 2 (pX pY)="+meanCXp+" "+meanCYp);
+        log.config("Best? Center guess (pX pY)="+bestCX+" "+bestCY);
+        log.config("DistMD guess (mm)="+meanMD);
+
+        this.setRefCX((float) bestCX);
+        this.setRefCY((float) bestCY);
+        this.setRefMD((float) meanMD);
+        this.setRefTiltDeg((float) FastMath.toDegrees(meanTilt));
+        this.setRefRotDeg((float) FastMath.toDegrees(meanRot));
+        
+        //=========== MINIMITZACIO AMB 2THETA (dspacing)
+        MultivariateFunction function = new MultivariateFunction() {
+            @Override
+            public double value(double[] array) {
+                double res = CalibOps.minimize2Theta(patt2D, array[0],array[1],array[2],array[3],array[4], solutions);
+                log.writeNameNums("config", true, "array,sum", array[0],array[1],array[2],array[3],array[4],res);
+                return res;
+            }
+        };
+        SimplexOptimizer optimizer = new SimplexOptimizer(1e-5, 1e-10);
+        PointValuePair optimum =
+                optimizer.optimize(
+                        new MaxEval(1000000), 
+                        new ObjectiveFunction(function), 
+                        GoalType.MINIMIZE, 
+                        new InitialGuess(new double[]{ this.getRefCX(),this.getRefCY(),this.getRefMD(),this.getRefTiltDeg(),this.getRefRotDeg() }), 
+                        new NelderMeadSimplex(new double[]{ 5, 5, 5, 0.2, 0.2 },1,2,0.5,0.5));
+
+        log.debug("opt sol="+Arrays.toString(optimum.getPoint()) + " : " + optimum.getSecond());
+        
+        this.setRefCX((float) optimum.getPoint()[0]);
+        this.setRefCY((float) optimum.getPoint()[1]);
+        this.setRefMD((float) optimum.getPoint()[2]);
+        this.setRefTiltDeg((float) optimum.getPoint()[3]);
+        this.setRefRotDeg((float) optimum.getPoint()[4]);
+        
+        tAOut.afegirText(true, true,"Calibration results ================");
+        tAOut.ln(" Distance Sample-Det (mm) ="+FileUtils.dfX_3.format(this.getRefMD()));
+        tAOut.ln(" Beam Center (best) (pX pY) ="+FileUtils.dfX_3.format(this.getRefCX())+" "+FileUtils.dfX_3.format(this.getRefCY()));
+        tAOut.ln(" Detecctor rot. (ind) (deg) = "+FileUtils.dfX_2.format(this.getRefRotDeg()));                
+        tAOut.ln(" Detector tilt (deg) = "+FileUtils.dfX_3.format(this.getRefTiltDeg()));    
+        tAOut.ln("=================================");
+    }
+        
     private void fitCircle(Point2D.Float[] points){
-//      // fit a circle
         try{
           CircleFitter fitter = new CircleFitter();
           fitter.initialize(points);
-//          log.info("initial circle: "
-//                             + format.format(fitter.getCenter().x)
-//                             + " "     + format.format(fitter.getCenter().y)
-//                             + " "     + format.format(fitter.getRadius()));
-          // minimize the residuals
           int iter = fitter.minimize(100, 0.1f, 1.0e-12f);
-//          log.info("converged after " + iter + " iterations");
+          log.config("converged after " + iter + " iterations");
           log.writeNameNums("config",true,"Circle fit (x y radi iter): ",fitter.getCenter().x,fitter.getCenter().y,fitter.getRadius(),iter);
           this.setCircleCenter(fitter.getCenter());
           this.setCircleRadius(fitter.getRadius());
@@ -1085,6 +969,17 @@ public class Calib_dialog extends JDialog {
         
     }
 
+    protected void do_btnRecalc_actionPerformed(ActionEvent arg0) {
+        //busquem ellipses
+        this.calcEllipses();
+        
+        //calculem parametres instrumentals
+        if (solutions.size()>0){
+            this.calcInstrumFromEllipses();
+        }
+        this.getIPanel().actualitzarVista();
+    }
+    
     public boolean isCalibrating() {
         return calibrating;
     }
@@ -1182,61 +1077,64 @@ public class Calib_dialog extends JDialog {
         return chckbxShowSearchEllipses.isSelected();
     }
    
-    protected void do_btnRecalc_actionPerformed(ActionEvent arg0) {
-        //busquem ellipses
-        this.calcEllipses();
-        
-        //calculem parametres instrumentals
-        if (solutions.size()>0){
-            this.calcInstrumFromEllipses();
-        }
-    }
-
-    public static float getOutliersFactSD() {
-        return outliersFactSD;
-    }
-
-    public static void setOutliersFactSD(float outliersFactSD) {
-        Calib_dialog.outliersFactSD = outliersFactSD;
-    }
-
-    public static boolean isShowAltCenter() {
-        return showAltCenter;
-    }
-
-    public static void setShowAltCenter(boolean showAltCenter) {
-        Calib_dialog.showAltCenter = showAltCenter;
-    }
-
-    public static boolean isConsiderGlobalRot() {
-        return considerGlobalRot;
-    }
-
-    public static void setConsiderGlobalRot(boolean considerGlobalRot) {
-        Calib_dialog.considerGlobalRot = considerGlobalRot;
-    }
-
-    public static boolean isForceGlobalRot() {
-        return forceGlobalRot;
-    }
-
-    public static void setForceGlobalRot(boolean forceGlobalRot) {
-        Calib_dialog.forceGlobalRot = forceGlobalRot;
-    }
-
-    public static boolean isRejectOutliers() {
-        return rejectOutliers;
-    }
-
-    public static void setRejectOutliers(boolean rejectOutliers) {
-        Calib_dialog.rejectOutliers = rejectOutliers;
-    }
-
     public static float getSearchElliLimitFactor() {
         return searchElliLimitFactor;
     }
 
     public static void setSearchElliLimitFactor(float searchElliLimitFactor) {
         Calib_dialog.searchElliLimitFactor = searchElliLimitFactor;
+    }
+    
+//    protected void do_btnGenlab_actionPerformed(ActionEvent arg0) {
+//        ImgFileUtils.writeEDF(new File(D2Dplot_global.getWorkdir()+D2Dplot_global.separator+"LaB6gen.edf"), CalibOps.createLaB6Img(1024.f, 1024.f, 180.f, 15.f, 0.f, 0.4246f));
+//    }
+
+    public ArrayList<EllipsePars> getElliCerques(){
+        return ellicerques;
+    }
+    protected void do_chckbxShowGuessPoints_itemStateChanged(ItemEvent arg0) {
+        this.getIPanel().actualitzarVista();
+    }
+    protected void do_chckbxShowFittedEllipses_itemStateChanged(ItemEvent e) {
+        this.getIPanel().actualitzarVista();
+    }
+    protected void do_chckbxShowSearchEllipses_itemStateChanged(ItemEvent e) {
+        this.getIPanel().actualitzarVista();
+    }
+    
+    protected void do_btnWriteCalFile_actionPerformed(ActionEvent e) {
+        File calfile = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null);
+        if (calfile != null){
+            this.writeCALfile(calfile);
+            D2Dplot_global.setWorkdir(calfile);
+        }
+    }
+    
+    public void writeCALfile(File calfile){
+        try {
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(calfile)));
+            output.println(String.format("# Calibration for %s", patt2D.getImgfileString()));
+            output.println(String.format("X-BEAM CENTRE = %.2f", this.getRefCX()));
+            output.println(String.format("Y-BEAM CENTRE = %.2f", this.getRefCY()));
+            output.println(String.format("DISTANCE = %.3f", this.getRefMD()));
+            output.println(String.format("WAVELENGTH = %.5f", patt2D.getWavel()));
+            output.println(String.format("TILT ROTATION = %.2f", this.getRefRotDeg()));
+            output.println(String.format("ANGLE OF TILT = %.3f", this.getRefTiltDeg()));
+            output.println();
+            output.println(String.format("SUBADU = %.1f", -9.5f));
+            output.println(String.format("START AZIMUTH = %.1f", 0.f));
+            output.println(String.format("END AZIMUTH = %.1f", 360.f));
+            output.println(String.format("INNER RADIUS = %d", 0));
+            output.println(String.format("OUTER RADIUS = %d", (int)(patt2D.getDimX()/2)-1));
+            output.println(String.format("AZIMUTH BINS = %d", 1));
+            output.println(String.format("RADIAL BINS = %d", (int)(patt2D.getDimX()/2)-1));
+            output.println();
+            output.println(String.format("#MASK FILE = %s", D2Dplot_global.getWorkdir()+D2Dplot_global.separator+"MASK.bin"));
+            output.println("#Mask file is a zero-intensity image with mask pixels at -1 intensity");
+            output.close();
+        }catch(Exception ex){
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            log.info(String.format("Error writting output CAL file: %s",calfile.toString()));
+        }
     }
 }
