@@ -34,9 +34,10 @@ import vava33.d2dplot.auxi.Pattern1D.PointPatt1D;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Iterator;
 
-import javax.swing.JCheckBox;
+import java.awt.Insets;
 
 public class IntegracioRadial extends JFrame {
 
@@ -49,11 +50,10 @@ public class IntegracioRadial extends JFrame {
 	private JTextField txt_2tf;
 	private JTextField txt_step;
 	private static String theta = "\u03B8";
-    private XYSeries pattplot; //diagrama xy 
     private XYSeriesCollection dataset;
     private JFreeChart chart;
-	private Pattern1D patt1D;
-    private static VavaLogger log = D2Dplot_global.log;
+	private ArrayList<Pattern1D> patt1D;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(IntegracioRadial.class.getName());
 
 	private Pattern2D patt2D;
 	private ChartPanel chartPanel;
@@ -63,15 +63,22 @@ public class IntegracioRadial extends JFrame {
 	private JTextField txtCakein;
 	private JTextField txtCakefin;
 	private JButton btnIntegrar;
-	private JCheckBox chckbxCorrlp;
-	private JCheckBox chckbxCorriang;
-	private JCheckBox chckbxUsetilt;
+	private JLabel lblAzimBins;
+	private JTextField txtAzimBins;
+	private JButton btnSetMin;
+	private JButton btnSetMax;
+	private JLabel lblSubtractI;
+	private JTextField txtZeroval;
+	
+	private ImagePanel ip;
+	private File maskfile;
 	
 	/**
 	 * Create the frame.
 	 */
-	public IntegracioRadial(Pattern2D patt) {
-		this.patt2D=patt;
+	public IntegracioRadial(ImagePanel ipanel) {
+	    this.ip=ipanel;
+	    this.inicia();
 		setTitle("Radial Integration");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 726, 456);
@@ -79,27 +86,21 @@ public class IntegracioRadial extends JFrame {
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
-		contentPane.setLayout(new MigLayout("", "[][grow][][][grow][grow]", "[74.00][][][grow]"));
+		contentPane.setLayout(new MigLayout("", "[][grow][][][grow][][grow][grow]", "[][][][grow]"));
 		
 		JLabel lbltini = new JLabel("2"+theta+" ini");
 		contentPane.add(lbltini, "cell 0 0,alignx right");
 		
 		txt_2ti = new JTextField();
-		txt_2ti.setText("1.0");
-		contentPane.add(txt_2ti, "cell 1 0,alignx left");
-		txt_2ti.setColumns(10);
+		txt_2ti.setText("1.00");
+		contentPane.add(txt_2ti, "cell 1 0 2 1,growx");
 		
 		lblCakeIni = new JLabel("Cake ini");
-		contentPane.add(lblCakeIni, "cell 2 0,alignx trailing");
+		contentPane.add(lblCakeIni, "cell 3 0,alignx trailing");
 		
 		txtCakein = new JTextField();
 		txtCakein.setText("0");
-		contentPane.add(txtCakein, "cell 3 0,growx");
-		txtCakein.setColumns(10);
-		
-		chckbxCorriang = new JCheckBox("Incident angle correction");
-		chckbxCorriang.setSelected(true);
-		contentPane.add(chckbxCorriang, "cell 4 0");
+		contentPane.add(txtCakein, "cell 4 0,growx");
 		
 		btnIntegrar = new JButton("Integrate");
 		btnIntegrar.addActionListener(new ActionListener() {
@@ -107,27 +108,38 @@ public class IntegracioRadial extends JFrame {
 		        do_btnIntegrartilt_actionPerformed(arg0);
 		    }
 		});
-		contentPane.add(btnIntegrar, "cell 5 0,growx");
+		
+		lblSubtractI = new JLabel("Add I");
+		lblSubtractI.setToolTipText("Subtract intensity to all pixels (useful if detector is adding a value to avoid negative intensities)");
+		contentPane.add(lblSubtractI, "cell 5 0,alignx trailing");
+		
+		txtZeroval = new JTextField();
+		txtZeroval.setText("-9.5");
+		contentPane.add(txtZeroval, "cell 6 0,growx");
+		contentPane.add(btnIntegrar, "cell 7 0,growx");
 		
 		JLabel lblStep = new JLabel("Step");
 		contentPane.add(lblStep, "cell 0 1,alignx right");
 		
 		txt_step = new JTextField();
 		txt_step.setText("0.01");
-		contentPane.add(txt_step, "cell 1 1,alignx left");
-		txt_step.setColumns(10);
+		contentPane.add(txt_step, "cell 1 1,growx");
+		
+		btnSetMin = new JButton("set Min");
+		btnSetMin.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent arg0) {
+		        do_btnSetMin_actionPerformed(arg0);
+		    }
+		});
+		btnSetMin.setMargin(new Insets(2, 2, 2, 2));
+		contentPane.add(btnSetMin, "cell 2 1");
 		
 		lblCakeEnd = new JLabel("Cake end");
-		contentPane.add(lblCakeEnd, "cell 2 1,alignx trailing");
+		contentPane.add(lblCakeEnd, "cell 3 1,alignx trailing");
 		
 		txtCakefin = new JTextField();
 		txtCakefin.setText("360");
-		contentPane.add(txtCakefin, "cell 3 1,growx");
-		txtCakefin.setColumns(10);
-		
-		chckbxUsetilt = new JCheckBox("Use tilt info");
-		chckbxUsetilt.setSelected(true);
-		contentPane.add(chckbxUsetilt, "cell 4 1");
+		contentPane.add(txtCakefin, "cell 4 1,growx");
 		
 		btn_save = new JButton("Save");
 		btn_save.addActionListener(new ActionListener() {
@@ -135,19 +147,30 @@ public class IntegracioRadial extends JFrame {
 				do_btn_save_actionPerformed(arg0);
 			}
 		});
-		contentPane.add(btn_save, "cell 5 1,growx");
+		contentPane.add(btn_save, "cell 7 1,growx");
 		
 		JLabel lbltfin = new JLabel("2"+theta+" end");
 		contentPane.add(lbltfin, "cell 0 2,alignx right");
 		
 		txt_2tf = new JTextField();
 		txt_2tf.setText("40.0");
-		contentPane.add(txt_2tf, "cell 1 2,alignx left");
-		txt_2tf.setColumns(10);
-		txt_2tf.setText(FileUtils.dfX_2.format(patt2D.getMax2TdegCircle()));
+		contentPane.add(txt_2tf, "cell 1 2,growx");
 		
-		chckbxCorrlp = new JCheckBox("LP correction");
-		contentPane.add(chckbxCorrlp, "cell 4 2");
+		btnSetMax = new JButton("set Max");
+		btnSetMax.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		        do_btnSetMax_actionPerformed(e);
+		    }
+		});
+		btnSetMax.setMargin(new Insets(2, 2, 2, 2));
+		contentPane.add(btnSetMax, "cell 2 2");
+		
+		lblAzimBins = new JLabel("Azim Bins");
+		contentPane.add(lblAzimBins, "cell 3 2,alignx trailing");
+		
+		txtAzimBins = new JTextField();
+		txtAzimBins.setText("1");
+		contentPane.add(txtAzimBins, "cell 4 2,growx");
 		
 		chartPanel = new ChartPanel((JFreeChart) null);
 		chartPanel.setVerticalAxisTrace(true);
@@ -155,23 +178,30 @@ public class IntegracioRadial extends JFrame {
 		chartPanel.setMaximumDrawWidth(2500);
 		chartPanel.setMaximumDrawHeight(1800);
 		chartPanel.setHorizontalAxisTrace(true);
-		contentPane.add(chartPanel, "cell 0 3 6 1,grow");
+		contentPane.add(chartPanel, "cell 0 3 8 1,grow");
 		
-		double optstep = FastMath.atan(patt.getPixSx()/patt.getDistMD());
-        txt_step.setText(FileUtils.dfX_3.format(FastMath.toDegrees(optstep)));
-		log.debug("DistMD= "+patt.getDistMD()+" pixsx= "+patt.getPixSx());
-
+		btnSetMin.doClick();
+		btnSetMax.doClick();
+		patt1D = new ArrayList<Pattern1D>();
 	}
 	
-    private void plotPattern(Pattern1D p, boolean norm){
+	public void inicia(){
+	    this.patt2D=ip.getPatt2D();
+	}
+	
+    private void plotPattern(Pattern1D p, boolean norm, boolean appendPatt, String seriesName){
         
         chartPanel.setMouseWheelEnabled(true);
         chartPanel.setHorizontalAxisTrace(true);
         chartPanel.setVerticalAxisTrace(true);
         chartPanel.setPopupMenu(null);
-
-        pattplot = new XYSeries("1D Pattern");
-        dataset = new XYSeriesCollection();
+        XYSeries pattplot = new XYSeries(seriesName);
+        if (!appendPatt){
+            dataset = new XYSeriesCollection();    
+        }else{ //only if it is null
+            if (dataset==null)dataset=new XYSeriesCollection(); 
+        }
+        
         
         Iterator<PointPatt1D> itp = p.getPoints().iterator();
         while(itp.hasNext()){
@@ -206,7 +236,7 @@ public class IntegracioRadial extends JFrame {
     }
     
 	protected void do_btn_save_actionPerformed(ActionEvent arg0) {
-		if(patt1D!=null){
+		if(patt1D.size()>0){
 		    File fileout;
             FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("Data file (2T I ESD)","dat","xy")};
 	        fileout = FileUtils.fchooser(null,new File(MainFrame.getWorkdir()), filter, true);
@@ -214,12 +244,118 @@ public class IntegracioRadial extends JFrame {
 	            fileout = FileUtils.canviExtensio(fileout, "dat");  
 	        }
 		    if (fileout!=null){
-	            patt1D.writeXYnorm(fileout,patt2D.getImgfile().toString());		        
+		        this.savePatterns(fileout);
 		    }
 		}
 	}
 	
-    protected void do_btnIntegrartilt_actionPerformed(ActionEvent arg0) {
+	public void savePatterns(File fileout){
+        if (patt1D.size()==1){
+            patt1D.get(0).writeDAT(fileout,patt2D.getImgfile().toString());
+            log.info(String.format("file %s written", fileout.toString()));
+        }else{
+            for (int i=0;i<patt1D.size();i++){
+                File fout = FileUtils.canviNomFitxer(fileout, FileUtils.getFNameNoExt(fileout.getName())+String.format("_azbin%02d", i));
+                patt1D.get(i).writeDAT(fout, patt2D.getImgfile().toString());
+                log.info(String.format("file %s written", fout.toString()));
+            }
+        }
+	}
+	
+	public void setTxtT2i(float t2i){
+	    txt_2ti.setText(Float.toString(t2i));
+	}
+	public void setTxtT2f(float t2f){
+        txt_2tf.setText(Float.toString(t2f));
+    }
+	public void setTxtStep(float step){
+        txt_step.setText(Float.toString(step));
+    }
+    public void setTxtCakeIn(float cakeinDeg){
+        txtCakein.setText(Float.toString(cakeinDeg));
+    }
+    public void setTxtCakeFin(float cakefinDeg){
+        txtCakefin.setText(Float.toString(cakefinDeg));
+    }
+    public void setTxtSubadu(float subadu){
+        txtZeroval.setText(Float.toString(subadu));
+    }
+    public void setTxtAzimbins(int abins){
+        txtAzimBins.setText(Integer.toString(abins));
+    }
+	
+    public float getTxtT2i(){
+        try{
+            return Float.parseFloat(txt_2ti.getText());
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.info("error parsing t2i");
+        }
+        return -1f;
+    }
+    
+    public float getTxtT2f(){
+        try{
+            return Float.parseFloat(txt_2tf.getText());
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.info("error parsing t2f");
+        }
+        return -1f;
+    }
+    
+    public float getTxtStep(){
+        try{
+            return Float.parseFloat(txt_step.getText());
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.info("error parsing stepsize");
+        }
+        return -1f;
+    }
+    
+    public float getTxtCakein(){
+        try{
+            return Float.parseFloat(txtCakein.getText());
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.info("error parsing start azimuth");
+        }
+        return -1f;
+    }
+    
+    public float getTxtCakefin(){
+        try{
+            return Float.parseFloat(txtCakefin.getText());
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.info("error parsing end azimuth");
+        }
+        return -1f;
+    }
+    
+    public float getTxtZeroval(){
+        try{
+            return Float.parseFloat(txtZeroval.getText());
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.info("error parsing Subadu");
+        }
+        return -1f;
+    }
+    
+    public int getTxtAzimBins(){
+        try{
+            return Integer.parseInt(txtAzimBins.getText());
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            log.info("error parsing Azim bins");
+        }
+        return -1;
+    }
+    
+    public void do_btnIntegrartilt_actionPerformed(ActionEvent arg0) {
+        this.patt1D.clear();
         
         if(patt2D==null)return;
         float t2ini=1.0f;
@@ -256,16 +392,74 @@ public class IntegracioRadial extends JFrame {
             log.info("Taking default cake value, full pattern (0-360)");
         }       
         
+        //subadu
+        float subadu = 0.f;
         try{
-            boolean usetilt = chckbxUsetilt.isSelected();
-            boolean corrLP = chckbxCorrlp.isSelected();
-            boolean corrInAng = chckbxCorriang.isSelected();
-            this.patt1D = ImgOps.radialIntegration(patt2D, t2ini, t2fin,stepsize, cakein, cakeout,usetilt,corrLP,corrInAng);    
+            subadu=Float.parseFloat(txtZeroval.getText());
         }catch(Exception e){
-            log.warning("Error during radial integration");
+            log.info("Taking default zeroIVal value, 0");
+        } 
+        
+        //AZIM BINS        
+        int azimBins = 1;
+        try{
+            azimBins=Integer.parseInt(txtAzimBins.getText());
+        }catch(Exception e){
+            log.info("Taking default azimBins value, 1");
+        }  
+        float azimRange = cakeout - cakein;
+        if (cakeout<cakein) azimRange = 360+azimRange;
+        float azimInc = azimRange/(float)azimBins;
+
+        boolean corrLP = true;
+        boolean corrInAng = false;         
+        
+        
+        //NOW WE INTEGRATE ALL THE BINS
+        for (int k = 0; k<azimBins; k++){
+            
+            float azIni = cakein + azimInc * k;
+            if (azIni > 360) azIni = azIni - 360f;
+            float azFin = azIni + azimInc;
+            if (azFin > 360) azFin = azFin - 360f;
+            
+            try{
+                Pattern1D p1D = ImgOps.radialIntegration(patt2D, t2ini, t2fin,stepsize, azIni, azFin,corrLP,corrInAng,subadu);
+                String comment = String.format("t2i=%.4f step=%.4f t2f=%.4f azIni=%.1f azFin=%.1f subI=%.1f", t2ini,t2fin,stepsize,azIni,azFin,subadu);
+                p1D.setComment(comment);
+                this.patt1D.add(p1D);
+            }catch(Exception e){
+                log.warning("Error during radial integration");
+            }
+            
+            if (k==0) {//new plot
+                this.plotPattern(patt1D.get(patt1D.size()-1),true,false,String.format("azRange= %.1f to %.1f", azIni,azFin));
+            }else{//append
+                this.plotPattern(patt1D.get(patt1D.size()-1),true,true,String.format("azRange= %.1f to %.1f", azIni,azFin));   
+            }
         }
-        
-        this.plotPattern(patt1D,true);
-        
+
+    }
+    protected void do_btnSetMin_actionPerformed(ActionEvent arg0) {
+        txt_step.setText(FileUtils.dfX_4.format(this.patt2D.calcMinStepsizeBy2Theta4Directions()));
+    }
+    protected void do_btnSetMax_actionPerformed(ActionEvent e) {
+        txt_2tf.setText(FileUtils.dfX_2.format(patt2D.getMax2TdegCircle() - 2*this.patt2D.calcMinStepsizeBy2Theta4Directions()));
+    }
+
+    public ArrayList<Pattern1D> getPatt1D() {
+        return patt1D;
+    }
+
+    public void setPatt1D(ArrayList<Pattern1D> patt1d) {
+        patt1D = patt1d;
+    }
+
+    public File getMaskfile() {
+        return maskfile;
+    }
+
+    public void setMaskfile(File maskfile) {
+        this.maskfile = maskfile;
     }
 }
