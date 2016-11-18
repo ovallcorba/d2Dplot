@@ -88,10 +88,10 @@ public class Peak implements Comparable<Peak> {
         
         if (!isIntegrated())return;
         
-        int ipX = FastMath.round(this.getPixelCentre().x);
-        int ipY = FastMath.round(this.getPixelCentre().y);
+        int ipX = (int)(this.getPixelCentre().x);
+        int ipY = (int)(this.getPixelCentre().y);
         
-        float[] lpfac = {1,1,1};
+        double[] lpfac = {1,1,1};
         if (lpcorr){
             lpfac = ImgOps.corrLP(this.getZona().getPatt2d(), ipX, ipY, 1, 1, this.getZona().getPatt2d().getIscan(), false);
         }
@@ -102,9 +102,16 @@ public class Peak implements Comparable<Peak> {
         this.fh2 = 0;
         this.sfh2 = 0;
         if (inten > 0){
-            esdinten = (float)FastMath.sqrt(this.getZona().getYsum()+2*this.getZona().getYbkgdesv())/inten;
-            this.fh2 = (float)FastMath.sqrt(inten*lpfac[1]*lpfac[2]);
-            this.sfh2 = (float)FastMath.sqrt(esdinten*(fh2*fh2));
+            if(lpfac[1]>0){
+                esdinten = (float)FastMath.sqrt(this.getZona().getYsum()+2*this.getZona().getYbkgdesv())/inten;
+                this.fh2 = (float)FastMath.sqrt(inten*lpfac[1]*lpfac[2]);
+                this.sfh2 = (float)FastMath.sqrt(esdinten*(fh2*fh2));                
+            }else{
+                esdinten=-1.f;
+                this.fh2 = -1;
+                this.sfh2 = -1;
+                this.nearMask=true; //posem flag near mask perque esta en zona lp erronia
+            }
             this.p = (float) (FastMath.PI*FastMath.pow(this.getZona().getYmax()/inten,2.d/3.d));
         }else{
             esdinten=-1.f;
@@ -129,8 +136,6 @@ public class Peak implements Comparable<Peak> {
         this.intRad2th = ImgOps.getTol2TFromIntRad(this.getZona().getPatt2d(), this.getPixelCentre().x,this.getPixelCentre().y,this.zona.getIntradPix());
 
 //        log.writeNameNums("CONFIG", true, "ymax, inten, FastMath.pow(pz.getYmax()/inten,2/3)", this.getZona().getYmax(), inten, FastMath.pow(this.getZona().getYmax()/inten,2/3));
-
-        
     }
     
     public boolean isIntegrated() {
@@ -264,9 +269,9 @@ public class Peak implements Comparable<Peak> {
 
     public String getFormmattedStringPCS(){
         int flag = 1;
-        if (nSatur>0) flag = nSatur*(-1);
         if (nVeinsEixam>1) flag = nVeinsEixam;
         if (nearMask) flag = -1;
+        if (nSatur>0) flag = nSatur*(-1);
         return String.format("%10.2f %10.2f %10.2f %12.2f %12.2f %12.2f %8.3f %5d %4d %9.4f",
                 pixelCentre.x,pixelCentre.y,radi,ymax,fh2,sfh2,p,flag,intRadPx,dsp);
     }
