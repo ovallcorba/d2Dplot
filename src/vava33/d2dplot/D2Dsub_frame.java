@@ -120,7 +120,7 @@ public class D2Dsub_frame extends JFrame {
 
     private Pattern2D initialPattern;
     private MainFrame mf;
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(D2Dsub_frame.class.getName());
     private JSeparator separator_5;
     private JCheckBox chckbxVRotAxis;
     private JCheckBox chckbxHRotAxis;
@@ -913,7 +913,7 @@ public class D2Dsub_frame extends JFrame {
 				    tAOut.afegirText(true, true,"Glass subtraction... ");
 				    
 				    //preparacio dades
-				    Pattern2D glass = ImgFileUtils.readPatternFile(glassD2File);
+				    Pattern2D glass = ImgFileUtils.readPatternFile(glassD2File,false);
 				    glass.copyMaskPixelsFromImage(dataWork);
 				    
 				    //escalat del vidre

@@ -21,7 +21,6 @@ import javax.swing.event.HyperlinkListener;
 
 import java.io.File;
 import java.io.IOException;
-
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JEditorPane;
@@ -163,6 +162,10 @@ public class About_dialog extends JDialog {
     }
 
     protected void do_btnUsersGuide_actionPerformed(ActionEvent arg0) {
+        openManual();
+    }
+
+    protected void openManual(){
         try{
             if(Desktop.isDesktopSupported()){ // s'obre amb el programa per defecte
                 Desktop.getDesktop().open(new File(D2Dplot_global.usersGuidePath));
@@ -184,7 +187,7 @@ public class About_dialog extends JDialog {
                 "D2Dplot User's Guide",
                 JOptionPane.PLAIN_MESSAGE);
     }
-
+    
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
         this.dispose();
     }

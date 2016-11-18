@@ -29,20 +29,20 @@ public class HPtools_frame extends JFrame {
      */
     private static final long serialVersionUID = -3398509795601157936L;
 
-    private VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(HPtools_frame.class.getName());
 
     private JPanel contentPane;
     private JTextField txtCellpar;
     private Pattern2D patt2d;
     private JLabel lblresult;
+    private ImagePanel ip;
 
 
     /**
      * Create the frame.
      */
-    public HPtools_frame(Pattern2D patt) {
+    public HPtools_frame(ImagePanel ipanel) {
         setAlwaysOnTop(true);
-        this.patt2d=patt;
         setTitle("HP tools (Cu pressure calc.) -- (IN DEVELOPMENT, USE WITH CAUTION))");
         setIconImage(Toolkit.getDefaultToolkit().getImage(Dinco_frame.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -96,10 +96,26 @@ public class HPtools_frame extends JFrame {
         JLabel lblNewLabel = new JLabel("A. Dewaele, P. Loubeyre & M. Mezouar. Phys. Rev. B 70, 094112 (2004)");
         lblNewLabel.setFont(new Font("Dialog", Font.PLAIN, 11));
         contentPane.add(lblNewLabel, "cell 0 4 3 1");
+        
+        this.ip = ipanel;
+        this.inicia();
     }
 
+    public void inicia(){
+        this.patt2d = ip.getPatt2D();
+        
+    }
+    public void setIpanel(ImagePanel ipanel){
+        this.ip = ipanel;
+    }
+    
+    public ImagePanel getIPanel() {
+        return ip;
+    }
+    
     protected void do_btnRemovePeaks_actionPerformed(ActionEvent arg0) {
         patt2d.getPuntsCercles().clear();
+        getIPanel().actualitzarVista();
     }
     
     protected void do_btnCalculate_actionPerformed(ActionEvent e) {
@@ -173,5 +189,6 @@ public class HPtools_frame extends JFrame {
         log.writeNameNums("CONFIG", true, "x,p1,p2,p3,p", x,p1,p2,p3,p);
         
         lblresult.setText(Double.toString(p));
+        getIPanel().actualitzarVista();
     }
 }

@@ -37,7 +37,7 @@ public class OrientSolucio implements Comparable<Object>{
     private ArrayList<Peak> peaksPCS; // contindra els pics en cas que sigui un PCS
     private float numRefCoincidents; // valor de la funcio de rotacio de la solucio en questio -->ARA JA NO, ES EL NOMBRE DE REFLEXIONS COINCIDENTS
     private float angR_lon,angS_lat,angT_spin;
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(OrientSolucio.class.getName());
 
 //  private boolean showSol; // mostra la solucio o no la mostra
     

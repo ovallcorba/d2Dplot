@@ -71,12 +71,9 @@ public class DB_dialog extends JFrame {
     private static LogJTextArea tAOut;
     
     private DefaultListModel lm;
-//    private File dataFile;
-//    private Pattern2D patt2D;
     private boolean showPDDataRings;
     private JButton btnShowDsp;
     private static JProgressBar pBarDB;
-//    private Thread readDBFileThread;
     private ProgressMonitor pm;
     private PDDatabase.openDBfileWorker openDBFwk;
     private PDDatabase.saveDBfileWorker saveDBFwk;
@@ -95,7 +92,7 @@ public class DB_dialog extends JFrame {
     private JPanel panel_2;
     private JButton btnAddCompound;
     private JButton btnEditCompound;
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(DB_dialog.class.getName());
 
     private Pattern2D patt2d;
     private ImagePanel ipanel;
@@ -106,12 +103,10 @@ public class DB_dialog extends JFrame {
      */
     public DB_dialog(ImagePanel ip) {
         this.setIpanel(ip);
-        this.setPatt2d(ip.getPatt2D());
         
         setIconImage(Toolkit.getDefaultToolkit().getImage(DB_dialog.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Compound DB");
-        // setBounds(100, 100, 660, 730);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
@@ -363,12 +358,9 @@ public class DB_dialog extends JFrame {
                 });
             }
         }
-        tAOut.ln("** PDDatabase **");
-        lm = new DefaultListModel();
-        listCompounds.setModel(lm);
-        tAOut.ln(" Reading default database: "+PDDatabase.getDefaultDBpath());
-        do_btnLoadDB_actionPerformed(null,false);
         this.setAlwaysOnTop(cbox_onTop.isSelected());
+        tAOut.ln("** PDDatabase **");
+        this.inicia();
     }
 
     @Override
@@ -377,6 +369,14 @@ public class DB_dialog extends JFrame {
         super.dispose();
     }
 
+    public void inicia(){
+        this.setPatt2d(this.getIpanel().getPatt2D());
+        lm = new DefaultListModel();
+        listCompounds.setModel(lm);
+        tAOut.ln(" Reading default database: "+PDDatabase.getDefaultDBpath());
+        do_btnLoadDB_actionPerformed(null,false);
+    }
+   
     //boolean ask for default or not
     protected void do_btnLoadDB_actionPerformed(ActionEvent arg0,boolean askIfDefaultDB) {
         
@@ -466,10 +466,6 @@ public class DB_dialog extends JFrame {
     protected void do_chckbxCalibrate_itemStateChanged(ItemEvent arg0) {
         this.showPDDataRings = chckbxPDdata.isSelected();
         this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), this.getCurrentCompound());
-//        this.showPDDataRings = chckbxPDdata.isSelected();
-//        if (chckbxPDdata.isSelected() && this.getCurrentCompound()!=null){
-//            mf.getPanelImatge().setShowDSPRings(this.isShowDataRings(), this.getCurrentCompound());    
-//        }
     }
 
     protected void do_lbllist_mouseEntered(MouseEvent e) {
@@ -536,7 +532,6 @@ public class DB_dialog extends JFrame {
         int ncomp = PDDatabase.getDBCompList().size();
         while (itrcomp.hasNext()){
             PDCompound c = (PDCompound) itrcomp.next();
-//            lm.addElement(c.printCompound()); //he tret el .trim()
             lm.addElement(c); 
             //progress
             if (n%100 == 0){
@@ -571,6 +566,7 @@ public class DB_dialog extends JFrame {
         PDCompound comp = this.getCurrentCompound();
         this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), comp);
         if (comp!=null)tAOut.ln(comp.printInfo2Line());
+        this.getIpanel().actualitzarVista();
     }
     
     
@@ -578,6 +574,7 @@ public class DB_dialog extends JFrame {
     public void loadSearchPeaksResults(){
         
         if (lm==null){return;}
+        if (PDDatabase.getDBSearchresults().size()==0){return;}
         
         //aqui en principi tindrem una llista de resultats a PDDatabase i s'haurà de mostrar
         lm.clear();
@@ -595,8 +592,6 @@ public class DB_dialog extends JFrame {
                 }
                 if (chckbxNpksInfo.isSelected()){
                     resid = resid * ((Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1))/2);
-//                    resid = resid * (Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1)); 
-//                                  * (Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1));
                 }
                 c.setTotal_residual(resid);
             }            
@@ -611,6 +606,7 @@ public class DB_dialog extends JFrame {
             nsol = nsol + 1;
         }
         lblHeader.setText(" Residual  inputRefs/compoundRefs  CompoundName  [Formula]  (alt. names)");
+        this.getIpanel().actualitzarVista();
     }
     
     public void searchPeaks(){
@@ -713,10 +709,12 @@ public class DB_dialog extends JFrame {
                 tAOut.stat("Number of (filtered) compounds = "+filteredListModel.getSize());    
             }
         }
+        this.getIpanel().actualitzarVista();
         
     }
     protected void do_btnResetSearch_actionPerformed(ActionEvent arg0) {
         this.updateListAllCompounds();
+        this.getIpanel().actualitzarVista();
     }
     protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB files", "db", "DB")};
@@ -754,7 +752,6 @@ public class DB_dialog extends JFrame {
                         pBarDB.setValue(100);
                         pBarDB.setStringPainted(true);
                         updateListAllCompounds();
-                        //startButton.setEnabled(true);
                     }
                 }
             }

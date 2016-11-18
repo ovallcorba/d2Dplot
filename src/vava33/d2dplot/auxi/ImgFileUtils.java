@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -20,6 +21,7 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -40,9 +42,10 @@ import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 import vava33.d2dplot.D2Dplot_global;
+import vava33.d2dplot.IntegracioRadial;
 
 public final class ImgFileUtils {
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(ImgFileUtils.class.getName());
 
     public static enum SupportedReadExtensions {
         BIN, IMG, SPR, GFRM, EDF, D2D;
@@ -916,8 +919,9 @@ public final class ImgFileUtils {
         float beamCX = 0, beamCY = 0, wl = 0;
         int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
         float tilt = 0, rot = 0;
-        int margin = 0, thresh = 0;
-        ArrayList<PolyExZone> exzones = new ArrayList<PolyExZone>();
+        int margin = 0, thresh = 0, dcircle = 0;
+        ArrayList<PolyExZone> polyExzones = new ArrayList<PolyExZone>();
+        ArrayList<ArcExZone> arcExzones = new ArrayList<ArcExZone>();
         float omeIni = 0, omeFin = 0, acqTime = -1;
 
         // primer treiem la info de les linies de text
@@ -990,6 +994,10 @@ public final class ImgFileUtils {
                         thresh = Integer.parseInt(line.substring(iigual,
                                 line.trim().length()).trim());
                     }
+                    if (FileUtils.containsIgnoreCase(line, "EXZdetRadius")) {
+                        dcircle = Integer.parseInt(line.substring(iigual,
+                                line.trim().length()).trim());
+                    }
                     // if(line.trim().startsWith("EXZpol")){
                     if (FileUtils.containsIgnoreCase(line, "EXZpol")) {
                         String linia = line.substring(iigual,
@@ -1001,8 +1009,20 @@ public final class ImgFileUtils {
                             z.addPoint(Integer.parseInt(values[j]),
                                     Integer.parseInt(values[j + 1]));
                         }
-                        exzones.add(z);
+                        polyExzones.add(z);
                     }
+                    
+                    if (FileUtils.containsIgnoreCase(line, "EXZarc")) {
+                        String linia = line.substring(iigual,
+                                line.trim().length()).trim();
+                        String[] values = linia.split("\\s+");
+                        int ipx = Integer.parseInt(values[0]);
+                        int ipy = Integer.parseInt(values[1]);
+                        int hradwpx = Integer.parseInt(values[2]);
+                        int hazimwdeg = Integer.parseInt(values[3]);
+                        arcExzones.add(new ArcExZone(ipx,ipy,hradwpx,hazimwdeg,patt2D));
+                    }
+                    
                     // output.println("Scan_omegaIni = "+FileUtils.dfX_1.format(patt2D.getOmeIni())+" ;");
                     // output.println("Scan_omegaFin = "+FileUtils.dfX_1.format(patt2D.getOmeFin())+" ;");
                     // output.println("Scan_acqTime = "+FileUtils.dfX_1.format(patt2D.getAcqTime())+" ;");
@@ -1042,9 +1062,11 @@ public final class ImgFileUtils {
             // info especifica d2d format
             patt2D.setTiltDeg(tilt);
             patt2D.setRotDeg(rot);
-            patt2D.setExZones(exzones);
+            patt2D.setPolyExZones(polyExzones);
+            patt2D.setArcExZones(arcExzones);
             patt2D.setExz_margin(margin);
             patt2D.setExz_threshold(thresh);
+            patt2D.setExz_detcircle(dcircle);
 
             int count = 0;
             in.read(header);
@@ -1116,7 +1138,7 @@ public final class ImgFileUtils {
     }
 
     // OBERTURA DELS DIFERENTS FORMATS DE DADES2D
-    public static Pattern2D readPatternFile(File d2File) {
+    public static Pattern2D readPatternFile(File d2File, boolean exzConfirm) {
         Pattern2D patt2D = null;
         // comprovem extensio
         log.debug(d2File.toString());
@@ -1175,8 +1197,16 @@ public final class ImgFileUtils {
             // operacions generals despres d'obrir
             patt2D.calcMeanI();
             patt2D.setImgfile(d2File);
-            ImgFileUtils.readEXZ(patt2D, null);
+            ImgFileUtils.readEXZ(patt2D, null,exzConfirm);
 
+            if (D2Dplot_global.isKeepCalibration()){
+                patt2D.setCentrX(D2Dplot_global.getCentX());
+                patt2D.setCentrY(D2Dplot_global.getCentY());
+                patt2D.setDistMD(D2Dplot_global.getDistMD());
+                patt2D.setTiltDeg(D2Dplot_global.getTilt());
+                patt2D.setRotDeg(D2Dplot_global.getRot());
+            }
+            
             // debug:
             log.debug("meanI= " + patt2D.getMeanI());
             log.debug("sdevI= " + patt2D.getSdevI());
@@ -1415,6 +1445,10 @@ public final class ImgFileUtils {
 
             output.write(new byte[60 - dataHeaderBytes]);
 
+            log.debug("nr arc zones="+patt2D.getArcExZones().size());
+            log.debug("nr pol zones="+patt2D.getPolyExZones().size());
+            log.debug("det circle="+patt2D.getExz_detcircle());
+            
             // creem imatge normal
             for (int i = 0; i < patt2D.getDimY(); i++) {
                 for (int j = 0; j < patt2D.getDimX(); j++) {
@@ -1423,11 +1457,7 @@ public final class ImgFileUtils {
                     if (patt2D.isInExZone(j, i)) {
                         bb.putShort((short) -1);
                     } else {
-                        if (patt2D.getInten(j, i)<patt2D.getExz_threshold()){
-                            bb.putShort((short) -1);
-                        } else {
-                            bb.putShort((short) (patt2D.getInten(j, i)/scI2));
-                        }
+                        bb.putShort((short) (patt2D.getInten(j, i)/scI2));
                     }
                     output.write(bb.array());
                     bb.clear();
@@ -1642,8 +1672,9 @@ public final class ImgFileUtils {
                     + FileUtils.dfX_1.format(patt2D.getAcqTime()));
             output.println("EXZMargin =" + patt2D.getExz_margin());
             output.println("EXZThreshold =" + patt2D.getExz_threshold());
+            output.println("EXZdetRadius =" + patt2D.getExz_detcircle());
             int polcount = 1;
-            Iterator<PolyExZone> it = patt2D.getExZones().iterator();
+            Iterator<PolyExZone> it = patt2D.getPolyExZones().iterator();
             while (it.hasNext()) {
                 PolyExZone p = it.next();
                 StringBuilder sb = new StringBuilder();
@@ -1653,6 +1684,13 @@ public final class ImgFileUtils {
                 output.println("EXZpol" + polcount + " ="
                         + sb.toString().trim());
                 polcount = polcount + 1;
+            }
+            int arccount = 1;
+            Iterator<ArcExZone> it2 = patt2D.getArcExZones().iterator();
+            while (it2.hasNext()) {
+                ArcExZone p = it2.next();
+                output.println(String.format("EXZarc%d=%d %d %d %d", arccount,p.getPx(),p.getPy(),p.getHalfRadialWthPx(),p.getHalfAzimApertureDeg()));
+                arccount = arccount + 1;
             }
             output.println("}");
             output.close();
@@ -1878,8 +1916,9 @@ public final class ImgFileUtils {
                     + patt2D.getImgfileString());
             output.println("EXZmargin=" + patt2D.getExz_margin());
             output.println("EXZthreshold=" + patt2D.getExz_threshold());
+            output.println("EXZdetRadius=" + patt2D.getExz_detcircle());
             int polcount = 1;
-            Iterator<PolyExZone> it = patt2D.getExZones().iterator();
+            Iterator<PolyExZone> it = patt2D.getPolyExZones().iterator();
             while (it.hasNext()) {
                 PolyExZone p = it.next();
                 StringBuilder sb = new StringBuilder();
@@ -1889,13 +1928,21 @@ public final class ImgFileUtils {
                 output.println("EXZpol" + polcount + "=" + sb.toString().trim());
                 polcount = polcount + 1;
             }
+            int arccount = 1;
+            Iterator<ArcExZone> it2 = patt2D.getArcExZones().iterator();
+            while (it2.hasNext()) {
+                ArcExZone p = it2.next();
+                output.println(String.format("EXZarc%d=%d %d %d %d", arccount,p.getPx(),p.getPy(),p.getHalfRadialWthPx(),p.getHalfAzimApertureDeg()));
+                arccount = arccount + 1;
+            }
 
             // COMENTARIS INFO
             output.println("!");
             output.println("! EXZmargin     Margin of the image in pixels (if any)");
             output.println("! EXZthreshold  Pixels with Y<threshold will be excluded");
-            output.println("! EXZpol#       Sequence of pixels (X1 Y1 X2 Y2 X3 Y3...) defining a polygonal shape to be");
-            output.println("!               considered as excluded zone for the image");
+            output.println("! EXZdetRadius  To exclude corners of the image in case detection area is circular(radius in px)");
+            output.println("! EXZpol#       Sequence of pixels (X1 Y1 X2 Y2 X3 Y3...) defining a polygonal shape");
+            output.println("! EXZarc#       Arc-shape defined as: ArcCenterX ArcCenterY ArcHalfRadialWthPx ArcHalfAzimWthDeg");
 
             output.close();
 
@@ -1907,23 +1954,92 @@ public final class ImgFileUtils {
         return exfile;
     }
 
+    private static class filtreExz implements FilenameFilter {
+        
+        private String prefix;
+        private String ext;
+        public filtreExz(String prefix, String ext){
+            super();
+            this.prefix=prefix;
+            this.ext=ext;
+        }
+        public boolean accept(File dir, String name) {
+            return name.startsWith(prefix) && name.endsWith(ext);
+        }
+    }
+    
+    public static File findEXZfile(File imgFile){
+        boolean trobat = false;
+        
+        File exfile = new File(FileUtils.getFNameNoExt(imgFile).concat(".exz"));
+        if (exfile.exists())trobat=true;
+        
+        if (!trobat){
+            exfile = new File(FileUtils.getFNameNoExt(imgFile).concat(".EXZ"));
+            if (exfile.exists())trobat=true;
+        }
+
+        if (!trobat){
+            exfile = new File(FileUtils.getFNameNoExt(imgFile).concat(".EXZ"));
+            if (exfile.exists())trobat=true;
+        }
+        
+        if (!trobat){
+            File f = new File(D2Dplot_global.getWorkdir());
+            String prefix = imgFile.getName().substring(0, FastMath.min(4,imgFile.getName().length()));
+            File[] matchingFiles = f.listFiles(new filtreExz(prefix,"exz"));
+            if(matchingFiles.length>0){
+                exfile = matchingFiles[0];    
+                trobat=true;
+            }
+            if (exfile.exists())trobat=true;
+        }
+        
+        if (!trobat){
+            File f = new File(D2Dplot_global.getWorkdir());
+            String prefix = imgFile.getName().substring(0, FastMath.min(4,imgFile.getName().length()));
+            File[] matchingFiles = f.listFiles(new filtreExz(prefix,"EXZ"));
+            if(matchingFiles.length>0){
+                exfile = matchingFiles[0];    
+                trobat=true;
+            }
+            if (exfile.exists())trobat=true;
+        }
+        
+        if (!trobat)return null;
+        return exfile;
+    }
+    
     // if exffile==null es mira el nomb del patt2d
-    public static boolean readEXZ(Pattern2D patt2D, File exfile) {
+    public static boolean readEXZ(Pattern2D patt2D, File exfile, boolean exzConfirm) {
         File dataFile = patt2D.getImgfile();
         if (exfile == null) {
-            exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(".exz"));
-            if (!exfile.exists()) {
-                exfile = new File(FileUtils.getFNameNoExt(dataFile).concat(
-                        ".EXZ"));
+            exfile = findEXZfile(dataFile);
+            if (exfile!=null){
                 if (!exfile.exists()) return false;
+                if (exzConfirm){
+                    boolean readEXZ = FileUtils.YesNoDialog(null,
+                            "Excluded Zones file found ("+exfile.getName()+"). Read it?");
+                    if (!readEXZ) return false;
+                }
+            }else{
+                return false;
             }
         }
-        if (!exfile.exists()) return false;
-
-        boolean readEXZ = FileUtils.YesNoDialog(null,
-                "Excluded Zones file found. Read it?");
-        if (!readEXZ) return false;
-
+        if(!exfile.exists()){
+            //tambe provem de trobarlo
+            exfile = findEXZfile(dataFile);
+            if (exfile!=null){
+                if (!exfile.exists()) return false;
+                if (exzConfirm){
+                    boolean readEXZ = FileUtils.YesNoDialog(null,
+                            "Excluded Zones file found ("+exfile.getName()+"). Read it?");
+                    if (!readEXZ) return false;
+                }
+            }else{
+                return false;
+            }
+        }
         // aqui hauriem de tenir exfile ben assignada, la llegim
         String line;
         try {
@@ -1956,6 +2072,12 @@ public final class ImgFileUtils {
                     patt2D.setExz_threshold(yth);
                     continue;
                 }
+                if (FileUtils.containsIgnoreCase(line, "EXZdet")) {
+                    int ydc = Integer.parseInt(line.substring(iigual,
+                            line.trim().length()).trim());
+                    patt2D.setExz_detcircle(ydc);
+                    continue;
+                }
                 if (FileUtils.containsIgnoreCase(line, "EXZpol")) {
                     String linia = line.substring(iigual, line.trim().length())
                             .trim();
@@ -1966,11 +2088,26 @@ public final class ImgFileUtils {
                         z.addPoint(Integer.parseInt(values[i]),
                                 Integer.parseInt(values[i + 1]));
                     }
-                    if (!patt2D.getExZones().contains(z)) { // NO REPETIM ZONES
+                    if (!patt2D.getPolyExZones().contains(z)) { // NO REPETIM ZONES
                         patt2D.addExZone(z);
                     }
                     continue;
                 }
+                if (FileUtils.containsIgnoreCase(line, "EXZarc")) {
+                    String linia = line.substring(iigual, line.trim().length())
+                            .trim();
+                    String[] values = linia.split("\\s+");
+                    int ipx = Integer.parseInt(values[0]);
+                    int ipy = Integer.parseInt(values[1]);
+                    int hradwpx = Integer.parseInt(values[2]);
+                    int hazimwdeg = Integer.parseInt(values[3]);
+                    ArcExZone a = new ArcExZone(ipx,ipy,hradwpx,hazimwdeg,patt2D);
+                    if (!patt2D.getArcExZones().contains(a)) { // NO REPETIM ZONES
+                        patt2D.addArcExZone(a);;
+                    }
+                    continue;
+                }
+                
             }
         } catch (Exception e) {
             if (D2Dplot_global.isDebug()) e.printStackTrace();
@@ -1980,6 +2117,120 @@ public final class ImgFileUtils {
         return true;
     }
 
+    public static boolean readCALfile(Pattern2D patt2D, File calfile, IntegracioRadial ir){
+        String line;
+        try {
+            Scanner scCALFile = new Scanner(calfile);
+            
+            //inits
+            float inner = 0;
+            float outer = FastMath.round((patt2D.getDimX()/2)-1);
+            int radBins = (int)outer;
+            File mskf = null;
+            
+            while (scCALFile.hasNextLine()) {
+                line = scCALFile.nextLine();
+                log.debug(line);
+                if (line.startsWith("#")) {
+                    continue;
+                }
+
+                int iigual = line.indexOf("=") + 1;
+                int ipcoma = line.indexOf(";") - 1;
+                if (ipcoma<0)ipcoma=line.trim().length();
+
+                if (FileUtils.containsIgnoreCase(line, "X-BEAM")) {
+                    patt2D.setCentrX(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (FileUtils.containsIgnoreCase(line, "Y-BEAM")) {
+                    patt2D.setCentrY(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (FileUtils.containsIgnoreCase(line, "DISTANCE")) {
+                    patt2D.setDistMD(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (FileUtils.containsIgnoreCase(line, "WAVELENGTH")) {
+                    patt2D.setWavel(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (FileUtils.containsIgnoreCase(line, "ROTATION")) {
+                    patt2D.setRotDeg(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (FileUtils.containsIgnoreCase(line, "ANGLE")) {
+                    patt2D.setTiltDeg(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (ir!=null){
+                    log.fine("inside ir");
+                    if (FileUtils.containsIgnoreCase(line, "SUBADU")) {
+                        ir.setTxtSubadu(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                        continue;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "START")) {
+                        ir.setTxtCakeIn(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                        continue;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "END")) {
+                        ir.setTxtCakeFin(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                        continue;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "INNER")) {
+                        inner = Float.parseFloat(line.substring(iigual, ipcoma).trim());
+                        continue;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "OUTER")) {
+                        outer = Float.parseFloat(line.substring(iigual, ipcoma).trim());
+                        continue;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "AZIMUTH BINS")) {
+                        ir.setTxtAzimbins(Integer.parseInt(line.substring(iigual, ipcoma).trim()));
+                        continue;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "RADIAL BINS")) {
+                        radBins = Integer.parseInt(line.substring(iigual, ipcoma).trim());
+                        continue;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "MASK")) {
+                        mskf = new File(line.substring(iigual, ipcoma).trim());
+                        log.debug("mskf="+mskf.toString());
+                        continue;
+                    }
+                }
+            }
+            if(ir!=null){
+                float t2i = (float) patt2D.calc2T(patt2D.getCentrX()+inner, patt2D.getCentrY(), true);
+                ir.setTxtT2i(t2i);
+                float t2f = (float) patt2D.calc2T(FastMath.min(patt2D.getCentrX()+outer,patt2D.getDimX()), patt2D.getCentrY(), true);
+                ir.setTxtT2f(t2f);
+                float step = (t2f-t2i)/(float)radBins;
+                if(step<patt2D.calcMinStepsizeBy2Theta4Directions())step=patt2D.calcMinStepsizeBy2Theta4Directions();
+                ir.setTxtStep(step);
+                log.debug(Float.toString(ir.getTxtCakefin()));
+                //aplicar mascara
+                if(mskf!=null){
+                    //apply mask pixels
+                    if (mskf.exists())log.fine("mask file exists");
+                    log.fine("applying mask");
+                    Pattern2D msk = ImgFileUtils.readPatternFile(mskf, false);
+                    patt2D.copyMaskPixelsFromImage(msk);
+                    ir.setMaskfile(mskf);
+                }else{
+                    log.fine("mskf is null");
+                }
+            }
+            scCALFile.close();
+        } catch (Exception e) {
+            if (D2Dplot_global.isDebug()) e.printStackTrace();
+            log.warning("Error reading CAL file");
+            return false;
+        }
+        return true;
+    }
+   
+    
     public static File readXDS(File xdsFile, Pattern2D patt2d) {
         // list of: x,y,z,Intensity,(iseg),h,k,l
         // (z is the image number where the centroid of the reflection is... it
@@ -2400,6 +2651,92 @@ public final class ImgFileUtils {
         }
         return pdc;
     }
+    
+    public static File writePCS(Pattern2D patt2d, File PCSfile, float delsig, boolean autoDelSig,
+            float angDeg,boolean autoAngDeg,int zoneR,int minpix,int bkgpt,boolean autoBkgPt,boolean autoazim){
+        
+        //TODO MOSTRAR ALERTA DE QUE PRIMER S'HA DE FER EL CALCUL SI NO S'HA FET
+        //per exemple amb int nrows = table.getModel().getRowCount();
+        
+        String eqLine="=============================================================================================================";
+        String minLine="-------------------------------------------------------------------------------------------------------------";
+     
+        // creem un printwriter amb el fitxer file (el que estem escribint)
+        try {
+            //preparem les files (ho he mogut aqui perque em fan falta alguns calculs per la capçalera
+            Iterator<Peak> itrR = patt2d.getPkSearchResult().iterator();
+            int maxIntRad = 0;
+            float maxAzim = 0.f;
+            float minAzim = 99999999.f;
+            while (itrR.hasNext()){
+                Peak r = itrR.next();
+                if(r.getIntRadPx()>maxIntRad)maxIntRad=r.getIntRadPx();
+                if(r.getAzimAper()>maxAzim)maxAzim=r.getAzimAper();
+                if(r.getAzimAper()<minAzim)minAzim=r.getAzimAper();
+            }
+            
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(PCSfile)));
+            // ESCRIBIM AL FITXER:
+            output.println(eqLine);
+            output.println("D2Dplot peak integration for TTS_INCO");
+            output.println(eqLine);
+            output.println("Image File= "+patt2d.getImgfileString());
+            output.println(String.format("dimX= %d, dimY= %d, centX= %.2f, centY= %.2f",patt2d.getDimX(),patt2d.getDimY(),patt2d.getCentrX(),patt2d.getCentrY()));
+            output.println(String.format("pixSize(micron)= %.3f, dist(mm)= %.3f, wave(A)= %.5f",patt2d.getPixSx()*1000,patt2d.getDistMD(),patt2d.getWavel()));
+            switch (patt2d.getIscan()){
+                case 1:
+                    output.println("HORIZONTAL rotation axis");
+                    break;
+                case 2:
+                    output.println("VERTICAL rotation axis");
+                    break;
+                default:
+                    output.println("NO rotation axis");
+                    break;
+            }
+            output.println(String.format("Saturated pixels= %d (sat. value= %d)",patt2d.getnSatur(),patt2d.getSaturValue()));
+            output.println(String.format("Saturated peaks= %d",patt2d.getnPkSatur())); 
+            output.println(String.format("MeanI= %d Sigma(I)= %.3f",patt2d.getMeanI(),patt2d.getSdevI()));
+            if (autoDelSig){
+                output.println(String.format("ESD factor (º)= %.2f (2theta dependance ENABLED)",delsig));    
+            }else{
+                output.println(String.format("ESD factor (º)= %.2f",delsig));    
+            }
+            if (autoazim){
+                output.println(String.format("Auto azim aperture of the integration (º) in the range %.2f to %.2f",minAzim,maxAzim));
+            }else{
+                output.println(String.format("Azim aperture of the integration (º)= %.2f",angDeg));
+            }
+            output.println(String.format("Max radial integration width (pixels)= %d",maxIntRad));
+            output.println(String.format("Peak merge zone radius (pixels)= %d",zoneR));
+            output.println(String.format("Min pixels for a peak= %d",minpix));
+            if (autoBkgPt){
+                output.println(String.format("Background pixels determined automatically"));
+            }else{
+                output.println(String.format("Background pixels= %d",bkgpt));
+            }
+            output.println(minLine);
+            
+            output.println(Peak.pcs_header);
+            //ara ordenem la llista i l'escribim
+            Collections.sort(patt2d.getPkSearchResult());
+            Iterator<Peak> itrpcs = patt2d.getPkSearchResult().iterator();
+            int npk = 1;
+            while (itrpcs.hasNext()){
+                Peak pcsr= itrpcs.next();
+                output.println(String.format("%6d %s", npk,pcsr.getFormmattedStringPCS()));
+                npk=npk+1;
+            }
+            output.close();
+
+        } catch (IOException e) {
+            if (D2Dplot_global.isDebug()) e.printStackTrace();
+            log.warning("Error writting PCS file");
+            return null;
+        }
+        log.printmsg("INFO", "PCS file written!");
+        return PCSfile;
+    }
 
     public static class batchConvertFileWorker extends
             SwingWorker<Integer, Integer> {
@@ -2417,7 +2754,7 @@ public final class ImgFileUtils {
         @Override
         protected Integer doInBackground() throws Exception {
             
-            int totalfiles = flist.length -1;
+            int totalfiles = flist.length;
             
             //PREGUNTEM EL FORMAT DE SORTIDA (aixo pot anar aqui o a maniframe)
             //this line returns the FORMAT in the ENUM or NULL
@@ -2467,7 +2804,7 @@ public final class ImgFileUtils {
                     options, //the titles of buttons
                     options[1]); //default button title
             if (m==JOptionPane.YES_OPTION){
-                newExZfile = FileUtils.fchooser(null,new File(D2Dplot_global.workdir), null, false);
+                newExZfile = FileUtils.fchooser(null,new File(D2Dplot_global.getWorkdir()), null, false);
             }
             
             //Ask for output folder
@@ -2487,7 +2824,7 @@ public final class ImgFileUtils {
                 float percent = ((float)i/(float)totalfiles)*100.f;
                 setProgress((int) percent);
                 
-                Pattern2D in = ImgFileUtils.readPatternFile(flist[i]);
+                Pattern2D in = ImgFileUtils.readPatternFile(flist[i],false);
                 if (in==null){
                     if (this.taOut!=null) taOut.stat("Error reading file "+flist[i].getName()+" ...skipping");
                     log.info("Error reading file "+flist[i].getName()+" ...skipping");
@@ -2526,7 +2863,7 @@ public final class ImgFileUtils {
                 }
                 
                 if (newExZfile != null){
-                    ImgFileUtils.readEXZ(in, newExZfile);
+                    ImgFileUtils.readEXZ(in, newExZfile,false);
                 }
                 
                 //podem escriure fitxer out
@@ -2548,4 +2885,5 @@ public final class ImgFileUtils {
             return 0;
         }
     }
+   
 }

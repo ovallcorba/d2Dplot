@@ -116,7 +116,8 @@ public class D2Dsub_batch extends JFrame {
     private JList listfiles;
     private JButton btnClear;
     private JScrollPane scrollPane;
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(D2Dsub_batch.class.getName());
+
 
     /**
      * Create the dialog.
@@ -723,7 +724,7 @@ public class D2Dsub_batch extends JFrame {
 		this.cua=new ArrayBlockingQueue<bkgsubtraction>(50);
 		for(int i=0; i<listfiles.getModel().getSize();i++){
 			File f = (File)listfiles.getModel().getElementAt(i);
-			Pattern2D data = ImgFileUtils.readPatternFile(f);
+			Pattern2D data = ImgFileUtils.readPatternFile(f,false);
 			
 			bkgsubtraction opts = new bkgsubtraction(data,doGlass,doBkg,doLP,opt);
 			opts.readOptions(bkgIter, bkgN, fhor, fver, fhorver, aresta, ilor, ipol, iosc, glassFactor, amplada, angle, stepsize);
@@ -869,7 +870,7 @@ public class D2Dsub_batch extends JFrame {
 				    tAOut.stat("Glass subtraction... ");
 				    
 				    //preparacio dades
-				    Pattern2D glass = ImgFileUtils.readPatternFile(glassD2File);
+				    Pattern2D glass = ImgFileUtils.readPatternFile(glassD2File,false);
 				    glass.copyMaskPixelsFromImage(dataWork);
 				    
 				    //escalat del vidre

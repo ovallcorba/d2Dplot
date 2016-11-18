@@ -42,7 +42,7 @@ public final class PDDatabase {
     private static ArrayList<PDCompound> QLcompList = new ArrayList<PDCompound>();  
     private static boolean QLmodified = false;
     
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(PDDatabase.class.getName());
     
     public static void resetDB(){
         DBcompList.clear();
@@ -507,6 +507,8 @@ public final class PDDatabase {
                     itC = DBcompList.iterator();
                 }
                 
+                log.writeNameNumPairs("config", true, "ncomp", ncomp);
+                
                 SimpleDateFormat fHora = new SimpleDateFormat("[yyyy-MM-dd 'at' HH:mm]");
                 String dt = fHora.format(new Date());
                 
@@ -560,6 +562,9 @@ public final class PDDatabase {
                         output.println(String.format("%3d %3d %3d %9.5f %7.2f",h,k,l,dsp,inten));                    
                     }
                     output.println(); //linia en blanc entre compostos
+
+                    log.config("itC end loop cycle");
+
                 }
                 output.close();
                 

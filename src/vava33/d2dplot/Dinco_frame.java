@@ -57,7 +57,7 @@ public class Dinco_frame extends JFrame {
     private JList listSol;
     private JList listEdit;
     private JCheckBox chckbxAddPeaks;
-    private VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(Dinco_frame.class.getName());
     private JButton btnExtractIntensities;
     private JCheckBox chckbxShowHkl;
     private JCheckBox chckbxShowSpots;
@@ -72,6 +72,9 @@ public class Dinco_frame extends JFrame {
      * Create the frame.
      */
     public Dinco_frame(ImagePanel ip) {
+        this.ip=ip;
+        this.setPatt2D(ip.getPatt2D());
+
         setTitle("DINCO");
         setIconImage(Toolkit.getDefaultToolkit().getImage(Dinco_frame.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -115,6 +118,11 @@ public class Dinco_frame extends JFrame {
         panel.add(scrollPane_1, "cell 0 1,grow");
         
         listEdit = new JList();
+        listEdit.addListSelectionListener(new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent e) {
+                do_listEdit_valueChanged(e);
+            }
+        });
         listEdit.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         ListCellRenderer renderer = new PointSolutionRenderer();
         listEdit.setCellRenderer(renderer);
@@ -146,10 +154,21 @@ public class Dinco_frame extends JFrame {
         scrollPane.setViewportView(listSol);
 
         chckbxShowSpots = new JCheckBox("Show Spots");
+        chckbxShowSpots.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                do_chckbxShowSpots_itemStateChanged(e);
+            }
+        });
         panel_1.add(chckbxShowSpots, "cell 0 2");
         chckbxShowSpots.setSelected(true);
 
         chckbxShowHkl = new JCheckBox("Show HKL");
+        chckbxShowHkl.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                do_chckbxShowHkl_itemStateChanged(e);
+            }
+        });
+        chckbxShowHkl.setSelected(true);
         panel_1.add(chckbxShowHkl, "cell 1 2");
 
         chckbxAddPeaks = new JCheckBox("Add Peaks");
@@ -188,6 +207,7 @@ public class Dinco_frame extends JFrame {
                     public void run()
                     {
                         listEdit.removeSelectionInterval(index, index);
+                        getIPanel().actualitzarVista();
                     }
                  });
            }
@@ -195,15 +215,22 @@ public class Dinco_frame extends JFrame {
         for (MouseListener ml : mls)
             listEdit.addMouseListener(ml);
         
-        
-        
-        this.ip=ip;
-        this.setPatt2D(ip.getPatt2D());
+        this.setAlwaysOnTop(chckbxOnTop.isSelected());
+
         this.inicia();
     }
     
-    private void inicia(){
-        this.setAlwaysOnTop(chckbxOnTop.isSelected());
+    public void setIpanel(ImagePanel ipanel){
+        this.ip = ipanel;
+    }
+    
+    public ImagePanel getIPanel() {
+        return ip;
+    }
+    
+    
+    public void inicia(){
+        this.setPatt2D(ip.getPatt2D());
         this.addSolutionsToList();
         this.loadPeakList();
     }
@@ -213,10 +240,12 @@ public class Dinco_frame extends JFrame {
         this.chckbxShowSpots.setSelected(false);
         this.chckbxShowHkl.setSelected(false);
         this.chckbxAddPeaks.setSelected(false);
+        getIPanel().actualitzarVista();
         super.dispose();
     }
     
     protected void do_btnClose_actionPerformed(ActionEvent e) {
+        getIPanel().actualitzarVista();
         this.dispose();
     }
     
@@ -224,7 +253,7 @@ public class Dinco_frame extends JFrame {
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[2];
         filter[0] = new FileNameExtensionFilter("DINCO SOL/PXY files (*.SOL *.PXY)","SOL","sol","PXY","pxy");
         filter[1] = new FileNameExtensionFilter("XDS files (SPOT.XDS)","XDS","xds");
-        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.workdir), filter, 0);
+        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if (fsol!=null){
             this.getPatt2D().clearSolutions();
             if (FileUtils.getExtension(fsol).equalsIgnoreCase("XDS")){
@@ -248,13 +277,14 @@ public class Dinco_frame extends JFrame {
             this.addSolutionsToList();
             D2Dplot_global.setWorkdir(fsol);
         }
+        
     }
     
     public void openSOL(){
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[2];
         filter[0] = new FileNameExtensionFilter("INCO SOL/PXY files (*.SOL *.PXY)","SOL","sol","PXY","pxy");
         filter[1] = new FileNameExtensionFilter("INCO/D2DPlot PCS files (*.PCS *.PXY)","PCS","pcs");
-        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.workdir), filter, 0);
+        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if (fsol!=null){
             this.getPatt2D().clearSolutions();
             if (FileUtils.getExtension(fsol).equalsIgnoreCase("PCS")){
@@ -274,7 +304,7 @@ public class Dinco_frame extends JFrame {
     public void openXDS(){
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[1];
         filter[0] = new FileNameExtensionFilter("XDS files (SPOT.XDS)","XDS","xds");
-        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.workdir), filter, 0);
+        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if (fsol!=null){
             this.getPatt2D().clearSolutions();
             fsol = ImgFileUtils.readXDS(fsol, this.getPatt2D());
@@ -296,7 +326,6 @@ public class Dinco_frame extends JFrame {
         while (iteros.hasNext()){
             lm.addElement(iteros.next());
         }
-        
         this.listSol.setModel(lm);
         this.listSol.setSelectedIndex(0);
         this.loadPeakList();
@@ -343,6 +372,7 @@ public class Dinco_frame extends JFrame {
             lm.addElement(s);
         }
         listEdit.setModel(lm);
+        getIPanel().actualitzarVista();
     }
 
     
@@ -423,8 +453,17 @@ public class Dinco_frame extends JFrame {
         this.setAlwaysOnTop(chckbxOnTop.isSelected());
     }
     protected void do_btnExtractIntensities_actionPerformed(ActionEvent arg0) {
-        PKsearch_frame pksframe = new PKsearch_frame(this.getPatt2D(),true,this,ip);
+        PKsearch_frame pksframe = new PKsearch_frame(ip,true,this);
         ip.setPKsearch(pksframe);
         pksframe.setVisible(true);
+    }
+    protected void do_chckbxShowSpots_itemStateChanged(ItemEvent e) {
+        getIPanel().actualitzarVista();
+    }
+    protected void do_chckbxShowHkl_itemStateChanged(ItemEvent e) {
+        getIPanel().actualitzarVista();
+    }
+    protected void do_listEdit_valueChanged(ListSelectionEvent e) {
+        getIPanel().actualitzarVista();
     }
 }

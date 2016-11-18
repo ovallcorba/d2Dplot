@@ -37,7 +37,7 @@ public class Subtract_dialog extends JDialog {
     private JTextField txtImage;
     private JTextField txtFactor;
     private JTextField txtImage_1;
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(Subtract_dialog.class.getName());
 
     /**
      * Launch the application.
@@ -166,7 +166,7 @@ public class Subtract_dialog extends JDialog {
 
     protected void do_btnSelect_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File d2File = FileUtils.fchooser(this,new File(D2Dplot_global.workdir), filt, filt.length-1, false, false);
+        File d2File = FileUtils.fchooser(this,new File(D2Dplot_global.getWorkdir()), filt, filt.length-1, false, false);
         if (d2File != null){
             txtImage.setText(d2File.toString());
             D2Dplot_global.setWorkdir(d2File);
@@ -174,7 +174,7 @@ public class Subtract_dialog extends JDialog {
     }
     protected void do_btnSelect_1_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File d2File = FileUtils.fchooser(this,new File(D2Dplot_global.workdir), filt, filt.length-1, false, false);
+        File d2File = FileUtils.fchooser(this,new File(D2Dplot_global.getWorkdir()), filt, filt.length-1, false, false);
         if (d2File != null){
             txtImage_1.setText(d2File.toString());
             D2Dplot_global.setWorkdir(d2File);

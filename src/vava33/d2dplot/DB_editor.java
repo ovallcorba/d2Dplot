@@ -50,7 +50,7 @@ public class DB_editor extends JDialog {
     private boolean editingExisting = false;
     private PDCompound comp;
     private DB_dialog DBdialog;
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(DB_editor.class.getName());
 
     /**
      * Create the frame.
@@ -387,7 +387,7 @@ public class DB_editor extends JDialog {
         //lines like this:
         //0  -1  -1  26042. 547.139   1
         FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("HKL file", "hkl", "HKL")};
-        File hklfile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.workdir), filter, 0);
+        File hklfile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if(hklfile==null)return;
         D2Dplot_global.setWorkdir(hklfile);
         

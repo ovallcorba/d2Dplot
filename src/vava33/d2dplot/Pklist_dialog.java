@@ -56,7 +56,7 @@ public class Pklist_dialog extends JDialog {
     private JCheckBox cbox_onTop;
     private JButton btnSaveappend;
     
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(Pklist_dialog.class.getName());
 
     private ImagePanel ipanel;
 
@@ -242,7 +242,7 @@ public class Pklist_dialog extends JDialog {
             i++;
         }
         list_pk.setModel(lm);
-
+        this.ipanel.actualitzarVista();
     }
 
     protected void tanca() {

@@ -26,7 +26,7 @@ public class PDCompound {
     private ArrayList<String> comment;
     private ArrayList<PDReflection> peaks;
     
-    private static VavaLogger log = D2Dplot_global.log;
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(PDCompound.class.getName());
     
     public PDCompound(String name){
         this.compName = new ArrayList<String>();
