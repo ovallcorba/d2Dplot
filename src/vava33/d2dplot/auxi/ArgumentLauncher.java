@@ -22,17 +22,6 @@ public final class ArgumentLauncher {
     
     private static VavaLogger log = D2Dplot_global.getVavaLogger(ArgumentLauncher.class.getName());
 
-    /*
-     * -macro com a primer argument implica interactive
-     * el segon argument aleshores ha de ser la imatge de treball
-     * 
-     * 
-     * possibilitat macrofile? -macrofile i llegir linia a linia les opcions?
-     * 
-     * DE MOMENT FUNCIONA PERO CALDRIA ESCRIURE MISSATGES PER CONSOLA.
-     * 
-     */
-    
     public static void readArguments(MainFrame mf, String[] args){
         
         if (args.length==0)return; //no hi ha res

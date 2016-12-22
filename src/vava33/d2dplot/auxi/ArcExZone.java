@@ -3,6 +3,7 @@ package vava33.d2dplot.auxi;
 import java.awt.Point;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 
 import org.apache.commons.math3.util.FastMath;
@@ -19,7 +20,7 @@ public class ArcExZone {
     private int halfRadialWthPx; //radial width in pixels of the zone
     private float radialWth2t; //in 2theta
     
-    private int halfAzimApertureDeg; //azimutal aperture in degrees
+    private float halfAzimApertureDeg; //azimutal aperture in degrees
     private Pattern2D patt2D;
     
     private int nclicks;
@@ -27,7 +28,7 @@ public class ArcExZone {
     
     private static VavaLogger log = D2Dplot_global.getVavaLogger(ArcExZone.class.getName());
 
-    private ArrayList<Point> listPixelsZone;
+    private HashSet<Point> listPixelsZone;
     int maxX;
     int minX;
     int maxY;
@@ -35,7 +36,7 @@ public class ArcExZone {
     float t2max;
     float t2min;
     
-    public ArcExZone(int cx, int xy, int halfRadWpx, int halfAzimApDeg, Pattern2D whereIbelong){
+    public ArcExZone(int cx, int xy, int halfRadWpx, float halfAzimApDeg, Pattern2D whereIbelong){
         this.px=cx;
         this.py=xy;
         this.halfRadialWthPx=halfRadWpx;
@@ -87,7 +88,7 @@ public class ArcExZone {
             
             //EL CLICK DE L'AZIMUT EL FORCEM A CLOCKWISE
             if (azimClick<azimCen)azimClick = azimClick + 360;
-            this.halfAzimApertureDeg=(int) (azimClick-azimCen);
+            this.halfAzimApertureDeg=(azimClick-azimCen);
             calcListPixelsZone();
             return true;
         }
@@ -121,19 +122,35 @@ public class ArcExZone {
     
     public void calcListPixelsZone(){
 
-        this.listPixelsZone=new ArrayList<Point>();
+        this.listPixelsZone=new HashSet<Point>();
         
         EllipsePars elli = ImgOps.getElliPars(patt2D, new Point2D.Float(px,py));
         float azimAngle = patt2D.getAzimAngle(px, py, true); //azimut des del zero
         float azimMax = azimAngle + halfAzimApertureDeg;
         float azimMin = azimAngle - halfAzimApertureDeg;
+
+        boolean fullRing = false;
+        if (halfAzimApertureDeg >= 180.f){
+            fullRing = true;
+            halfAzimApertureDeg = 180.f;
+            azimMin=0;
+            azimMax=360;
+        }
         
+        log.writeNameNumPairs("config",true, "azimAngle,azimMax,azimMin", azimAngle,azimMax,azimMin);
+
+        //COMPROVACIO DE PASSAR PEL "ZERO":
+        if (azimMin<0){ 
+            azimMin = azimMin +360;
+        }
         if (azimMax<azimMin){
-            //vol dir que passem pel zero
             azimMax = azimMax + 360;
         }
         
-        ArrayList<Point2D.Float> pixelsArc = elli.getEllipsePoints(azimMin, azimMax, 1);
+        log.writeNameNumPairs("config",true, "azimAngle,azimMax,azimMin", azimAngle,azimMax,azimMin);
+        
+        ArrayList<Point2D.Float> pixelsArc = elli.getEllipsePoints(azimMin, azimMax, 0.5f);
+        log.debug("pixelsArc.size="+pixelsArc.size());
         float t2p = (float) patt2D.calc2T(px, py, true);
         t2max = (float) FastMath.min(t2p + radialWth2t/2.,patt2D.getMax2TdegCircle());
         t2min = (float) FastMath.max(0.1, t2p - radialWth2t/2.);
@@ -158,6 +175,8 @@ public class ArcExZone {
         minX = FastMath.max(minX,0);
         minY = FastMath.max(minY,0);
         
+        log.writeNameNumPairs("config", true, "maxX,minX,maxY,minY", maxX,minX,maxY,minY);
+        
         //ara ja tenim el quadrat on hem de buscar
         for (int j=minY;j<=maxY;j++){
            for (int i=minX;i<=maxX;i++){
@@ -165,6 +184,10 @@ public class ArcExZone {
                if(!patt2D.isInside(i, j))continue;
                t2p = (float)patt2D.calc2T(i, j, true);
                if((t2p<t2min)||(t2p>t2max))continue;
+               if (fullRing){
+                   this.listPixelsZone.add(new Point(i,j)); //l'afegim, vol dir que donem tota la volta! 180º
+                   continue;
+               }
                azimAngle = patt2D.getAzimAngle(i, j, true);
                if (azimMax>360){
                    if((azimAngle<=azimMin)&&((azimAngle+360)>=azimMax))continue;
@@ -176,31 +199,14 @@ public class ArcExZone {
         }
     }
     
-    public boolean containsSLOW(int pixX, int pixY){
-        //comprovacions previes per tal d'speed up
-        if (pixX>maxX)return false;
-        if (pixX<minX)return false;
-        if (pixY>maxY)return false;
-        if (pixY<minY)return false;
-        //TODO:comprovacio t2?
-        float t2p = (float) patt2D.calc2T(pixX, pixY, true);
-        if((t2p<t2min)||(t2p>t2max))return false;
-        log.debug("contains "+pixX+" "+pixY);
-        return this.listPixelsZone.contains(new Point(pixX,pixY));
-    }
-    
     public boolean contains(int pixX, int pixY){
         //comprovacions previes per tal d'speed up
         if (pixX>maxX)return false;
         if (pixX<minX)return false;
         if (pixY>maxY)return false;
         if (pixY<minY)return false;
-        
-        for (int i=0;i<this.listPixelsZone.size();i++){
-            if (pixX==listPixelsZone.get(i).x && pixY==listPixelsZone.get(i).y){
-                return true;
-            }
-        }
+
+        if (listPixelsZone.contains(new Point(pixX,pixY)))return true;
         return false;
     }
     
@@ -212,7 +218,7 @@ public class ArcExZone {
     }
     
     public String toString(){
-        return String.format("(x,y)= %d %d, halfRadWthPx= %d, halfAzimDeg= %d",px,py,halfRadialWthPx,halfAzimApertureDeg);
+        return String.format("(x,y)= %d %d, halfRadWthPx= %d, halfAzimDeg= %.1f",px,py,halfRadialWthPx,halfAzimApertureDeg);
     }
     public int getPx() {
         return px;
@@ -238,10 +244,10 @@ public class ArcExZone {
     public void setHalfRadialWthPx(int halfRadialWthPx) {
         this.halfRadialWthPx = halfRadialWthPx;
     }
-    public int getHalfAzimApertureDeg() {
+    public float getHalfAzimApertureDeg() {
         return halfAzimApertureDeg;
     }
-    public void setHalfAzimApertureDeg(int halfAzimApertureDeg) {
+    public void setHalfAzimApertureDeg(float halfAzimApertureDeg) {
         this.halfAzimApertureDeg = halfAzimApertureDeg;
     }
 }

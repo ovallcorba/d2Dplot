@@ -1111,9 +1111,13 @@ public class Calib_dialog extends JDialog {
     }
     
     public void writeCALfile(File calfile){
+        
+        String tm = D2Dplot_global.getStringTimeStamp("yyyy-MM-dd 'at' HH:mm");
+        
         try {
             PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(calfile)));
-            output.println(String.format("# Calibration for %s", patt2D.getImgfileString()));
+            output.println(String.format("# Calibration for %s on %s", patt2D.getImgfileString(),tm));
+            output.println(String.format("CALFIL = %s [d2Dplot]", patt2D.getImgfile().getAbsolutePath()));
             output.println(String.format("X-BEAM CENTRE = %.2f", this.getRefCX()));
             output.println(String.format("Y-BEAM CENTRE = %.2f", this.getRefCY()));
             output.println(String.format("DISTANCE = %.3f", this.getRefMD()));

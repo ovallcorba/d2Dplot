@@ -5,6 +5,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Scanner;
 
 import vava33.d2dplot.auxi.PDDatabase;
@@ -19,18 +21,20 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String welcomeMSG = "d2Dplot v1611 (161118) by OV";
+    public static final String welcomeMSG = "d2Dplot v1611 (161222) by OV";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     public static final String userDir = System.getProperty("user.dir");
     public static final String configFilePath = System.getProperty("user.dir") + separator + "d2dconfig.cfg";
     public static final String usersGuidePath = System.getProperty("user.dir") + separator + "d2Dplot_userguide.pdf";
     public static Boolean configFileReaded = null; //true=readed false=errorReading null=notFound
-
+    
     //symbols and characters
     public static final String theta = "\u03B8";
     public static final String angstrom= "\u212B";
-
+    public static final String fDiaHora1 = "[yyMMddHHmm]";
+    public static final String fDiaHora2 = "[yyyy-MM-dd 'at' HH:mm]";
+        
     public static VavaLogger log;
 
     public static boolean keepCalibration = false;
@@ -67,6 +71,7 @@ public final class D2Dplot_global {
     private static Color colorPeakSearchSelected;
     private static Color colorQLcomp;
     private static Color colorDBcomp;
+    private static Color colorEXZ = new Color(255, 0, 255);
 
     //puntClick
     private static Color colorClickPointsCircle;
@@ -697,6 +702,14 @@ public final class D2Dplot_global {
         D2Dplot_global.rot = rot;
     }
     
+    public static Color getColorEXZ() {
+        return colorEXZ;
+    }
+
+    public static void setColorEXZ(Color colorEXZ) {
+        D2Dplot_global.colorEXZ = colorEXZ;
+    }
+
     public static void setCalib(float dist, float cX, float cY, float tilt, float rot){
         setRot(rot);
         setTilt(tilt);
@@ -749,6 +762,11 @@ public final class D2Dplot_global {
         log.printmsg(loglevel,"colorPeakSearchSelected = "+getColorName(colorPeakSearchSelected));
         log.printmsg(loglevel,"colorExcludedZones = "+getColorName(colorCallibEllipses));         
         log.printmsg(loglevel,"*****************************************************************************");
+    }
+    
+    public static String getStringTimeStamp(String simpleDateFormatStr){
+        SimpleDateFormat fHora = new SimpleDateFormat(simpleDateFormatStr);
+        return fHora.format(new Date());
     }
 }
 

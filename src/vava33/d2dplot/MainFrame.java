@@ -9,40 +9,30 @@ import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.InputEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.Iterator;
 
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
-import javax.swing.KeyStroke;
 import javax.swing.ProgressMonitor;
 import javax.swing.UIManager;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import net.miginfocom.swing.MigLayout;
+
+import com.vava33.jutils.FileUtils;
+import com.vava33.jutils.LogJTextArea;
+import com.vava33.jutils.VavaLogger;
 
 import vava33.d2dplot.auxi.ArgumentLauncher;
 import vava33.d2dplot.auxi.ImgFileUtils;
@@ -50,10 +40,23 @@ import vava33.d2dplot.auxi.ImgOps;
 import vava33.d2dplot.auxi.PDCompound;
 import vava33.d2dplot.auxi.PDDatabase;
 import vava33.d2dplot.auxi.Pattern2D;
+import javax.swing.JComboBox;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JSeparator;
+import javax.swing.JMenuBar;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 
-import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.LogJTextArea;
-import com.vava33.jutils.VavaLogger;
+import net.miginfocom.swing.MigLayout;
+
+import javax.swing.KeyStroke;
+
+import java.awt.event.KeyEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class MainFrame extends JFrame {
     private static final long serialVersionUID = 4368250280987133953L;
@@ -1428,7 +1431,7 @@ public class MainFrame extends JFrame {
     public boolean isSelectPoints(){
         return this.chckbxIndex.isSelected();
     }
-
+    
     protected void do_btnPeakSearchint_actionPerformed(ActionEvent arg0) {
         mntmFindPeaks.doClick();
     }

@@ -50,6 +50,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.math3.util.FastMath;
 import javax.swing.JToggleButton;
+import javax.swing.border.EtchedBorder;
 
 public class ExZones_dialog extends JDialog {
 
@@ -113,6 +114,7 @@ public class ExZones_dialog extends JDialog {
     
     Pattern2D backupImage;
     private JButton btnUndo;
+    private JButton btnReadMaskbin;
     
     /**
      * Create the dialog.
@@ -124,11 +126,11 @@ public class ExZones_dialog extends JDialog {
         setTitle("Excluded Zones");
         // setBounds(100, 100, 660, 730);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        int width = 660;
-        int height = 730;
+        int width = 580;
+        int height = 640;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 540, 608);
+        setBounds(x, y, width, height);
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[grow]", "[grow]"));
@@ -141,7 +143,7 @@ public class ExZones_dialog extends JDialog {
                 this.splitPane.setLeftComponent(this.panel_left);
                 {
                     this.chckbxExZones = new JCheckBox("Show/Edit Excluded Zones");
-                    panel_left.setLayout(new MigLayout("", "[grow][grow][grow]", "[][][][][][grow][grow][]"));
+                    panel_left.setLayout(new MigLayout("", "[][grow][grow]", "[][][][][][grow][grow][][]"));
                     this.chckbxExZones.setSelected(true);
                     this.panel_left.add(this.chckbxExZones, "cell 0 0 2 1,alignx left,aligny center");
                 }
@@ -157,30 +159,6 @@ public class ExZones_dialog extends JDialog {
                     });
                     this.cbox_onTop.setActionCommand("on top");
                     this.panel_left.add(this.cbox_onTop, "cell 2 0,alignx right,aligny center");
-                }
-                {
-                    panel_2 = new JPanel();
-                    panel_left.add(panel_2, "cell 0 1 3 1,growx");
-                    panel_2.setLayout(new MigLayout("insets 1", "[][grow]", "[]"));
-                    {
-                        btnReadExzFile = new JButton("Read EXZ file");
-                        panel_2.add(btnReadExzFile, "cell 0 0,alignx left");
-                        {
-                            this.btnWriteExzFile = new JButton("Write EXZ file");
-                            panel_2.add(btnWriteExzFile, "cell 1 0,alignx left");
-                            this.btnWriteExzFile.addActionListener(new ActionListener() {
-                                @Override
-                                public void actionPerformed(ActionEvent arg0) {
-                                    do_btnWriteExzFile_actionPerformed(arg0);
-                                }
-                            });
-                        }
-                        btnReadExzFile.addActionListener(new ActionListener() {
-                            public void actionPerformed(ActionEvent e) {
-                                do_btnReadExzFile_actionPerformed(e);
-                            }
-                        });
-                    }
                 }
                 {
                     {
@@ -393,6 +371,50 @@ public class ExZones_dialog extends JDialog {
                                 });
                                 panel_3.add(btnUndo, "cell 3 0");
                             }
+                            {
+                                panel_2 = new JPanel();
+                                panel_2.setBorder(new EtchedBorder(EtchedBorder.RAISED, null, null));
+                                panel_left.add(panel_2, "cell 0 8 3 1,growx");
+                                panel_2.setLayout(new MigLayout("insets 1", "[grow][][][grow]", "[]"));
+                                {
+                                    btnReadExzFile = new JButton("Read EXZ file");
+                                    panel_2.add(btnReadExzFile, "cell 0 0,alignx right");
+                                    {
+                                        this.btnWriteExzFile = new JButton("Write EXZ file");
+                                        panel_2.add(btnWriteExzFile, "cell 1 0,alignx center");
+                                        {
+                                            btnReadMaskbin = new JButton("Read MASK.BIN");
+                                            btnReadMaskbin.addActionListener(new ActionListener() {
+                                                public void actionPerformed(ActionEvent e) {
+                                                    do_btnReadMaskbin_actionPerformed(e);
+                                                }
+                                            });
+                                            panel_2.add(btnReadMaskbin, "cell 2 0");
+                                        }
+                                        {
+                                            btnWriteMaskbin = new JButton("Write MASK.BIN");
+                                            btnWriteMaskbin.setToolTipText("it also writes equivalent EXZ file");
+                                            panel_2.add(btnWriteMaskbin, "cell 3 0");
+                                            btnWriteMaskbin.addActionListener(new ActionListener() {
+                                                public void actionPerformed(ActionEvent e) {
+                                                    do_btnWriteMaskbin_actionPerformed(e);
+                                                }
+                                            });
+                                        }
+                                        this.btnWriteExzFile.addActionListener(new ActionListener() {
+                                            @Override
+                                            public void actionPerformed(ActionEvent arg0) {
+                                                do_btnWriteExzFile_actionPerformed(arg0);
+                                            }
+                                        });
+                                    }
+                                    btnReadExzFile.addActionListener(new ActionListener() {
+                                        public void actionPerformed(ActionEvent e) {
+                                            do_btnReadExzFile_actionPerformed(e);
+                                        }
+                                    });
+                                }
+                            }
                             tglbtnFreedraw.addActionListener(new ActionListener() {
                                 public void actionPerformed(ActionEvent arg0) {
                                     do_tglbtnFreedraw_actionPerformed(arg0);
@@ -442,15 +464,6 @@ public class ExZones_dialog extends JDialog {
                         do_btnApply_actionPerformed(arg0);
                     }
                 });
-                {
-                    btnWriteMaskbin = new JButton("Write MASK.BIN");
-                    btnWriteMaskbin.addActionListener(new ActionListener() {
-                        public void actionPerformed(ActionEvent e) {
-                            do_btnWriteMaskbin_actionPerformed(e);
-                        }
-                    });
-                    buttonPane.add(btnWriteMaskbin, "flowx,cell 0 0,alignx center");
-                }
                 buttonPane.add(btnApply, "cell 1 0,alignx right,aligny top");
             }
             okButton.setActionCommand("OK");
@@ -528,6 +541,9 @@ public class ExZones_dialog extends JDialog {
     protected void do_btnDelPoly_actionPerformed(ActionEvent e) {
         patt2D.getPolyExZones().remove(listPolZones.getSelectedIndex());
         this.updateListPoly();
+        if (!lmPoly.isEmpty()){
+            listPolZones.setSelectedIndex(lmPoly.size()-1);
+        }
     }
 
     protected void do_btnWriteExzFile_actionPerformed(ActionEvent arg0) {
@@ -564,8 +580,9 @@ public class ExZones_dialog extends JDialog {
         tAOut.ln(" - You can define a margin in case of image borders");
         tAOut.ln(" - You can define a detector radius in case the detection area is circular");
         tAOut.ln(" 2 options after defining excluded zones:");
-        tAOut.ln(" - Save in a format (D2D, BIN) that contain the information");
+        tAOut.ln(" - Save the image in a format (D2D, BIN) that contain the information");
         tAOut.ln(" - Save an Excluded Zones (ExZ) file to be loaded later, it is a text file");
+        tAOut.ln(" - Save a MASK.BIN file to be able to batch process images later (it also saves automatically an EXZ file just in case)");
         tAOut.ln("");
     }
 
@@ -714,18 +731,24 @@ public class ExZones_dialog extends JDialog {
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[1];
         filter[0] = new FileNameExtensionFilter("d2Dplot BIN format", "bin","BIN");
         File out = FileUtils.fchooserSaveAsk(this, new File(D2Dplot_global.getWorkdir()), filter);
+        File outexz = FileUtils.canviExtensio(out, "EXZ");
         if (out!=null){
             Pattern2D mask = new Pattern2D(this.patt2D,false,true);
             mask.setExz_threshold(0);
+            boolean overwrite = false;
+            if (outexz.exists()){
+                overwrite = FileUtils.YesNoDialog(this, String.format("Overwrite existing %s file?",outexz.getName()));
+            }
             out = ImgFileUtils.writeBIN(out, mask);
+            if (overwrite) outexz = ImgFileUtils.writeEXZ(outexz, patt2D);
         }else{
             tAOut.ln("Error writting MASK.BIN file");
         }
         if (out != null){
             tAOut.ln(out.toString()+" written!");
+            tAOut.ln(outexz.toString()+" written!");
         }else{
             tAOut.ln("Error writting MASK.BIN file");
-
         }
     }
     
@@ -810,7 +833,7 @@ public class ExZones_dialog extends JDialog {
         this.setDrawingArcExZone(false);
         patt2D.getArcExZones().add(currentArcExZ);
         lmArc.addElement(currentArcExZ.toString());
-        this.updateListPoly();
+        this.updateListArc();
         listArcZones.setSelectedIndex(lmArc.size()-1);
     }
     protected void do_btnAddArc_actionPerformed(ActionEvent arg0) {
@@ -837,9 +860,10 @@ public class ExZones_dialog extends JDialog {
     protected void do_btnDelArc_actionPerformed(ActionEvent e) {
         patt2D.getArcExZones().remove(listArcZones.getSelectedIndex());
         this.updateListArc();
+        if (!lmArc.isEmpty()){
+            listArcZones.setSelectedIndex(lmArc.size()-1);
+        }
     }
-
-    
 
     public boolean isDrawingFreeExZone() {
         return drawingFreeExZone;
@@ -872,6 +896,16 @@ public class ExZones_dialog extends JDialog {
             this.ip.getMainFrame().updatePatt2D(backupImage, false);
             this.ip.pintaImatge();
             patt2D = backupImage;
+        }
+    }
+    protected void do_btnReadMaskbin_actionPerformed(ActionEvent e) {
+        File f = FileUtils.fchooserOpen(this, new File(D2Dplot_global.getWorkdir()), ImgFileUtils.getExtensionFilterRead(), 0);
+        if (f.exists()){
+            boolean overwrite = FileUtils.YesNoDialog(this, String.format("Apply excluded pixels from the selected image to the current image?"));
+            if (!overwrite)return;
+            Pattern2D msk = ImgFileUtils.readPatternFile(f, false);
+            patt2D.copyMaskPixelsFromImage(msk);
+            this.getIPanel().pintaImatge();
         }
     }
 }

@@ -1040,6 +1040,39 @@ public class ImagePanel extends JPanel {
         }
     }
 
+    private Color getColorOfAPixel(int jy, int ix){
+        Color col;
+        if (this.getPaintExZ()){
+            //here we check excluded zones, otherwise not to be faster
+            if (patt2D.isInExZone(jy, ix)){
+                col = exzcol;
+            }else{
+                if (this.isColor()) {
+                    // pintem en color
+                    col = intensityColor(patt2D.getInten(jy, ix), maxI,minI, minValSlider,valSlider);
+                } else {
+                    // pintem en BW
+                    col = intensityBW(patt2D.getInten(jy, ix), maxI,minI,minValSlider,valSlider);
+                }
+            }
+        }else{
+            if (this.isColor()) {
+                // pintem en color
+                col = intensityColor(patt2D.getInten(jy, ix), maxI,minI, minValSlider,valSlider);
+            } else {
+                // pintem en BW
+                col = intensityBW(patt2D.getInten(jy, ix), maxI,minI,minValSlider,valSlider);
+            }
+        }
+        return col;
+    }
+    
+    int minValSlider;
+    int valSlider;
+    int maxI;
+    int minI;
+    Color exzcol = D2Dplot_global.getColorEXZ();
+    
     protected void pintaImatge() {
         log.debug("ImagePanel pintaImatge called");
         
@@ -1051,29 +1084,18 @@ public class ImagePanel extends JPanel {
         BufferedImage im = new BufferedImage(patt2D.getDimX(), patt2D.getDimY(), type);
 
         
-        int minValSlider = this.slider_contrast.getMinimum();
-        int valSlider = this.slider_contrast.getValue();
-        int maxI = patt2D.getMaxI();
-        int minI = patt2D.getMinI();
-
-
-        Color col;
+        minValSlider = this.slider_contrast.getMinimum();
+        valSlider = this.slider_contrast.getValue();
+        maxI = patt2D.getMaxI();
+        minI = patt2D.getMinI();
+        
+//        patt2D.populateListExzPixels();
+        
         if (!this.isInvertY()) {
             // creem imatge normal
             for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
                 for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
-                    if (patt2D.isInExZone(j, i) && this.getPaintExZ()) {// es mascara, el pintem magenta
-                        col = new Color(255, 0, 255);
-                    } else{
-                        if (this.isColor()) {
-                            // pintem en color
-                            col = intensityColor(patt2D.getInten(j, i), maxI,minI, minValSlider,valSlider);
-                        } else {
-                            // pintem en BW
-                            col = intensityBW(patt2D.getInten(j, i), maxI,minI,minValSlider,valSlider);
-                        }
-                    }
-                    im.setRGB(j, i, col.getRGB());
+                    im.setRGB(j, i, this.getColorOfAPixel(j, i).getRGB());
                 }
             }
         } else {
@@ -1081,18 +1103,7 @@ public class ImagePanel extends JPanel {
             int fila = 0;
             for (int i = patt2D.getDimY() - 1; i >= 0; i--) {
                 for (int j = 0; j < patt2D.getDimX(); j++) {
-                    if (patt2D.isInExZone(j, i) && this.getPaintExZ()) {// es mascara, el pintem magenta
-                        col = new Color(255, 0, 255);
-                    }else{
-                        if (this.isColor()) {
-                            // pintem en color
-                            col = intensityColor(patt2D.getInten(j, i), maxI,minI, minValSlider,valSlider);
-                        } else {
-                            // pintem en BW
-                            col = intensityBW(patt2D.getInten(j, i), maxI,minI,minValSlider,valSlider);
-                        }    
-                    }
-                    im.setRGB(j, fila, col.getRGB());
+                    im.setRGB(j, fila, this.getColorOfAPixel(j, i).getRGB());
                 }
                 fila = fila + 1;
             }
@@ -1622,8 +1633,9 @@ public class ImagePanel extends JPanel {
                     
                     EllipsePars eOut = ImgOps.getElliPars(patt2D, (t2rad+FastMath.toRadians(tol2t/2)));
                     EllipsePars eIn= ImgOps.getElliPars(patt2D, (t2rad-FastMath.toRadians(tol2t/2)));
-                    ArrayList<Point2D.Float>pointsOut =  eOut.getEllipsePoints(azim-angdeg, azim+angdeg, 0.5f);
-                    ArrayList<Point2D.Float>pointsIn =  eIn.getEllipsePoints(azim-angdeg, azim+angdeg, 0.5f);
+//                    log.writeNameNumPairs("config", true, "azim,angdeg", azim,angdeg);
+                    ArrayList<Point2D.Float>pointsOut =  eOut.getEllipsePoints(azim-angdeg, azim+angdeg, 0.1f);
+                    ArrayList<Point2D.Float>pointsIn =  eIn.getEllipsePoints(azim-angdeg, azim+angdeg, 0.1f);
                     
                     //ara juntem els punts
                     if (pointsIn!=null && pointsOut!=null){
@@ -1874,9 +1886,9 @@ public class ImagePanel extends JPanel {
                 // Rectangle r = g2.getClipBounds();
                 AffineTransform t = new AffineTransform();
                 float offsetX = originX % scalefit;
-                if (originX>0)offsetX = offsetX+originX;
+                if (originX>0)offsetX = originX;
                 float offsetY = originY % scalefit;
-                if (originY>0)offsetY = offsetY+originY;
+                if (originY>0)offsetY = originY;
                 t.translate(offsetX, offsetY);
                 t.scale(scalefit, scalefit);
                 g2.drawImage(getSubimage(), t, null);

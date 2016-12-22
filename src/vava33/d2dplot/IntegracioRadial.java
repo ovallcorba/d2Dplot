@@ -425,7 +425,7 @@ public class IntegracioRadial extends JFrame {
             
             try{
                 Pattern1D p1D = ImgOps.radialIntegration(patt2D, t2ini, t2fin,stepsize, azIni, azFin,corrLP,corrInAng,subadu);
-                String comment = String.format("t2i=%.4f step=%.4f t2f=%.4f azIni=%.1f azFin=%.1f subI=%.1f", t2ini,t2fin,stepsize,azIni,azFin,subadu);
+                String comment = String.format("I vs. 2Theta [deg] t2i step t2f: %.4f %.4f %.4f Wave: %.4f Azim: %.2f %.2f addI: %.1f", t2ini,stepsize,t2fin,this.patt2D.getWavel(),stepsize,azIni,azFin,subadu);
                 p1D.setComment(comment);
                 this.patt1D.add(p1D);
             }catch(Exception e){

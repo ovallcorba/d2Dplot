@@ -107,9 +107,12 @@ public class ImageTiltRot_diag extends JDialog {
             this.rot = Float.parseFloat(txtRot.getText());
             this.tilt = Float.parseFloat(txtTilt.getText());
             
-            this.rot = (-1)*this.rot -90;
-            this.rot = -this.rot;
-            this.tilt = -this.tilt;
+//            this.rot = (-1)*this.rot -90;
+//            this.rot = -this.rot;
+//            this.tilt = -this.tilt;
+
+            this.rot = f2dRotToD2d(this.rot);
+            this.tilt = f2dRotToD2d(this.tilt);
             
             lblRot_1.setText(String.format("rot= %.3f",this.rot));
             lblTilt.setText(String.format("tilt= %.3f",this.tilt));
@@ -118,6 +121,15 @@ public class ImageTiltRot_diag extends JDialog {
             e.printStackTrace();
         }
     }
+    
+    public static float f2dRotToD2d(float rotf2d){
+        float rot = (-1)*rotf2d -90;
+        return -rot;
+    }
+    public static float f2dTiltToD2d(float tiltf2d){
+        return -tiltf2d;
+    }
+    
     protected void do_btnSet_actionPerformed(ActionEvent arg0) {
         this.par.setTiltRotFields(this.tilt, this.rot);
     }

@@ -740,7 +740,9 @@ public final class ImgFileUtils {
         float beamCX = 0, beamCY = 0, wl = 0;
         int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
         float omeIni = 0, omeFin = 0, acqTime = -1;
-
+        float tilt = 0, rot = 0;
+        boolean fit2d = false;
+        
         // primer treiem la info de les linies de text
         try {
             Scanner scD2file = new Scanner(d2File);
@@ -789,6 +791,20 @@ public final class ImgFileUtils {
                     if (FileUtils.containsIgnoreCase(line, "ref_wave")) {
                         wl = Float.parseFloat(line.substring(iigual,
                                 line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_tilt")) {
+                        tilt = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_rot")) {
+                        rot = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
+                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
+                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
+                            fit2d = true;
+                        } //else d2dplot convention
                     }
 
                     try {
@@ -902,6 +918,17 @@ public final class ImgFileUtils {
 
         // parametres instrumentals
         patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
+        if ((tilt!=0) && (rot!=0)){
+            if (!fit2d){
+                //d2dplot convention, directly the values
+                patt2D.setTiltDeg(tilt);
+                patt2D.setRotDeg(rot);
+            }else{
+                //fit2d convention, convert to d2d
+                patt2D.setRotDeg(ImageTiltRot_diag.f2dRotToD2d(rot));
+                patt2D.setTiltDeg(ImageTiltRot_diag.f2dTiltToD2d(tilt));
+            }
+        }
 
         // parametres adquisicio
         patt2D.setScanParameters(omeIni, omeFin, acqTime);
@@ -1198,7 +1225,8 @@ public final class ImgFileUtils {
             patt2D.calcMeanI();
             patt2D.setImgfile(d2File);
             ImgFileUtils.readEXZ(patt2D, null,exzConfirm);
-
+//            patt2D.populateListExzPixels(); //maybe it has been already done in readExZ if one has been found...
+            
             if (D2Dplot_global.isKeepCalibration()){
                 patt2D.setCentrX(D2Dplot_global.getCentX());
                 patt2D.setCentrY(D2Dplot_global.getCentY());
@@ -1509,6 +1537,10 @@ public final class ImgFileUtils {
                     + FileUtils.dfX_2.format(patt2D.getDistMD()) + " ;");
             output.println("ref_wave = "
                     + FileUtils.dfX_4.format(patt2D.getWavel()) + " ;");
+            output.println("ref_tilt = "
+                    + FileUtils.dfX_2.format(patt2D.getTiltDeg()) + " ;");
+            output.println("ref_rot = "
+                    + FileUtils.dfX_2.format(patt2D.getRotDeg()) + " ;");
             // escribim l'scan
             // scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
             // scan_type = mar_ct (1.0,) ;
@@ -2114,6 +2146,7 @@ public final class ImgFileUtils {
             log.warning("Error reading EXZ file");
             return false;
         }
+//        patt2D.populateListExzPixels();
         return true;
     }
 

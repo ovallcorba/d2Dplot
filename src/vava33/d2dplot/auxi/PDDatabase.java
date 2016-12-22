@@ -10,10 +10,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.Scanner;
 import java.util.zip.ZipFile;
@@ -509,8 +507,10 @@ public final class PDDatabase {
                 
                 log.writeNameNumPairs("config", true, "ncomp", ncomp);
                 
-                SimpleDateFormat fHora = new SimpleDateFormat("[yyyy-MM-dd 'at' HH:mm]");
-                String dt = fHora.format(new Date());
+//                SimpleDateFormat fHora = new SimpleDateFormat("[yyyy-MM-dd 'at' HH:mm]");
+//                String dt = fHora.format(new Date());
+                
+                String dt = D2Dplot_global.getStringTimeStamp("[yyyy-MM-dd 'at' HH:mm]");
                 
                 output.println("# ====================================================================");
                 output.println("#         D2Dplot compound database "+dt);
