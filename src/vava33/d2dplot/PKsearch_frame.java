@@ -584,6 +584,26 @@ public class PKsearch_frame extends JFrame {
     
     public void integratePk(Peak pic){
         this.readIntegrateOptions();
+        //afegim comprovacio "autos"
+        boolean autoTol = chckbxAutointrad.isSelected();
+        boolean autoazim = chckbxAutoazim.isSelected();
+        boolean autobkgpt = chckbxAutobkgpt.isSelected();
+        if (autobkgpt){
+            int npix = ImgOps.ArcNPix(patt2d, (int)(pic.getPixelCentre().x), (int)(pic.getPixelCentre().y), tol2tpix, angDeg);
+            //agafem un 5% dels pixels com a fons
+            bkgpt = FastMath.round(npix*def_bkgPxAutoPercent);
+            if (bkgpt<def_minbkgPx)bkgpt=def_minbkgPx;
+            log.debug("bkgPT="+bkgpt);
+        }
+        if (autoTol){
+            tol2tpix = ImgOps.intRadPixelsOfAPeak(patt2d,pic.getPixelCentre().x,pic.getPixelCentre().y);
+            //TODO: posem limits?
+        }
+        if (autoazim){
+            angDeg = ImgOps.azimAngleOfAPeak(patt2d,pic.getPixelCentre().x,pic.getPixelCentre().y);
+            log.writeNameNums("CONFIG", true, "x,y,angDeg", pic.getPixelCentre().x,pic.getPixelCentre().y,angDeg);
+            //TODO
+        }
         pic.setZona(ImgOps.YarcTilt(patt2d, (int)(pic.getPixelCentre().x), (int)(pic.getPixelCentre().y), tol2tpix, angDeg, true, bkgpt, false));
         pic.calculate(chckbxLpCorrection.isSelected());
         if (this.patt2d.getPkSearchResult()==null)this.patt2d.setPkSearchResult(new ArrayList<Peak>()); //in case it is not initialized
@@ -591,6 +611,7 @@ public class PKsearch_frame extends JFrame {
         this.updateTable();
     }
     
+    //hauria de ser privat
     public void readIntegrateOptions(){
         try{
             tol2tpix = Integer.parseInt(txtTtol.getText());
@@ -963,3 +984,38 @@ public class PKsearch_frame extends JFrame {
         }   
     }
 }
+
+
+//==============================================================================
+//TTS_REDUC: PICS DE DIAGRAMES DE DIFRACCIO 2D [160311]
+//(c) Prof. Dr. Jordi Rius
+//Collaborator: O. Vallcorba
+//Institut de Ciencia de Materials de Barcelona (CSIC)
+//08193-Bellaterra, Catalonia, Spain
+//
+//==============================================================================
+//NOM DE LA IMATGE:                   dickin_1_0010
+//NPIX_X,NPIX_Y,CENT_X,CENT_Y:  2048  2048     1024.37   1024.15
+//PIXLEN,SEPOD,WAVE: 79.000   185.150  0.42460
+//EIX DE GIR VERTICAL
+//N. PIXELS SATURATS=               0
+//N. PICS SATURATS=               0
+//VALOR DE SATURACIO=       65500.
+//SIGMA_I,n_SIGMA:      39.810     2.000
+//INTEGRACIO CIRCULAR: SEMIARC EN GRAUS=     2.000
+//INTEGRACIO RADIAL MAX. EN PIXELS(MEITAT)=          15
+//------------------------------------------------------------------------------
+//NPEAK     XPIXEL    YPIXEL    RO_VAL        YMAX         FH2     sigma(FH2)    p    CODI INTRAD   D
+//1   1386.89   1080.29    366.84      32637.09      185.76        9.00   0.879    1   10    2.7375
+//2    675.13    844.85    392.58      10186.30      106.72        6.90   0.824    1    8    2.5613
+//3    558.00   1359.46    574.40       6638.55      112.24        7.81   0.703    1    9    1.7709
+//4    733.42   1047.07    291.86       6422.27       72.59        5.69   0.897    1    9    3.4294
+//5   1190.97    347.87    696.50       4736.42       58.86        4.38   0.648    1    8    1.4750
+//6    938.10    357.30    672.40       3562.69       45.63        3.27   0.485    1    9    1.5247
+
+////MODEL ROW VS VIEW ROW!!!
+////int viewRow = table.getSelectedRow();
+////int modelRow = table.convertRowIndexToModel(viewRow);
+////int viewColumn = table.getSelectedColumn();
+////int modelColumn = table.convertColumnIndexToModel(viewColumn);
+////Object cell = model.getValueAt( modelRow, modelColumn );
