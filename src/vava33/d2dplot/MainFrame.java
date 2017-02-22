@@ -5,6 +5,7 @@ import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -40,6 +41,7 @@ import vava33.d2dplot.auxi.ImgOps;
 import vava33.d2dplot.auxi.PDCompound;
 import vava33.d2dplot.auxi.PDDatabase;
 import vava33.d2dplot.auxi.Pattern2D;
+
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JSeparator;
@@ -57,6 +59,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 
 public class MainFrame extends JFrame {
     private static final long serialVersionUID = 4368250280987133953L;
@@ -1131,7 +1134,50 @@ public class MainFrame extends JFrame {
         int selection = fileChooser.showSaveDialog(null);
         if (selection == JFileChooser.APPROVE_OPTION) {
             imFile = fileChooser.getSelectedFile();
-            imFile = ImgFileUtils.exportPNG(imFile, panelImatge.getSubimage());
+            int w = panelImatge.getPanelImatge().getSize().width;
+            int h = panelImatge.getPanelImatge().getSize().height;
+            String s = (String)JOptionPane.showInputDialog(
+                    this,
+                    "Current plot size (Width x Heigth) is "+Integer.toString(w)+" x "+Integer.toString(h)+"pixels\n"
+                            + "Scale factor to apply=",
+                    "Apply scale factor",
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    null,
+                    "1.0");
+            
+            float factor = 1.0f;
+            if ((s != null) && (s.length() > 0)) {
+                try{
+                    factor=Float.parseFloat(s);
+                }catch(Exception ex){
+                    log.debug("error reading factor");
+                }
+                log.writeNameNumPairs("config", true, "factor", factor);
+            }
+            
+            double pageWidth = panelImatge.getPanelImatge().getSize().width*factor;
+            double pageHeight = panelImatge.getPanelImatge().getSize().height*factor;
+            double imageWidth = panelImatge.getPanelImatge().getSize().width;
+            double imageHeight = panelImatge.getPanelImatge().getSize().height;
+
+            double scaleFactor = ImgFileUtils.getScaleFactorToFit(
+                    new Dimension((int) Math.round(imageWidth), (int) Math.round(imageHeight)),
+                    new Dimension((int) Math.round(pageWidth), (int) Math.round(pageHeight)));
+
+            int width = (int) Math.round(pageWidth);
+            int height = (int) Math.round(pageHeight);
+
+            BufferedImage img = new BufferedImage(
+                    width,
+                    height,
+                    BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = img.createGraphics();
+            g2d.scale(scaleFactor, scaleFactor);
+            panelImatge.getPanelImatge().paintComponent(g2d);
+            g2d.dispose();
+
+            imFile = ImgFileUtils.exportPNG(imFile, img);
             if (imFile == null) {
                 tAOut.stat("Error saving PNG file");
                 return;
@@ -1183,7 +1229,8 @@ public class MainFrame extends JFrame {
         if (lblOpened.getText().startsWith("(no")||lblOpened.getText().isEmpty())return;
         
         File f = new File(lblOpened.getText());
-        String fpath = f.getParent();
+//        String fpath = f.getParent();
+        String fpath = f.getAbsolutePath();
         boolean opened=false;
         try {
             if(Desktop.isDesktopSupported()){
