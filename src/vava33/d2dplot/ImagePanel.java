@@ -878,7 +878,7 @@ public class ImagePanel extends JPanel {
         // m�s petita segons la mida del frame i la imatge
         log.writeNameNums("CONFIG", true, "panelWidth, ImageWidth", getPanelImatge().getWidth(),getImage().getWidth());
         log.writeNameNums("CONFIG", true, "panelHeight, Imageheigh", getPanelImatge().getHeight(),getImage().getHeight());
-        double xScale = (double) getPanelImatge().getWidth() / getPanelImatge().getWidth();
+        double xScale = (double) getPanelImatge().getWidth() / getImage().getWidth();
         double yScale = (double) getPanelImatge().getHeight() / getImage().getHeight(this);
         scalefit = (float) FastMath.min(xScale, yScale);
         log.writeNameNums("CONFIG", true, "scalefit", scalefit);
