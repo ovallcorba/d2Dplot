@@ -21,7 +21,7 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String welcomeMSG = "d2Dplot v1611 (161222) by OV";
+    public static final String welcomeMSG = "d2Dplot v1611 (170130) by OV";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     public static final String userDir = System.getProperty("user.dir");
@@ -42,9 +42,9 @@ public final class D2Dplot_global {
     
 //*** parametres que es poden canviar a les opcions *****
     //global 
-    public static boolean logging = false;
-    public static String loglevel = "info"; //info, config, etc...
-    private static final boolean overrideLogLevelConfigFile = false;
+    public static boolean logging = true;
+    public static String loglevel = "debug"; //info, config, etc...
+    private static final boolean overrideLogLevelConfigFile = true;
     private static String workdir = System.getProperty("user.dir");
     public static boolean sideControls = true;
 
@@ -553,7 +553,8 @@ public final class D2Dplot_global {
     }
     
     public static void setWorkdir(File workDirOrFile) {
-        D2Dplot_global.workdir = workDirOrFile.getParent();
+//        D2Dplot_global.workdir = workDirOrFile.getParent();
+        D2Dplot_global.workdir = new File(workDirOrFile.getAbsolutePath()).getParent();
         if (D2Dplot_global.workdir==null)D2Dplot_global.workdir=".";
     }
     
