@@ -1,7 +1,12 @@
 package vava33.d2dplot.auxi;
 
+import java.awt.Dimension;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.IndexColorModel;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -48,7 +53,7 @@ public final class ImgFileUtils {
     private static VavaLogger log = D2Dplot_global.getVavaLogger(ImgFileUtils.class.getName());
 
     public static enum SupportedReadExtensions {
-        BIN, IMG, SPR, GFRM, EDF, D2D;
+        BIN, IMG, SPR, GFRM, EDF, D2D,TIFF;
     }
 
     public static enum SupportedWriteExtensions {
@@ -64,6 +69,7 @@ public final class ImgFileUtils {
         formatInfo.put("img", "IMG Data file (*.img)");
         formatInfo.put("spr", "Spreadsheet (ascii) data file (*.spr)");
         formatInfo.put("gfrm", "Bruker (GADDS) data file (*.gfrm)");
+        formatInfo.put("tiff", "tiff");
     }
 
     public static FileNameExtensionFilter[] getExtensionFilterWrite() {
@@ -447,7 +453,7 @@ public final class ImgFileUtils {
 
         try {
             // llegir "LINIA" amb tots els parametres...
-            Scanner scD2file = new Scanner(d2File);
+            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
             String line = scD2file.nextLine();
             log.debug(line);
             // treurem la informaci� d'aquesta linia.
@@ -613,7 +619,7 @@ public final class ImgFileUtils {
         int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
 
         try {
-            Scanner scD2file = new Scanner(d2File);
+            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
             for (int i = 0; i < 50; i++) {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
@@ -745,10 +751,12 @@ public final class ImgFileUtils {
         
         // primer treiem la info de les linies de text
         try {
-            Scanner scD2file = new Scanner(d2File);
+            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
+            log.debug(scD2file.toString());
             for (int i = 0; i < 50; i++) {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
+                    log.debug("edf line="+line);
                     int iigual = line.indexOf("=") + 1;
                     if (FileUtils.containsIgnoreCase(line, "Size =")) {
                         binSize = Integer.parseInt(line.substring(iigual,
@@ -953,7 +961,7 @@ public final class ImgFileUtils {
 
         // primer treiem la info de les linies de text
         try {
-            Scanner scD2file = new Scanner(d2File);
+            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
             for (int i = 0; i < 50; i++) {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
@@ -1164,6 +1172,70 @@ public final class ImgFileUtils {
         return patt2D; // correcte
     }
 
+    
+    public static Pattern2D readTIFF(File d2File) {
+
+        BufferedImage image = null;
+        try {
+            image = ImageIO.read(d2File);
+        } catch (IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+        if (image == null)return null;
+        System.out.println(image);
+        System.out.println(image.getColorModel());
+
+        ColorModel colorModel = image.getColorModel();
+        IndexColorModel indexColorModel = null;
+        if (colorModel instanceof IndexColorModel)
+        {
+            indexColorModel = (IndexColorModel)colorModel;
+        }
+        else
+        {
+            System.out.println("No IndexColorModel");
+            return null;
+        }
+
+        DataBuffer dataBuffer = image.getRaster().getDataBuffer();
+        DataBufferByte dataBufferByte = null;
+        if (dataBuffer instanceof DataBufferByte)
+        {
+            dataBufferByte = (DataBufferByte)dataBuffer;
+        }
+        else
+        {
+            System.out.println("No DataBufferByte");
+            return null;
+        }
+
+        int w = image.getWidth();
+        int h = image.getHeight();
+        BufferedImage test = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        byte data[] = dataBufferByte.getData();
+        for (int y=0; y<h; y++)
+        {
+            for (int x=0; x<w; x++)
+            {
+                int arrayIndex = x + y * w;
+                int colorIndex = data[arrayIndex];
+                int color = indexColorModel.getRGB(colorIndex);
+                System.out.println("At "+x+" "+y+" index is "+colorIndex+
+                        " with color "+Integer.toHexString(color));
+                test.setRGB(x, y, color);
+            }
+        }
+        try {
+            ImageIO.write(test, "PNG", new File("exampleTiff256.png"));
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    
     // OBERTURA DELS DIFERENTS FORMATS DE DADES2D
     public static Pattern2D readPatternFile(File d2File, boolean exzConfirm) {
         Pattern2D patt2D = null;
@@ -1215,6 +1287,8 @@ public final class ImgFileUtils {
             case SPR:
                 patt2D = ImgFileUtils.readSPR(d2File);
                 break;
+            case TIFF:
+                patt2D = ImgFileUtils.readTIFF(d2File);
             default:
                 break;
 
@@ -1294,7 +1368,7 @@ public final class ImgFileUtils {
         int dimX = 0, dimY = 0;
         try {
             long start = System.nanoTime();
-            Scanner scD2file = new Scanner(d2File);
+            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
             // 1a linia NCOL NFILES ...
             dimX = Integer.parseInt(scD2file.next().trim()); // num columnes
             dimY = Integer.parseInt(scD2file.next().trim()); // num files
@@ -1773,6 +1847,27 @@ public final class ImgFileUtils {
         return null;
     }
 
+    public static double getScaleFactorToFit(Dimension original, Dimension toFit) {
+        double dScale = 1d;
+        if (original != null && toFit != null) {
+            double dScaleWidth = getScaleFactor(original.width, toFit.width);
+            double dScaleHeight = getScaleFactor(original.height, toFit.height);
+
+            dScale = Math.min(dScaleHeight, dScaleWidth);
+        }
+        return dScale;
+    }
+
+    public static double getScaleFactor(int iMasterSize, int iTargetSize) {
+        double dScale = 1;
+        if (iMasterSize > iTargetSize) {
+            dScale = (double) iTargetSize / (double) iMasterSize;
+        } else {
+            dScale = (double) iTargetSize / (double) iMasterSize;
+        }
+        return dScale;
+    }
+    
     private static boolean isNewBIN(File d2File) {
         // primer mirem la cap�alera
         int dimX = 0, dimY = 0;
@@ -2018,6 +2113,7 @@ public final class ImgFileUtils {
         
         if (!trobat){
             File f = new File(D2Dplot_global.getWorkdir());
+            log.debug(f.toString());
             String prefix = imgFile.getName().substring(0, FastMath.min(4,imgFile.getName().length()));
             File[] matchingFiles = f.listFiles(new filtreExz(prefix,"exz"));
             if(matchingFiles.length>0){
