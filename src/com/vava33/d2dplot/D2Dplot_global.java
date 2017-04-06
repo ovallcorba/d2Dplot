@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.Color;
 import java.io.BufferedWriter;
@@ -9,11 +9,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Scanner;
 
-import vava33.d2dplot.auxi.PDDatabase;
-import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.auxi.PuntClick;
-import vava33.d2dplot.auxi.PuntSolucio;
-
+import com.vava33.d2dplot.auxi.PDDatabase;
+import com.vava33.d2dplot.auxi.Pattern2D;
+import com.vava33.d2dplot.auxi.PuntClick;
+import com.vava33.d2dplot.auxi.PuntSolucio;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
@@ -21,7 +20,7 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String welcomeMSG = "d2Dplot v1611 (170130) by OV";
+    public static final String welcomeMSG = "d2Dplot v1703 (170405) by OV";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     public static final String userDir = System.getProperty("user.dir");
@@ -34,7 +33,10 @@ public final class D2Dplot_global {
     public static final String angstrom= "\u212B";
     public static final String fDiaHora1 = "[yyMMddHHmm]";
     public static final String fDiaHora2 = "[yyyy-MM-dd 'at' HH:mm]";
-        
+    
+    public static String[] lightColors = {"black","blue","red","green","magenta","cyan","pink","yellow"}; //8 colors
+    public static String[] DarkColors = {"yellow","white","cyan","green","magenta","blue","red","pink"}; //8 colors
+    
     public static VavaLogger log;
 
     public static boolean keepCalibration = false;
@@ -42,12 +44,14 @@ public final class D2Dplot_global {
     
 //*** parametres que es poden canviar a les opcions *****
     //global 
-    public static boolean logging = true;
-    public static String loglevel = "debug"; //info, config, etc...
-    private static final boolean overrideLogLevelConfigFile = true;
+    public static boolean logging = false;
+    public static String loglevel = "info"; //info, config, etc...
+    private static final boolean overrideLogLevelConfigFile = false;
     private static String workdir = System.getProperty("user.dir");
     public static boolean sideControls = true;
-
+    private static Integer def_Width=768;
+    private static Integer def_Height=1024;
+    
     //DB
     public static String DBfile;
     public static String QLfile;
@@ -94,6 +98,8 @@ public final class D2Dplot_global {
         //global
         workdir = System.getProperty("user.dir");
         sideControls = true;
+        def_Width=null;
+        def_Height=null;
         
         //now initilize the others with the NONE value
         //DB (dels DBfiles ja s'encarrega checkDBs
@@ -140,7 +146,18 @@ public final class D2Dplot_global {
         }else{
             DB_dialog.setMinDspacingToSearch(minDspacingToSearch.floatValue());
         }
-
+        
+        if (def_Width == null){
+            def_Width = MainFrame.getDef_Width();
+        }else{
+            MainFrame.setDef_Width(def_Width.intValue());
+        }
+        if (def_Height == null){
+            def_Height = MainFrame.getDef_Height();
+        }else{
+            MainFrame.setDef_Height(def_Height.intValue());
+        }
+        
         //Calib
         
         //ImagePanel and pattern2D
@@ -307,6 +324,17 @@ public final class D2Dplot_global {
                 if (FileUtils.containsIgnoreCase(line, "CompoundDB")){
                     String sDBfile = (line.substring(iigual, line.trim().length()).trim());
                     if (new File(sDBfile).exists())DBfile = sDBfile;
+                }
+                
+                if (FileUtils.containsIgnoreCase(line, "IniWidth")){
+                    String value = (line.substring(iigual, line.trim().length()).trim());
+                    Integer ivalue = parseInteger(value);
+                    if(ivalue!=null)def_Width = ivalue.intValue();
+                }
+                if (FileUtils.containsIgnoreCase(line, "IniHeight")){
+                    String value = (line.substring(iigual, line.trim().length()).trim());
+                    Integer ivalue = parseInteger(value);
+                    if(ivalue!=null)def_Height = ivalue.intValue();
                 }
 
                 if(!overrideLogLevelConfigFile){
@@ -483,6 +511,8 @@ public final class D2Dplot_global {
             output.println("logging = "+Boolean.toString(logging));
             output.println("loglevel = "+loglevel);
             output.println("sideControls = "+Boolean.toString(sideControls));
+            output.println(String.format("%s = %d", "IniWidth",def_Width));
+            output.println(String.format("%s = %d", "IniHeight",def_Height));
             
             output.println("# General plotting");
             output.println("colorClickPoints = "+getColorName(colorClickPoints));
@@ -566,7 +596,7 @@ public final class D2Dplot_global {
         D2Dplot_global.configFileReaded = configFileReaded;
     }
 
-    private static Color parseColorName(String name){
+    public static Color parseColorName(String name){
         if (FileUtils.containsIgnoreCase(name, "black")) return Color.black;
         if (FileUtils.containsIgnoreCase(name, "green")) return Color.green;
         if (FileUtils.containsIgnoreCase(name, "red")) return Color.red;
@@ -727,7 +757,9 @@ public final class D2Dplot_global {
         log.printmsg(loglevel,"logging = "+Boolean.toString(logging));
         log.printmsg(loglevel,"loglevel = "+D2Dplot_global.loglevel);
         log.printmsg(loglevel,"sideControls = "+Boolean.toString(sideControls));
-
+        log.printmsg(loglevel,String.format("%s = %d", "IniWidth",def_Width));
+        log.printmsg(loglevel,String.format("%s = %d", "IniHeight",def_Height));
+        
         log.printmsg(loglevel,"# General plotting");
         log.printmsg(loglevel,"colorClickPoints = "+getColorName(colorClickPoints));
         log.printmsg(loglevel,"colorClickPointsCircle = "+getColorName(colorClickPointsCircle));

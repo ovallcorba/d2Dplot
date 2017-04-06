@@ -1,4 +1,5 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
+
 
 import java.awt.Color;
 import java.awt.Cursor;
@@ -31,16 +32,15 @@ import javax.swing.UIManager;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import com.vava33.d2dplot.auxi.ArgumentLauncher;
+import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.ImgOps;
+import com.vava33.d2dplot.auxi.PDCompound;
+import com.vava33.d2dplot.auxi.PDDatabase;
+import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.auxi.ArgumentLauncher;
-import vava33.d2dplot.auxi.ImgFileUtils;
-import vava33.d2dplot.auxi.ImgOps;
-import vava33.d2dplot.auxi.PDCompound;
-import vava33.d2dplot.auxi.PDDatabase;
-import vava33.d2dplot.auxi.Pattern2D;
 
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
@@ -61,9 +61,15 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
+import javax.swing.border.LineBorder;
+import javax.swing.ScrollPaneConstants;
+
 public class MainFrame extends JFrame {
     private static final long serialVersionUID = 4368250280987133953L;
-
+    
+    private static int def_Width=1100;
+    private static int def_Height=768;
+    
     private static VavaLogger log;
     
     private Pattern2D patt2D;
@@ -226,7 +232,7 @@ public class MainFrame extends JFrame {
         setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource("/img/Icona.png")));
         setTitle("d2Dplot");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 1180, 853);
+        setBounds(100, 100, 1129, 945);
         
         menuBar = new JMenuBar();
         setJMenuBar(menuBar);
@@ -462,7 +468,7 @@ public class MainFrame extends JFrame {
         this.scrollPane.setViewportView(this.tAOut);
         this.panel_all = new JPanel();
         this.splitPane.setLeftComponent(this.panel_all);
-        panel_all.setLayout(new MigLayout("fill, insets 0", "[1200px,grow]", "[][604px,grow]"));
+        panel_all.setLayout(new MigLayout("fill, insets 0", "[1200px,grow]", "[][grow]"));
         
         panel_2 = new JPanel();
         panel_all.add(panel_2, "cell 0 0,grow");
@@ -518,11 +524,27 @@ public class MainFrame extends JFrame {
         this.panel_all.add(this.splitPane_1, "cell 0 1,grow");
 
         this.panelImatge = new ImagePanel(D2Dplot_global.sideControls);
-        this.splitPane_1.setLeftComponent(this.panelImatge);
+        
+        
+        JScrollPane jspimage = new JScrollPane();
+        jspimage.setViewportBorder(null);
+        jspimage.setBorder(null);
+        jspimage.setViewportView(this.panelImatge);
+        this.splitPane_1.setLeftComponent(jspimage);
+        
+//        this.splitPane_1.setLeftComponent(this.panelImatge);
         this.panelImatge.setBorder(null);
         this.panel_controls = new JPanel();
-        this.splitPane_1.setRightComponent(this.panel_controls);
-        panel_controls.setLayout(new MigLayout("fill, insets 0", "[120px,grow]", "[][][][][][grow]"));
+        
+        JScrollPane jscontrols = new JScrollPane();
+        jscontrols.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        jscontrols.setViewportBorder(null);
+        jscontrols.setBorder(null);
+        jscontrols.setViewportView(this.panel_controls);
+        this.splitPane_1.setRightComponent(jscontrols);
+        
+//        this.splitPane_1.setRightComponent(this.panel_controls);
+        panel_controls.setLayout(new MigLayout("fill, insets 0", "[130px,grow]", "[5px:20px:35px,grow][::160px,grow][::85px,grow][::140px,grow][::130px,grow][grow]"));
         
         btnInstParameters = new JButton("I. Parameters");
         btnInstParameters.addActionListener(new ActionListener() {
@@ -535,19 +557,19 @@ public class MainFrame extends JFrame {
         this.panel_controls.add(this.panel_opcions, "cell 0 1,grow");
         this.panel_opcions.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Plot",
                 TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-        this.btnResetView = new JButton("Reset view");
-        btnResetView.setPreferredSize(new Dimension(90, 32));
+        this.btnResetView = new JButton("Fit");
+//        btnResetView.setPreferredSize(new Dimension(90, 32));
         this.btnResetView.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 do_btnResetView_actionPerformed(arg0);
             }
         });
-        panel_opcions.setLayout(new MigLayout("fill, insets 0", "[60px][60]", "[][][][][][]"));
+        panel_opcions.setLayout(new MigLayout("fill, insets 0", "[60px][60]", "[5px:20px:35px][5px:20px:35px][5px:20px:35px][5px:20px:35px]"));
         this.btnResetView.setMargin(new Insets(2, 2, 2, 2));
-        this.panel_opcions.add(this.btnResetView, "cell 0 0 2 1,growx,aligny center");
-        this.btnMidaReal = new JButton("True size");
-        btnMidaReal.setPreferredSize(new Dimension(90, 32));
+        this.panel_opcions.add(this.btnResetView, "cell 0 0,growx,aligny center");
+        this.btnMidaReal = new JButton("100%");
+//        btnMidaReal.setPreferredSize(new Dimension(90, 32));
         this.btnMidaReal.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -555,10 +577,10 @@ public class MainFrame extends JFrame {
             }
         });
         this.btnMidaReal.setMargin(new Insets(2, 2, 2, 2));
-        this.panel_opcions.add(this.btnMidaReal, "cell 0 1 2 1,growx,aligny center");
+        this.panel_opcions.add(this.btnMidaReal, "cell 1 0,growx,aligny center");
         this.btn05x = new JButton("0.5x");
-        panel_opcions.add(btn05x, "cell 0 2,alignx center");
-        btn05x.setPreferredSize(new Dimension(50, 32));
+        panel_opcions.add(btn05x, "cell 0 1,growx,aligny center");
+//        btn05x.setPreferredSize(new Dimension(50, 32));
         this.btn05x.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
@@ -567,8 +589,8 @@ public class MainFrame extends JFrame {
         });
         this.btn05x.setMargin(new Insets(1, 2, 1, 2));
         this.btn2x = new JButton("2x");
-        panel_opcions.add(btn2x, "cell 1 2,alignx center");
-        btn2x.setPreferredSize(new Dimension(50, 32));
+        panel_opcions.add(btn2x, "cell 1 1,growx,aligny center");
+//        btn2x.setPreferredSize(new Dimension(50, 32));
         this.btn2x.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -583,15 +605,7 @@ public class MainFrame extends JFrame {
                 do_chckbxColor_itemStateChanged(arg0);
             }
         });
-        panel_opcions.add(chckbxColor, "cell 0 3 2 1");
-        
-        chckbxInvertY = new JCheckBox("Invert Y");
-        chckbxInvertY.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                do_chckbxInvertY_itemStateChanged(e);
-            }
-        });
-        panel_opcions.add(chckbxInvertY, "cell 0 4 2 1");
+        panel_opcions.add(chckbxColor, "cell 0 2");
         
         chckbxPaintExz = new JCheckBox("Paint ExZ");
         chckbxPaintExz.addItemListener(new ItemListener() {
@@ -599,19 +613,27 @@ public class MainFrame extends JFrame {
                 do_chckbxPaintExz_itemStateChanged(arg0);
             }
         });
-        panel_opcions.add(chckbxPaintExz, "cell 0 5 2 1");
+        
+        chckbxInvertY = new JCheckBox("flip Y");
+        chckbxInvertY.addItemListener(new ItemListener() {
+            public void itemStateChanged(ItemEvent e) {
+                do_chckbxInvertY_itemStateChanged(e);
+            }
+        });
+        panel_opcions.add(chckbxInvertY, "cell 1 2");
+        panel_opcions.add(chckbxPaintExz, "cell 0 3 2 1");
         
         panel = new JPanel();
         panel.setBorder(new TitledBorder(null, "Points", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel_controls.add(panel, "cell 0 2,grow");
-        panel.setLayout(new MigLayout("fill, insets 0", "[]", "[][]"));
+        panel.setLayout(new MigLayout("fill, insets 0", "[]", "[5px:20px][5px:20px,grow]"));
         this.chckbxIndex = new JCheckBox("Sel. Points");
-        panel.add(chckbxIndex, "cell 0 0,alignx left,aligny center");
+        panel.add(chckbxIndex, "cell 0 0,growx,aligny center");
         chckbxIndex.setSelected(true);
         this.btnSaveDicvol = new JButton("Points List");
         panel.add(btnSaveDicvol, "cell 0 1,growx,aligny center");
         this.btnSaveDicvol.setMinimumSize(new Dimension(100, 28));
-        this.btnSaveDicvol.setPreferredSize(new Dimension(100, 32));
+//        this.btnSaveDicvol.setPreferredSize(new Dimension(100, 32));
         this.btnSaveDicvol.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
@@ -621,12 +643,12 @@ public class MainFrame extends JFrame {
         this.btnSaveDicvol.setMargin(new Insets(2, 2, 2, 2));
         
         panel_3 = new JPanel();
-        panel_3.setBorder(new TitledBorder(null, "Identification", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_3.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "Phase ID", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
         panel_controls.add(panel_3, "cell 0 3,grow");
-        panel_3.setLayout(new MigLayout("fill, insets 0, hidemode 3", "[120px]", "[][][][][]"));
+        panel_3.setLayout(new MigLayout("fill, insets 0, hidemode 3", "[120px]", "[5px:20px][][5px:20px][5px:20px][]"));
         
         btnDbdialog = new JButton("Database");
-        btnDbdialog.setPreferredSize(new Dimension(100, 32));
+//        btnDbdialog.setPreferredSize(new Dimension(100, 32));
         btnDbdialog.setMargin(new Insets(2, 2, 2, 2));
         panel_3.add(btnDbdialog, "cell 0 0,growx,aligny center");
         
@@ -634,7 +656,7 @@ public class MainFrame extends JFrame {
         panel_3.add(separator_1, "cell 0 1,growx,aligny center");
         
         chckbxShowRings = new JCheckBox("Quicklist");
-        panel_3.add(chckbxShowRings, "cell 0 2,alignx left,aligny center");
+        panel_3.add(chckbxShowRings, "cell 0 2,growx,aligny center");
         
         combo_LATdata = new JComboBox();
         combo_LATdata.addItemListener(new ItemListener() {
@@ -648,15 +670,15 @@ public class MainFrame extends JFrame {
         btnAddLat = new JButton("Add to List");
         btnAddLat.setVisible(false);
         btnAddLat.setEnabled(false);
-        btnAddLat.setPreferredSize(new Dimension(100, 32));
+//        btnAddLat.setPreferredSize(new Dimension(100, 32));
         panel_3.add(btnAddLat, "cell 0 4,growx,aligny center");
         
         panel_1 = new JPanel();
         panel_1.setBorder(new TitledBorder(null, "Shortcuts", TitledBorder.LEADING, TitledBorder.TOP, null, null));
         panel_controls.add(panel_1, "cell 0 4,grow");
-        panel_1.setLayout(new MigLayout("fill, insets 0", "[grow]", "[][][][][]"));
+        panel_1.setLayout(new MigLayout("fill, insets 0", "[grow]", "[5px:20px][5px:20px][5px:20px]"));
         
-        btnPeakSearchint = new JButton("Peak Search");
+        btnPeakSearchint = new JButton("PK search");
         btnPeakSearchint.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_btnPeakSearchint_actionPerformed(arg0);
@@ -693,11 +715,22 @@ public class MainFrame extends JFrame {
     }
 
     private void inicialitza() {
-        this.setSize(1200, 960); //ho centra el metode main
+//        this.setSize(1200, 960); //ho centra el metode main
+//        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+//        if(this.getWidth()>screenSize.width||this.getHeight()>screenSize.height){
+//            this.setSize(screenSize.width-100,screenSize.height-100);
+//        }
+        
+        //HO FEM CABRE (170322)
+        this.setSize(MainFrame.getDef_Width(), MainFrame.getDef_Height()); //ho centra el metode main
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        if(this.getWidth()>screenSize.width||this.getHeight()>screenSize.height){
-            this.setSize(screenSize.width-100,screenSize.height-100);
+        while(this.getWidth()>screenSize.width){
+            this.setSize(this.getWidth()-100, this.getHeight());
         }
+        while(this.getHeight()>screenSize.height){
+            this.setSize(this.getWidth(), this.getHeight()-100);
+        }
+        
         tAOut.stat(D2Dplot_global.welcomeMSG);
         FileUtils.setLocale();
         
@@ -721,6 +754,29 @@ public class MainFrame extends JFrame {
         }
         combo_LATdata.setPrototypeDisplayValue("XX"); 
         updateQuickList();
+        
+        
+        //MIDES BUTONS
+        btnInstParameters.setPreferredSize(new Dimension(110,30));
+        btnInstParameters.setMinimumSize(new Dimension(110,15));
+        btnResetView.setPreferredSize(new Dimension(50,30));
+        btnResetView.setMinimumSize(new Dimension(50,15));
+        btnMidaReal.setPreferredSize(new Dimension(50,30));
+        btnMidaReal.setMinimumSize(new Dimension(50,15));
+        btn05x.setPreferredSize(new Dimension(50,30));
+        btn05x.setMinimumSize(new Dimension(50,15));
+        btn2x.setPreferredSize(new Dimension(50,30));
+        btn2x.setMinimumSize(new Dimension(50,15));
+        btnSaveDicvol.setPreferredSize(new Dimension(110,30));
+        btnSaveDicvol.setMinimumSize(new Dimension(110,15));
+        btnDbdialog.setPreferredSize(new Dimension(110,30));
+        btnDbdialog.setMinimumSize(new Dimension(110,15));
+        btnPeakSearchint.setPreferredSize(new Dimension(110,30));
+        btnPeakSearchint.setMinimumSize(new Dimension(110,15));
+        btnTtsdincoSol.setPreferredSize(new Dimension(110,30));
+        btnTtsdincoSol.setMinimumSize(new Dimension(110,15));
+        btnRadIntegr.setPreferredSize(new Dimension(110,30));
+        btnRadIntegr.setMinimumSize(new Dimension(110,15));
     }
     
     public static void updateQuickList(){
@@ -1501,5 +1557,28 @@ public class MainFrame extends JFrame {
     public void setIrWin(IntegracioRadial irWin) {
         this.irWin = irWin;
     }
-
+    /**
+     * @return the def_Width
+     */
+    public static int getDef_Width() {
+        return def_Width;
+    }
+    /**
+     * @param def_Width the def_Width to set
+     */
+    public static void setDef_Width(int def_Width) {
+        MainFrame.def_Width = def_Width;
+    }
+    /**
+     * @return the def_Height
+     */
+    public static int getDef_Height() {
+        return def_Height;
+    }
+    /**
+     * @param def_Height the def_Height to set
+     */
+    public static void setDef_Height(int def_Height) {
+        MainFrame.def_Height = def_Height;
+    }
 }
