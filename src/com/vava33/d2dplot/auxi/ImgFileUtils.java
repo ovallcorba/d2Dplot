@@ -1,12 +1,13 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
+
+import ij.ImagePlus;
+import ij.io.Opener;
+import ij.measure.Calibration;
+import ij.process.ImageProcessor;
 
 import java.awt.Dimension;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
-import java.awt.image.DataBuffer;
-import java.awt.image.DataBufferByte;
-import java.awt.image.IndexColorModel;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -42,18 +43,17 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.IntegracioRadial;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.IntegracioRadial;
 
 public final class ImgFileUtils {
     private static VavaLogger log = D2Dplot_global.getVavaLogger(ImgFileUtils.class.getName());
 
     public static enum SupportedReadExtensions {
-        BIN, IMG, SPR, GFRM, EDF, D2D,TIFF;
+        BIN, IMG, SPR, GFRM, EDF, D2D, TIF, CBF;
     }
 
     public static enum SupportedWriteExtensions {
@@ -69,7 +69,8 @@ public final class ImgFileUtils {
         formatInfo.put("img", "IMG Data file (*.img)");
         formatInfo.put("spr", "Spreadsheet (ascii) data file (*.spr)");
         formatInfo.put("gfrm", "Bruker (GADDS) data file (*.gfrm)");
-        formatInfo.put("tiff", "tiff");
+        formatInfo.put("tif", "TIFF image format (*.tif)");
+        formatInfo.put("cbf", "Dectris Pilatus image format (*.cbf)");
     }
 
     public static FileNameExtensionFilter[] getExtensionFilterWrite() {
@@ -82,7 +83,7 @@ public final class ImgFileUtils {
         while (itrformats.hasNext()) {
             String frm = itrformats.next();
             // this line returns the FORMAT in the ENUM or NULL
-            ImgFileUtils.SupportedWriteExtensions wfrm = FileUtils.searchEnum(
+            ImgFileUtils.SupportedWriteExtensions wfrm = (SupportedWriteExtensions) FileUtils.searchEnum(
                     ImgFileUtils.SupportedWriteExtensions.class, frm);
             if (wfrm != null) {
                 // afegim filtre
@@ -106,7 +107,7 @@ public final class ImgFileUtils {
         while (itrformats.hasNext()) {
             String frm = itrformats.next();
             // this line returns the FORMAT in the ENUM or NULL
-            ImgFileUtils.SupportedReadExtensions wfrm = FileUtils.searchEnum(
+            ImgFileUtils.SupportedReadExtensions wfrm = (SupportedReadExtensions) FileUtils.searchEnum(
                     ImgFileUtils.SupportedReadExtensions.class, frm);
             if (wfrm != null) {
                 // afegim filtre
@@ -1174,65 +1175,211 @@ public final class ImgFileUtils {
 
     
     public static Pattern2D readTIFF(File d2File) {
+        Opener op = new Opener();
+        ImagePlus imp = op.openImage("/home/ovallcorba/ovallcorba/eclipse_ws/TESTS/ipp6.TIF");
+//        ImageProcessor sp = (imp.getProcessor()).convertToShort(false);
+        ImageProcessor sp = imp.getProcessor();
 
-        BufferedImage image = null;
-        try {
-            image = ImageIO.read(d2File);
-        } catch (IOException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
+        Pattern2D patt2D = null;
+        long start = System.nanoTime(); // control temps
+        float pixSizeX = 0, pixSizeY = 0;
+        float distOD = 0;
+        float beamCX = 0, beamCY = 0, wl = 0;
+        int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
+        
+        dimX = imp.getWidth();
+        dimY = imp.getHeight();
+        Calibration cal = imp.getCalibration();
+        String xunit = cal.getXUnit();
+        float factor = 1.0f;
+        if (FileUtils.containsIgnoreCase(xunit, "inch")){
+            factor = 25.4f;
         }
-        if (image == null)return null;
-        System.out.println(image);
-        System.out.println(image.getColorModel());
-
-        ColorModel colorModel = image.getColorModel();
-        IndexColorModel indexColorModel = null;
-        if (colorModel instanceof IndexColorModel)
-        {
-            indexColorModel = (IndexColorModel)colorModel;
-        }
-        else
-        {
-            System.out.println("No IndexColorModel");
-            return null;
-        }
-
-        DataBuffer dataBuffer = image.getRaster().getDataBuffer();
-        DataBufferByte dataBufferByte = null;
-        if (dataBuffer instanceof DataBufferByte)
-        {
-            dataBufferByte = (DataBufferByte)dataBuffer;
-        }
-        else
-        {
-            System.out.println("No DataBufferByte");
-            return null;
-        }
-
-        int w = image.getWidth();
-        int h = image.getHeight();
-        BufferedImage test = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        byte data[] = dataBufferByte.getData();
-        for (int y=0; y<h; y++)
-        {
-            for (int x=0; x<w; x++)
-            {
-                int arrayIndex = x + y * w;
-                int colorIndex = data[arrayIndex];
-                int color = indexColorModel.getRGB(colorIndex);
-                System.out.println("At "+x+" "+y+" index is "+colorIndex+
-                        " with color "+Integer.toHexString(color));
-                test.setRGB(x, y, color);
+        pixSizeX = (float) (cal.pixelWidth*factor);
+        pixSizeY = (float) (cal.pixelHeight*factor);
+        
+        log.debug(String.format("pxw=%f, pxh=%f, pxd=%f",cal.pixelWidth,cal.pixelHeight,cal.pixelDepth));
+        
+        patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,-1.0f, true);
+        patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
+        
+        log.debug(String.format("width=%d height=%d",imp.getWidth(),imp.getHeight()));
+//        System.out.printf("pixel(x,y)=%d,%d getpixel=%d getpixelvalue=%f",2027,862,sp.getPixel(2027, 862),sp.getPixelValue(2027, 862));
+        
+        int count = 0;
+        for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+            for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+                int inten = sp.getPixel(j,i);
+                patt2D.setInten(j, i,inten);
+                count++;
+                if (inten>patt2D.getMaxI())patt2D.setMaxI(inten);
+                if (inten<patt2D.getMinI())patt2D.setMinI(inten);
             }
         }
+        
+        long end = System.nanoTime();
+        patt2D.setMillis((float) ((end - start) / 1000000d));
+        patt2D.setPixCount(count);
+        return patt2D;
+    }
+    
+    
+    
+    public static Pattern2D readCBF(File d2File) {
+        Pattern2D patt2D = null;
+        long start = System.nanoTime(); // control temps
+        float pixSizeX = 0, pixSizeY = 0;
+        float distOD = 0;
+        float beamCX = 0, beamCY = 0, wl = 0;
+        int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
+        float omeIni = 0, omeFin = 0, acqTime = -1;
+
+        // primer treiem la info de les linies de text
         try {
-            ImageIO.write(test, "PNG", new File("exampleTiff256.png"));
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
+            for (int i = 0; i < 6; i++) {
+                if (scD2file.hasNextLine()) {
+                    String line = scD2file.nextLine();
+
+                    if (FileUtils.containsIgnoreCase(line, "Beam_xy")) {
+                        //# Beam_xy (1237.95, 1302.57) pixels
+                        try{
+                            String s1 = line.trim().split("(")[1];
+                            String s2 = s1.trim().split(")")[0];
+                            String[] vals = s2.trim().split(",");
+                            beamCX = Float.parseFloat(vals[0]);
+                            beamCY = Float.parseFloat(vals[1]);
+                        }catch(Exception ex){
+                            log.warning("error reading beam centre from cbf");
+                        }
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "Pixel_size")) {
+                        String[] vals = line.trim().split("\\s+");
+                        try{
+                            pixSizeX=Float.parseFloat(vals[2])*1000; //m to mm
+                            pixSizeY=Float.parseFloat(vals[2])*1000;
+                        }catch(Exception ex){
+                            log.warning("error reading pixel size from cbf");
+                        }
+                    }
+                    
+                    if (FileUtils.containsIgnoreCase(line, "Detector_distance")) {
+                        String[] vals = line.trim().split("\\s+");
+                        try{
+                            distOD=Float.parseFloat(vals[2])*1000; //m to mm
+                        }catch(Exception ex){
+                            log.warning("error reading distance from cbf");
+                        }
+                    }
+
+                    if (FileUtils.containsIgnoreCase(line, "Wavelength")) {
+                        String[] vals = line.trim().split("\\s+");
+                        try{
+                            wl=Float.parseFloat(vals[2]);
+                        }catch(Exception ex){
+                            log.warning("error reading wavelength from cbf");
+                        }
+                    }
+
+                    if (FileUtils.containsIgnoreCase(line, "Start_angle")) {
+                        String[] vals = line.trim().split("\\s+");
+                        try{
+                            omeIni=Float.parseFloat(vals[2]);
+                        }catch(Exception ex){
+                            log.warning("error reading start angle from cbf");
+                        }
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "Angle_increment")) {
+                        String[] vals = line.trim().split("\\s+");
+                        try{
+                            float incr = Float.parseFloat(vals[2]);
+                            omeFin = omeIni+incr;
+                        }catch(Exception ex){
+                            log.warning("error reading angle increment from cbf");
+                        }
+                        
+                    }
+
+                    if (FileUtils.containsIgnoreCase(line, "Exposure_time")) {
+                        String[] vals = line.trim().split("\\s+");
+                        try{
+                            acqTime = Float.parseFloat(vals[2]); 
+                        }catch(Exception ex){
+                            log.warning("error reading Exposure_time from cbf");
+                        }
+                    }
+                }
+            }
+            scD2file.close();
+        }catch(Exception ex){
+            if (D2Dplot_global.isDebug()) ex.printStackTrace();
+            log.warning("error reading CBF header");
         }
-        return null;
+        
+        
+        ImageJCbfReader reader = new ImageJCbfReader();
+        ImagePlus imp = reader.read(d2File);
+        ImageProcessor sp = imp.getProcessor();
+
+        dimX = imp.getWidth();
+        dimY = imp.getHeight();
+        Calibration cal = imp.getCalibration();
+        String xunit = cal.getXUnit();
+        float factor = 1.0f;
+        if (FileUtils.containsIgnoreCase(xunit, "inch")){
+            factor = 25.4f;
+        }
+        pixSizeX = (float) (cal.pixelWidth*factor);
+        pixSizeY = (float) (cal.pixelHeight*factor);
+        
+        log.debug(String.format("pxw=%f, pxh=%f, pxd=%f",cal.pixelWidth,cal.pixelHeight,cal.pixelDepth));
+        
+        patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,-1.0f, true);
+        patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
+        patt2D.setScanParameters(omeIni, omeFin, acqTime);
+        
+        log.debug(String.format("width=%d height=%d",imp.getWidth(),imp.getHeight()));
+//        System.out.printf("pixel(x,y)=%d,%d getpixel=%d getpixelvalue=%f",2027,862,sp.getPixel(2027, 862),sp.getPixelValue(2027, 862));
+        
+        int count = 0;
+        for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+            for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+                int inten = (int) sp.getPixelValue(j,i);
+                patt2D.setInten(j, i,inten);
+                count++;
+                if (inten>patt2D.getMaxI())patt2D.setMaxI(inten);
+                if (inten<patt2D.getMinI())patt2D.setMinI(inten);
+            }
+        }
+        
+        
+        //TODO:Cal escalar a max 65000??? ho he comentat al final...
+        
+        patt2D.setScale(1.0f);
+        
+        log.writeNameNumPairs("CONFIG", true,"dimX,dimY,beamCX,beamCY,pixSizeX,distOD,wl", dimX, dimY, beamCX, beamCY, pixSizeX, distOD, wl);
+        log.writeNameNumPairs("CONFIG", true, "maxI,minI", patt2D.getMaxI(),patt2D.getMinI());
+        
+        // calculem el factor d'escala (valor maxim entre quocient i 1, mai
+        // escalem per sobre)
+//        patt2D.setScale(FastMath.max(patt2D.getMaxI() / (float) D2Dplot_global.satur65, 1.000f));
+//
+//        // ara aplico factor escala i guardo on i com toca
+//        for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+//            for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+//                                                         // (X)
+//                patt2D.setInten(j, i,(int) (sp.getPixelValue(j,i)/patt2D.getScale()));
+//            }
+//        }
+//        // corregim maxI i minI
+//        patt2D.setMaxI((int) (patt2D.getMaxI() / patt2D.getScale()));
+//        patt2D.setMinI((int) (patt2D.getMinI() / patt2D.getScale()));
+        
+        
+        long end = System.nanoTime();
+        patt2D.setMillis((float) ((end - start) / 1000000d));
+        patt2D.setPixCount(count);
+        return patt2D;
     }
     
     
@@ -1244,7 +1391,7 @@ public final class ImgFileUtils {
         String ext = FileUtils.getExtension(d2File).trim();
 
         // this line returns the FORMAT in the ENUM or NULL
-        SupportedReadExtensions format = FileUtils.searchEnum(
+        SupportedReadExtensions format = (SupportedReadExtensions) FileUtils.searchEnum(
                 SupportedReadExtensions.class, ext);
         if (format != null) {
             log.debug("Format=" + format.toString());
@@ -1287,13 +1434,18 @@ public final class ImgFileUtils {
             case SPR:
                 patt2D = ImgFileUtils.readSPR(d2File);
                 break;
-            case TIFF:
+            case TIF:
                 patt2D = ImgFileUtils.readTIFF(d2File);
+                break;
+            case CBF:
+                patt2D = ImgFileUtils.readCBF(d2File);
+                break;
             default:
                 break;
 
         }
-
+        patt2D.setFileFormat(format);
+        
         if (patt2D != null) {
             // operacions generals despres d'obrir
             patt2D.calcMeanI();
@@ -1322,7 +1474,7 @@ public final class ImgFileUtils {
         String ext = FileUtils.getExtension(d2File).trim();
 
         // this line returns the FORMAT in the ENUM or NULL
-        SupportedWriteExtensions format = FileUtils.searchEnum(
+        SupportedWriteExtensions format = (SupportedWriteExtensions) FileUtils.searchEnum(
                 SupportedWriteExtensions.class, ext);
         if (format != null) {
             log.debug("Format=" + format.toString());
