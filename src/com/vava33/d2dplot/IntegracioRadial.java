@@ -1,6 +1,5 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
-import java.awt.Color;
 import java.awt.Toolkit;
 
 import javax.swing.JFrame;
@@ -16,27 +15,22 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 
 import org.apache.commons.math3.util.FastMath;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
 
+import com.vava33.d2dplot.auxi.ImgOps;
+import com.vava33.d2dplot.auxi.Pattern1D;
+import com.vava33.d2dplot.auxi.Pattern2D;
+import com.vava33.d2dplot.auxi.Pattern1D.PointPatt1D;
+import com.vava33.d2dplot.d1dplot.DataPoint;
+import com.vava33.d2dplot.d1dplot.DataSerie;
+import com.vava33.d2dplot.d1dplot.PlotPanel;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.auxi.ImgOps;
-import vava33.d2dplot.auxi.Pattern1D;
-import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.auxi.Pattern1D.PointPatt1D;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
-
 import java.awt.Insets;
 
 public class IntegracioRadial extends JFrame {
@@ -50,13 +44,11 @@ public class IntegracioRadial extends JFrame {
 	private JTextField txt_2tf;
 	private JTextField txt_step;
 	private static String theta = "\u03B8";
-    private XYSeriesCollection dataset;
-    private JFreeChart chart;
 	private ArrayList<Pattern1D> patt1D;
     private static VavaLogger log = D2Dplot_global.getVavaLogger(IntegracioRadial.class.getName());
 
 	private Pattern2D patt2D;
-	private ChartPanel chartPanel;
+	private PlotPanel plotpanel;
 	private JButton btn_save;
 	private JLabel lblCakeIni;
 	private JLabel lblCakeEnd;
@@ -81,7 +73,7 @@ public class IntegracioRadial extends JFrame {
 	    this.inicia();
 		setTitle("Radial Integration");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		setBounds(100, 100, 726, 456);
+		setBounds(100, 100, 940, 540);
         setIconImage(Toolkit.getDefaultToolkit().getImage(Help_dialog.class.getResource("/img/Icona.png")));
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -172,13 +164,8 @@ public class IntegracioRadial extends JFrame {
 		txtAzimBins.setText("1");
 		contentPane.add(txtAzimBins, "cell 4 2,growx");
 		
-		chartPanel = new ChartPanel((JFreeChart) null);
-		chartPanel.setVerticalAxisTrace(true);
-		chartPanel.setMouseWheelEnabled(true);
-		chartPanel.setMaximumDrawWidth(2500);
-		chartPanel.setMaximumDrawHeight(1800);
-		chartPanel.setHorizontalAxisTrace(true);
-		contentPane.add(chartPanel, "cell 0 3 8 1,grow");
+		plotpanel = new PlotPanel();
+		contentPane.add(plotpanel, "cell 0 3 8 1,grow");
 		
 		btnSetMin.doClick();
 		btnSetMax.doClick();
@@ -191,48 +178,33 @@ public class IntegracioRadial extends JFrame {
 	
     private void plotPattern(Pattern1D p, boolean norm, boolean appendPatt, String seriesName){
         
-        chartPanel.setMouseWheelEnabled(true);
-        chartPanel.setHorizontalAxisTrace(true);
-        chartPanel.setVerticalAxisTrace(true);
-        chartPanel.setPopupMenu(null);
-        XYSeries pattplot = new XYSeries(seriesName);
-        if (!appendPatt){
-            dataset = new XYSeriesCollection();    
-        }else{ //only if it is null
-            if (dataset==null)dataset=new XYSeriesCollection(); 
-        }
+        com.vava33.d2dplot.d1dplot.Pattern1D p1 = new com.vava33.d2dplot.d1dplot.Pattern1D();
         
+        DataSerie ds = new DataSerie();
+        
+        ds.setWavelength(this.patt2D.getWavel());
         
         Iterator<PointPatt1D> itp = p.getPoints().iterator();
         while(itp.hasNext()){
-        	PointPatt1D point = itp.next();
+            PointPatt1D point = itp.next();
             log.fine(point.getT2()+","+point.getCounts());
-        	if(norm){
-        	    pattplot.add(point.getT2(),(float)point.getCounts()/(float)point.getNpix());
-        	}else{
-        	    pattplot.add(point.getT2(),point.getCounts());    
-        	}
+            if(norm){
+                ds.addPoint(new DataPoint(point.getT2(),(float)point.getCounts()/(float)point.getNpix(),0.f));
+            }else{
+                ds.addPoint(new DataPoint(point.getT2(),(float)point.getCounts(),0.f));
+            }
         }
         
-        dataset.addSeries(pattplot);
+        ds.setSerieName(seriesName);
+        p1.AddDataSerie(ds);
         
-        // Generate the graph
-        chart = ChartFactory.createXYLineChart(
-        "Radial integration",                  // Title
-        "2"+theta,                      // x-axis Label
-        "Counts",                  // y-axis Label
-        dataset,                   // Dataset
-        PlotOrientation.VERTICAL,  // Plot Orientation
-        true,                      // Show Legend
-        false,                     // Use tooltips
-        false                      // Configure chart to generate URLs?
-        );
-        
-        chart.getXYPlot().setBackgroundPaint(new Color(255,255,255));
-        chart.setBackgroundPaint(new Color(240,240,240));
-        chart.getXYPlot().setRangeGridlinePaint(Color.DARK_GRAY);
-        chart.getXYPlot().setDomainGridlinePaint(Color.DARK_GRAY);
-        chartPanel.setChart(chart);  //el pintem (es fa reset de zoom)
+        if (appendPatt!=true){
+            plotpanel.getPatterns().clear();
+            plotpanel.getPatterns().add(p1);
+        }else{
+            plotpanel.getPatterns().add(p1);    
+        }
+        plotpanel.fitGraph();
     }
     
 	protected void do_btn_save_actionPerformed(ActionEvent arg0) {
