@@ -1,6 +1,7 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.BorderLayout;
+
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
@@ -15,7 +16,7 @@ import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JTextField;
 
-import vava33.d2dplot.Param_dialog;
+import com.vava33.d2dplot.Param_dialog;
 
 import java.awt.Font;
 
@@ -38,11 +39,11 @@ public class ImageTiltRot_diag extends JDialog {
         this.par=p;
         setTitle("Tilt/Rot Convention");
         setModal(true);
-        setBounds(100, 100, 488, 546);
+        setBounds(100, 100, 505, 607);
         getContentPane().setLayout(new BorderLayout());
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         getContentPane().add(contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("", "[][][][grow]", "[grow][][][][]"));
+        contentPanel.setLayout(new MigLayout("", "[][][][grow]", "[grow][][][][][]"));
         {
             JLabel lblImatge = new JLabel("");
             lblImatge.setIcon(new ImageIcon(ImageTiltRot_diag.class.getResource("/img/tilt_rot_drawing2.png")));
@@ -101,6 +102,11 @@ public class ImageTiltRot_diag extends JDialog {
             });
             contentPanel.add(btnSet, "cell 3 4,growx");
         }
+        {
+            JLabel lblNewLabel = new JLabel("<html>Fit2D calibration reference: AP Hammersley, SO Svensson & A Thompson, <i>Calibration and correction of spatial distortions in 2D detector systems</i>, Nucl. Instr. Meth., A346, 312-321, (1994) </html>");
+            lblNewLabel.setFont(new Font("Dialog", Font.PLAIN, 10));
+            contentPanel.add(lblNewLabel, "cell 0 5 4 1");
+        }
     }
     protected void do_btnConvert_actionPerformed(ActionEvent arg0) {
         try{
@@ -112,7 +118,7 @@ public class ImageTiltRot_diag extends JDialog {
 //            this.tilt = -this.tilt;
 
             this.rot = f2dRotToD2d(this.rot);
-            this.tilt = f2dRotToD2d(this.tilt);
+            this.tilt = f2dTiltToD2d(this.tilt);
             
             lblRot_1.setText(String.format("rot= %.3f",this.rot));
             lblTilt.setText(String.format("tilt= %.3f",this.tilt));
@@ -123,8 +129,12 @@ public class ImageTiltRot_diag extends JDialog {
     }
     
     public static float f2dRotToD2d(float rotf2d){
-        float rot = (-1)*rotf2d -90;
-        return -rot;
+//        float rot = (-1)*rotf2d -90;
+        float rot = rotf2d + 90;
+        if (rot >= 120){
+            rot = rotf2d%(-180);
+        }
+        return rot;
     }
     public static float f2dTiltToD2d(float tiltf2d){
         return -tiltf2d;
@@ -132,5 +142,6 @@ public class ImageTiltRot_diag extends JDialog {
     
     protected void do_btnSet_actionPerformed(ActionEvent arg0) {
         this.par.setTiltRotFields(this.tilt, this.rot);
+        this.dispose();
     }
 }

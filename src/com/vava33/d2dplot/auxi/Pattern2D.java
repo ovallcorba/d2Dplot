@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
@@ -8,8 +8,7 @@ import java.util.Iterator;
 
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.d2dplot.D2Dplot_global;
-
+import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
@@ -29,6 +28,8 @@ public class Pattern2D {
     float tiltDeg, rotDeg; //tilt and rot of the detector in degrees
     float costilt, sintilt, cosrot, sinrot;
     float omeIni,omeFin,acqTime;
+    ImgFileUtils.SupportedReadExtensions fileFormat;
+    
     /*
      * rot es considerant el 0 a les 12h d'un rellotge amb clockwise positiu
      * tilt es la rotació d'aquest eix de forma que "entra" o "surt" del pla del detector.
@@ -50,6 +51,7 @@ public class Pattern2D {
     int exz_margin = 0; //per salvar el bin (zones excloses)
     int exz_threshold = 0; //per salvar el bin (zones excloses)
     int exz_detcircle = 0; //cercle del detector
+//    private HashSet<Point> listPixelsInExZones;
 
     // Variables relacionades amb el fitxer
     private File imgfile; //file from which the data has been read (if any)
@@ -97,6 +99,7 @@ public class Pattern2D {
         this.arcExZones = new ArrayList<ArcExZone>();
         this.solucions = new ArrayList<OrientSolucio>();
         this.puntsCercles = new ArrayList<PuntClick>();
+//        this.listPixelsInExZones = new HashSet<Point>();
         this.exz_margin=0;
         this.exz_threshold = 0;
         this.exz_detcircle = 0;
@@ -315,6 +318,12 @@ public class Pattern2D {
     
     public int getSaturValue(){
         if (this.isB4inten()){
+            if (this.getFileFormat()==ImgFileUtils.SupportedReadExtensions.CBF){
+                return 1048573; //saturacio pilatus 6M
+            }
+            if (this.getFileFormat()==ImgFileUtils.SupportedReadExtensions.TIF){
+                return 1048573;
+            }
             return D2Dplot_global.satur65;
         }else{
             return D2Dplot_global.satur32;
@@ -1221,6 +1230,14 @@ public class Pattern2D {
             }
         }
         return closest;
+    }
+
+    public ImgFileUtils.SupportedReadExtensions getFileFormat() {
+        return fileFormat;
+    }
+
+    public void setFileFormat(ImgFileUtils.SupportedReadExtensions fileFormat) {
+        this.fileFormat = fileFormat;
     }
     
 }

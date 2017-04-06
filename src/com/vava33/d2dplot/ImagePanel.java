@@ -1,8 +1,11 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
+
+//per editar posar true sidecontrols
 
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -33,20 +36,19 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.d2dplot.auxi.ArcExZone;
+import com.vava33.d2dplot.auxi.EllipsePars;
+import com.vava33.d2dplot.auxi.ImgOps;
+import com.vava33.d2dplot.auxi.OrientSolucio;
+import com.vava33.d2dplot.auxi.PDCompound;
+import com.vava33.d2dplot.auxi.PDReflection;
+import com.vava33.d2dplot.auxi.Pattern2D;
+import com.vava33.d2dplot.auxi.Peak;
+import com.vava33.d2dplot.auxi.PolyExZone;
+import com.vava33.d2dplot.auxi.PuntClick;
+import com.vava33.d2dplot.auxi.PuntSolucio;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.auxi.ArcExZone;
-import vava33.d2dplot.auxi.EllipsePars;
-import vava33.d2dplot.auxi.ImgOps;
-import vava33.d2dplot.auxi.OrientSolucio;
-import vava33.d2dplot.auxi.PDCompound;
-import vava33.d2dplot.auxi.PDReflection;
-import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.auxi.Peak;
-import vava33.d2dplot.auxi.PolyExZone;
-import vava33.d2dplot.auxi.PuntClick;
-import vava33.d2dplot.auxi.PuntSolucio;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -228,7 +230,9 @@ public class ImagePanel extends JPanel {
             this.slider_contrast.setSnapToTicks(false);
             this.slider_contrast.setMaximum(0);
             this.slider_contrast.setValue(this.slider_contrast.getMaximum()/2);
-
+            this.slider_contrast.setMinimumSize(new Dimension(50,50));
+            this.slider_contrast.setPreferredSize(new Dimension(50,100));
+            
             txtConminval = new JTextField();
             txtConminval.setFont(new Font("Dialog", Font.PLAIN, 10));
             txtConminval.setHorizontalAlignment(SwingConstants.CENTER);
@@ -460,8 +464,9 @@ public class ImagePanel extends JPanel {
         }
         if (arg0.getButton() == CLICAR) {
             // si estem amb modo calibratge o definint EXZ
-            if (estaCalibrant()||estaDefinintEXZ()){
-                if (!exZones.isDrawingFreeExZone()){
+//            if (estaCalibrant()||estaDefinintEXZ()){
+            if (estaDefinintEXZ()){
+                if (!exZones.isDrawingFreeExZone()){  //TODO: AQUI PETA PERQUE NO EXISTEIX exZones (es null) quan ho fem des de la calibració)
                     this.setMouseBox(true);    
                 }else{
                     //posar alguna variable? de moment ho faig a mousedrag
@@ -930,9 +935,17 @@ public class ImagePanel extends JPanel {
     protected Color intensityBW(int intensity, int maxInt, int minInt,int minVal, int maxVal) {
     	
         if (intensity < 0) {// es mascara, el pintem magenta
-            return new Color(255, 0, 255);
+            if (this.getPaintExZ()){
+                return new Color(255, 0, 255);    
+            }else{
+                return new Color(0,0,0);
+            }
         }
-
+        
+        if (intensity>=patt2D.getSaturValue()){
+            if (this.getPaintExZ())return new Color(255, 0, 255);
+        }
+        
         float ccomponent=-1.f;
 
         switch(contrast_fun){
@@ -980,12 +993,20 @@ public class ImagePanel extends JPanel {
     protected Color intensityColor(int intensity, int maxInt, int minInt, int minVal, int maxVal) {
                 
         if (intensity < 0) {// es mascara, el pintem magenta
-            return new Color(255, 0, 255);
+            if (this.getPaintExZ()){
+                return new Color(255, 0, 255);    
+            }else{
+                return new Color(0,0,0);
+            }
         }
         if (intensity == 0) {
             return new Color(0,0,0);
         } // poso el 0 absolut com a negre
 
+        if (intensity>=patt2D.getSaturValue()){
+            if (this.getPaintExZ())return new Color(255, 0, 255);
+        }
+        
         //LIMITS
         if(intensity>=maxVal){
             return new Color(255,0,0);

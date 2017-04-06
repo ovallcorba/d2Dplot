@@ -2,7 +2,7 @@
 // si no existeix, cada cop que s'executi d2dsub fer que es comprovi si existeix fitxer EXZ 
 // i sin� crear-lo amb la informaci� introdu�da.
 
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -38,21 +38,20 @@ import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-
-import vava33.d2dplot.auxi.ImgFileUtils;
-import vava33.d2dplot.auxi.ImgOps;
-import vava33.d2dplot.auxi.Pattern2D;
-
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ButtonGroup;
 
+import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.ImgOps;
+import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 import javax.swing.JSeparator;
 import javax.swing.JList;
+
 import net.miginfocom.swing.MigLayout;
 
 public class D2Dsub_batch extends JFrame {

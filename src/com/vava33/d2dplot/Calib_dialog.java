@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -43,14 +43,14 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.SimplexOptimizer;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.analysis.*;
 
+import com.vava33.d2dplot.auxi.CalibOps;
+import com.vava33.d2dplot.auxi.CircleFitter;
+import com.vava33.d2dplot.auxi.EllipsePars;
+import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
-import vava33.d2dplot.auxi.CalibOps;
-import vava33.d2dplot.auxi.CircleFitter;
-import vava33.d2dplot.auxi.EllipsePars;
-import vava33.d2dplot.auxi.Pattern2D;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JToggleButton;
@@ -72,7 +72,7 @@ public class Calib_dialog extends JDialog {
     private JSplitPane splitPane;
     private JToggleButton btnAutoCalibration;
     private LogJTextArea tAOut;
-    private Param_dialog paramDialog;
+//    private Param_dialog paramDialog;
     private JButton btnImageParameters;
     private JPanel panel;
     private JCheckBox chckbxShowGuessPoints;
@@ -418,6 +418,7 @@ public class Calib_dialog extends JDialog {
             patt2D.setRotDeg(refRotDeg);
             tAOut.ln("Values set as image calibration parameters");
             this.getIPanel().actualitzarVista();
+            this.getIPanel().getMainFrame().updateIparameters();
             return;
         }
         tAOut.ln("Please perform a calculation first");
@@ -462,11 +463,12 @@ public class Calib_dialog extends JDialog {
     
     protected void do_btnImageParameters_actionPerformed(ActionEvent arg0) {
         if (patt2D != null) {
-            if (paramDialog == null){
-                paramDialog = new Param_dialog(this.ip,this.patt2D);
-            }
-            paramDialog.inicia();;
-            paramDialog.setVisible(true);
+            this.ip.getMainFrame().do_mntmInstrumentalParameters_actionPerformed(null);
+//            if (paramDialog == null){
+//                paramDialog = new Param_dialog(this.ip,this.patt2D);
+//            }
+//            paramDialog.inicia();;
+//            paramDialog.setVisible(true);
         }
     }
     

@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -14,11 +14,13 @@ import javax.swing.JTextField;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 
-import vava33.d2dplot.auxi.ImageTiltRot_diag;
-import vava33.d2dplot.auxi.ImgFileUtils;
-import vava33.d2dplot.auxi.Pattern2D;
 import net.miginfocom.swing.MigLayout;
+
 import javax.swing.JCheckBox;
+
+import com.vava33.d2dplot.auxi.ImageTiltRot_diag;
+import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.Pattern2D;
 
 public class Param_dialog extends JDialog {
 

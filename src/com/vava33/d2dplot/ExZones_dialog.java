@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -32,16 +32,16 @@ import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
+import com.vava33.d2dplot.auxi.ArcExZone;
+import com.vava33.d2dplot.auxi.ExZ_ArcDialog;
+import com.vava33.d2dplot.auxi.ExZ_BSdiag;
+import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.Pattern2D;
+import com.vava33.d2dplot.auxi.PolyExZone;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
-import vava33.d2dplot.auxi.ArcExZone;
-import vava33.d2dplot.auxi.ExZ_ArcDialog;
-import vava33.d2dplot.auxi.ExZ_BSdiag;
-import vava33.d2dplot.auxi.ImgFileUtils;
-import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.auxi.PolyExZone;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.event.ListSelectionListener;
@@ -49,6 +49,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.math3.util.FastMath;
+
 import javax.swing.JToggleButton;
 import javax.swing.border.EtchedBorder;
 

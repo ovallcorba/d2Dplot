@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Toolkit;
@@ -10,14 +10,14 @@ import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
-
-import vava33.d2dplot.auxi.ImgFileUtils;
-import vava33.d2dplot.auxi.Pattern2D;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
+
 import net.miginfocom.swing.MigLayout;
 
 public class SimpleImageDialog extends JDialog {
