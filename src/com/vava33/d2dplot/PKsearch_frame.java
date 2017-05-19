@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.Toolkit;
 
@@ -6,18 +6,19 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
+import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.ImgOps;
+import com.vava33.d2dplot.auxi.ImgOps.PkSCIntegrateFileWorker;
+import com.vava33.d2dplot.auxi.OrientSolucio;
+import com.vava33.d2dplot.auxi.Patt2Dzone;
+import com.vava33.d2dplot.auxi.Pattern2D;
+import com.vava33.d2dplot.auxi.Peak;
+import com.vava33.d2dplot.auxi.PuntSolucio;
+import com.vava33.d2dplot.auxi.findPksTableRenderer;
+import com.vava33.d2dplot.auxi.ImgOps.PkIntegrateFileWorker;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
-import vava33.d2dplot.auxi.ImgFileUtils;
-import vava33.d2dplot.auxi.ImgOps;
-import vava33.d2dplot.auxi.ImgOps.PkIntegrateFileWorker;
-import vava33.d2dplot.auxi.OrientSolucio;
-import vava33.d2dplot.auxi.Patt2Dzone;
-import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.auxi.Peak;
-import vava33.d2dplot.auxi.PuntSolucio;
-import vava33.d2dplot.auxi.findPksTableRenderer;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JCheckBox;
@@ -115,10 +116,10 @@ public class PKsearch_frame extends JFrame {
     public static int def_bkgpt = 20;
     public static int def_tol2tpix = 30;
     public static float def_angDeg = 4.0f;
-    public static float def_delsig = 1.5f;
+    public static float def_delsig = 6.0f;
     public static int def_zoneR=FastMath.round(def_tol2tpix/2);
     public static int def_minpix=6;
-    public static int nzonesFindPeaks = 10;
+    public static int nzonesFindPeaks = 24;
     public static float def_bkgPxAutoPercent = 0.005f;
     public static int def_minbkgPx = 10;
     
@@ -151,7 +152,13 @@ public class PKsearch_frame extends JFrame {
     
     ProgressMonitor pm;
     PkIntegrateFileWorker convwk;
+    PkSCIntegrateFileWorker pkscwk;
     private JButton btnImport;
+    private JButton btnRemoveDiamonds;
+    private JButton btnRemoveSaturated;
+    
+    private File fileout;
+    private JButton btnBatchout;
     
     /**
      * Create the frame.
@@ -202,7 +209,7 @@ public class PKsearch_frame extends JFrame {
             }
         });
         panel_4.add(spinner, "cell 2 0");
-        spinner.setModel(new SpinnerNumberModel(2, 1, 5, 1));
+        spinner.setModel(new SpinnerNumberModel(5, 1, 10, 1));
         
         chckbxOnTop = new JCheckBox("on top");
         panel_4.add(chckbxOnTop, "cell 3 0,alignx right");
@@ -216,14 +223,14 @@ public class PKsearch_frame extends JFrame {
         panel_3 = new JPanel();
         panel_3.setBorder(new TitledBorder(null, "Peak detection", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
         panel.add(panel_3, "cell 0 1,grow");
-        panel_3.setLayout(new MigLayout("", "[][grow][]", "[][][][]"));
+        panel_3.setLayout(new MigLayout("", "[][grow][]", "[][][][][]"));
         
         lblDelsig = new JLabel("ESD factor=");
         panel_3.add(lblDelsig, "cell 0 0,alignx right");
         
         txtDelsig = new JTextField();
         panel_3.add(txtDelsig, "cell 1 0,growx");
-        txtDelsig.setText(Float.toString(def_delsig));
+        txtDelsig.setText("1.5");
         txtDelsig.setColumns(10);
         
         chckbxAutodelsig = new JCheckBox("f(2"+D2Dplot_global.theta+")");
@@ -248,6 +255,22 @@ public class PKsearch_frame extends JFrame {
         
         chckbxAddremovePeaks = new JCheckBox("Add/Remove peaks");
         panel_3.add(chckbxAddremovePeaks, "cell 0 3 3 1,alignx center");
+        
+        btnRemoveDiamonds = new JButton("Remove Diamonds");
+        panel_3.add(btnRemoveDiamonds, "cell 0 4");
+        
+        btnRemoveSaturated = new JButton("Remove Saturated");
+        panel_3.add(btnRemoveSaturated, "cell 1 4");
+        btnRemoveSaturated.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnRemoveSaturated_actionPerformed(arg0);
+            }
+        });
+        btnRemoveDiamonds.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnRemoveDiamonds_actionPerformed(e);
+            }
+        });
         
         btnCalculate = new JButton("Calculate");
         btnCalculate.addActionListener(new ActionListener() {
@@ -367,37 +390,20 @@ public class PKsearch_frame extends JFrame {
         
         panel_1 = new JPanel();
         contentPane.add(panel_1, "flowx,cell 0 1,grow");
-        panel_1.setLayout(new MigLayout("", "[][grow][][][][][]", "[]"));
+        panel_1.setLayout(new MigLayout("", "[][][][grow][][grow]", "[][]"));
         
         lblNpks = new JLabel("");
         panel_1.add(lblNpks, "cell 0 0");
         
         btnExportPeakList = new JButton("Write PCS file for INCO");
-        panel_1.add(btnExportPeakList, "cell 1 0,growx");
+        panel_1.add(btnExportPeakList, "cell 1 0 2 1,growx");
         
-        btnExportTable = new JButton("Export Full Table");
-        btnExportTable.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                do_btnExportTable_actionPerformed(arg0);
-            }
-        });
-        
-        btnMaskbin = new JButton("MASK.BIN");
-        btnMaskbin.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                do_btnMaskbin_actionPerformed(e);
-            }
-        });
-        
-        btnBatch = new JButton("Batch");
+        btnBatch = new JButton("Batch Processing (PCS)");
         btnBatch.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_btnBatch_actionPerformed(arg0);
             }
         });
-        panel_1.add(btnBatch, "cell 2 0");
-        panel_1.add(btnMaskbin, "cell 3 0");
-        panel_1.add(btnExportTable, "cell 4 0");
         
         btnImport = new JButton("Import");
         btnImport.addActionListener(new ActionListener() {
@@ -405,10 +411,35 @@ public class PKsearch_frame extends JFrame {
                 do_btnImport_actionPerformed(arg0);
             }
         });
-        panel_1.add(btnImport, "cell 5 0");
+        panel_1.add(btnImport, "cell 3 0");
+        panel_1.add(btnBatch, "cell 4 0");
+        
+        btnExportTable = new JButton("Export Full Table");
+        btnExportTable.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnExportTable_actionPerformed(arg0);
+            }
+        });
+        panel_1.add(btnExportTable, "cell 1 1");
+        
+        btnMaskbin = new JButton("MASK.BIN");
+        btnMaskbin.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnMaskbin_actionPerformed(e);
+            }
+        });
+        panel_1.add(btnMaskbin, "cell 2 1");
+        
+        btnBatchout = new JButton("Batch Processing (OUT)");
+        btnBatchout.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnBatchout_actionPerformed(arg0);
+            }
+        });
+        panel_1.add(btnBatchout, "cell 4 1");
         
         btnClose = new JButton("close");
-        panel_1.add(btnClose, "cell 6 0");
+        panel_1.add(btnClose, "cell 5 1,alignx right");
         btnClose.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_btnClose_actionPerformed(e);
@@ -493,9 +524,32 @@ public class PKsearch_frame extends JFrame {
     private void searchPeaks(){
         boolean t2dep = chckbxAutodelsig.isSelected();
         this.readSearchOptions();
-        patt2d.setPkSearchResult(ImgOps.findPeaks(patt2d, delsig, zoneR, t2dep, nzonesFindPeaks, minpix, false));
+//        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, t2dep, nzonesFindPeaks, minpix, false);
+        ArrayList<Peak> pks = ImgOps.findPeaksBetter(patt2d, delsig, zoneR, t2dep, nzonesFindPeaks, minpix, false,-1);
+        
+//        if(chckbxAvoidDiamonds.isSelected()){
+//            
+//        }
+        //if noSaturated //TODO
+        
+        patt2d.setPkSearchResult(pks);
         this.iPanel.actualitzarVista();
     }
+    
+    protected void do_btnRemoveSaturated_actionPerformed(ActionEvent arg0) {
+        int removed = ImgOps.removeSaturPeaks(patt2d.getPkSearchResult());
+        log.info(String.format("Removed %d saturated peaks",removed));
+        lblNpks.setText(String.format("%d Peaks!", patt2d.getPkSearchResult().size()));
+        this.iPanel.actualitzarVista();
+    }
+    
+    protected void do_btnRemoveDiamonds_actionPerformed(ActionEvent e) {
+        int removed = ImgOps.removeDiamondPeaks(patt2d.getPkSearchResult());
+        log.info(String.format("Removed %d diamond (guessed) peaks",removed));
+        lblNpks.setText(String.format("%d Peaks!", patt2d.getPkSearchResult().size()));
+        this.iPanel.actualitzarVista(); 
+    }
+    
     
     public void readSearchOptions(){
         try{
@@ -524,6 +578,10 @@ public class PKsearch_frame extends JFrame {
         
         this.readIntegrateOptions();
         
+        if (patt2d.getPkSearchResult()==null){
+            log.info("no peaks found");
+            return;
+        }
         Iterator<Peak> itrpks = patt2d.getPkSearchResult().iterator();
         while (itrpks.hasNext()){
             Peak pk = (Peak)itrpks.next();
@@ -534,7 +592,7 @@ public class PKsearch_frame extends JFrame {
                 //agafem un 5% dels pixels com a fons
                 bkgpt = FastMath.round(npix*def_bkgPxAutoPercent);
                 if (bkgpt<def_minbkgPx)bkgpt=def_minbkgPx;
-                log.debug("bkgPT="+bkgpt);
+                log.fine("bkgPT="+bkgpt);
             }
             if (autoTol){
                 tol2tpix = ImgOps.intRadPixelsOfAPeak(patt2d,pxc.x,pxc.y);
@@ -542,7 +600,7 @@ public class PKsearch_frame extends JFrame {
             }
             if (autoazim){
                 angDeg = ImgOps.azimAngleOfAPeak(patt2d,pxc.x,pxc.y);
-                log.writeNameNums("CONFIG", true, "x,y,angDeg", pxc.x,pxc.y,angDeg);
+                log.writeNameNums("FINE", true, "x,y,angDeg", pxc.x,pxc.y,angDeg);
                 //TODO
             }
             
@@ -649,6 +707,10 @@ public class PKsearch_frame extends JFrame {
         ((DefaultTableModel)table.getModel()).setRowCount(0);
         
         //mostrarem els pics
+        if (patt2d.getPkSearchResult()==null){
+            lblNpks.setText("No Peaks found");
+            return;
+        }
         for(int i=0; i<patt2d.getPkSearchResult().size();i++){
             Peak pk = patt2d.getPkSearchResult().get(i);
             Object[] row = new Object[table.getColumnCount()];
@@ -969,8 +1031,151 @@ public class PKsearch_frame extends JFrame {
     protected void do_btnImport_actionPerformed(ActionEvent arg0) {
         File f = FileUtils.fchooserOpen(this, new File(D2Dplot_global.getWorkdir()), null, 0);
         if (f==null)return;
-        this.importTable(f);
+        if (FileUtils.getExtension(f).equalsIgnoreCase("OUT")){
+            fileout = f;
+            this.importOUT(f);
+        }else{
+            this.importTable(f);            
+        }
     }
+    
+    public File getFileOut(){
+        return this.fileout;
+    }
+    
+    public void importOUT(File outFile){
+        boolean singleImg = false;
+        int inum = patt2d.getFileNameNumber();
+        log.debug("image Number="+inum);
+        if (inum>=0)singleImg = true;
+        
+        try {
+            Scanner scOUTfile = new Scanner(outFile);
+            boolean firstLine = false;
+            String line;
+            while (!firstLine){
+                line = scOUTfile.nextLine();
+                if (line.trim().startsWith("NPEAK"))firstLine=true;
+            }
+            line = scOUTfile.nextLine(); //linia numero d'imatge
+            String[] lineS = line.trim().split("\\s+");
+//            int cnum = Integer.parseInt(lineS[0])-1; //-1 perque fortran comença a escriure a 1 i no a zero
+            int cnum = Integer.parseInt(lineS[0]); // numero de la imatge segons el fitxer
+            log.debug("current out reading Number="+cnum);
+
+            
+            ArrayList<Peak> realPeaks = new ArrayList<Peak>();
+            while (scOUTfile.hasNextLine()){
+                //System.out.println(line);
+                line = scOUTfile.nextLine();
+                if (line.trim().startsWith("NPEAK")){
+                    line = scOUTfile.nextLine(); //linia numero d'imatge
+                    lineS = line.trim().split("\\s+");
+//                    cnum = Integer.parseInt(lineS[0])-1;
+                    cnum = Integer.parseInt(lineS[0]);
+                    log.debug("current out reading Number="+cnum);
+                    continue;//seguim
+                }
+                if(line.trim().startsWith("----"))continue;
+                if(line.trim().startsWith("NOMBRE"))continue;
+                if(line.trim().isEmpty())continue;
+                
+                if (singleImg){
+                    if (cnum!=inum){
+                        log.debug("cnum!=inum");
+                        continue;
+                    }
+                }
+                
+                //en principi aqui tindrem pics a afegir
+                
+                log.debug("Reading Matching Image Peaks="+inum+" (out file="+cnum+")");
+                
+                lineS = line.trim().split("\\s+");
+                Peak pic = new Peak(Float.parseFloat(lineS[1]),Float.parseFloat(lineS[2]));
+                try{
+                    pic.setRadi(Float.parseFloat(lineS[3]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setRadi(0);
+                }
+                try{
+                    pic.setYmax(Float.parseFloat(lineS[4]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setYmax(0);
+                }
+                try{
+                    pic.setFh2(Float.parseFloat(lineS[5])*Float.parseFloat(lineS[5]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setFh2(0);
+                }
+                try{
+                    pic.setSfh2(Float.parseFloat(lineS[6])*Float.parseFloat(lineS[6]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setSfh2(0);
+                }
+                try{
+                    pic.setP(Float.parseFloat(lineS[7]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setP(0);
+                }
+                try{
+                    pic.setIntRadPx(Integer.parseInt(lineS[9]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setIntRadPx(0);
+                }
+                try{
+                    pic.setDsp(Float.parseFloat(lineS[10]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setDsp(0);
+                }
+
+                
+                pic.setYmean(0);
+                pic.setNpix(0);
+                pic.setYbkg(0);
+                pic.setYbkgSD(0);
+                pic.setNbkgpix(0);
+                pic.setIntRad2th(0);
+                pic.setAzimAper(0);
+                pic.setnVeinsEixam(0);
+                pic.setnSatur(0);
+                pic.setNearMask(false);
+
+                Patt2Dzone pz = new Patt2Dzone(pic.getNpix(), -1, (int)pic.getYmax(), pic.getYmean(), -1, pic.getYbkg(), pic.getYbkgSD());
+                pz.setIntradPix(pic.getIntRadPx());
+                pz.setAzimAngle(pic.getAzimAper());
+                pz.setBkgpt(pic.getNbkgpix());
+                pz.setCentralPoint(pic.getPixelCentre());
+                pz.setPatt2d(this.patt2d);
+                pic.setZona(pz);
+                
+                pic.setIntegrated(true);
+                
+                realPeaks.add(pic);
+                
+                if (singleImg){
+                    if (cnum>inum){
+                        log.debug("cnum>inum");
+                        break; //ja hem llegit la imatge bona
+                    }
+                }
+            }
+            patt2d.setPkSearchResult(realPeaks);
+            scOUTfile.close();
+            this.updateTable();
+        } catch (Exception e) {
+            if (D2Dplot_global.isDebug()) e.printStackTrace();
+            log.warning("Error reading OUT file");
+        }
+    }
+    
     protected void do_chckbxShowPoints_itemStateChanged(ItemEvent e) {
         this.iPanel.actualitzarVista();
     }
@@ -983,39 +1188,186 @@ public class PKsearch_frame extends JFrame {
             this.iPanel.actualitzarVista();
         }   
     }
+    
+    
+    //TODO
+    public void writeOUT(File outFile){
+        boolean singleImg = false;
+        int inum = patt2d.getFileNameNumber();
+        log.debug("image Number="+inum);
+        if (inum>=0)singleImg = true;
+        
+        try {
+            Scanner scOUTfile = new Scanner(outFile);
+            boolean firstLine = false;
+            String line;
+            while (!firstLine){
+                line = scOUTfile.nextLine();
+                if (line.trim().startsWith("NPEAK"))firstLine=true;
+            }
+            line = scOUTfile.nextLine(); //linia numero d'imatge
+            String[] lineS = line.trim().split("\\s+");
+//            int cnum = Integer.parseInt(lineS[0])-1; //-1 perque fortran comença a escriure a 1 i no a zero
+            int cnum = Integer.parseInt(lineS[0]); // numero de la imatge segons el fitxer
+            log.debug("current out reading Number="+cnum);
+
+            
+            ArrayList<Peak> realPeaks = new ArrayList<Peak>();
+            while (scOUTfile.hasNextLine()){
+                System.out.println(line);
+                line = scOUTfile.nextLine();
+                if (line.trim().startsWith("NPEAK")){
+                    line = scOUTfile.nextLine(); //linia numero d'imatge
+                    lineS = line.trim().split("\\s+");
+//                    cnum = Integer.parseInt(lineS[0])-1;
+                    cnum = Integer.parseInt(lineS[0]);
+                    log.debug("current out reading Number="+cnum);
+                    continue;//seguim
+                }
+                if(line.trim().startsWith("----"))continue;
+                if(line.trim().startsWith("NOMBRE"))continue;
+                if(line.trim().isEmpty())continue;
+                
+                if (singleImg){
+                    if (cnum!=inum){
+                        log.debug("cnum!=inum");
+                        continue;
+                    }
+                }
+                
+                //en principi aqui tindrem pics a afegir
+                
+                lineS = line.trim().split("\\s+");
+                Peak pic = new Peak(Float.parseFloat(lineS[1]),Float.parseFloat(lineS[2]));
+                try{
+                    pic.setRadi(Float.parseFloat(lineS[3]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setRadi(0);
+                }
+                try{
+                    pic.setYmax(Float.parseFloat(lineS[4]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setYmax(0);
+                }
+                try{
+                    pic.setFh2(Float.parseFloat(lineS[5])*Float.parseFloat(lineS[5]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setFh2(0);
+                }
+                try{
+                    pic.setSfh2(Float.parseFloat(lineS[6])*Float.parseFloat(lineS[6]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setSfh2(0);
+                }
+                try{
+                    pic.setP(Float.parseFloat(lineS[7]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setP(0);
+                }
+                try{
+                    pic.setIntRadPx(Integer.parseInt(lineS[9]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setIntRadPx(0);
+                }
+                try{
+                    pic.setDsp(Float.parseFloat(lineS[10]));
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    pic.setDsp(0);
+                }
+
+                
+                pic.setYmean(0);
+                pic.setNpix(0);
+                pic.setYbkg(0);
+                pic.setYbkgSD(0);
+                pic.setNbkgpix(0);
+                pic.setIntRad2th(0);
+                pic.setAzimAper(0);
+                pic.setnVeinsEixam(0);
+                pic.setnSatur(0);
+                pic.setNearMask(false);
+
+                Patt2Dzone pz = new Patt2Dzone(pic.getNpix(), -1, (int)pic.getYmax(), pic.getYmean(), -1, pic.getYbkg(), pic.getYbkgSD());
+                pz.setIntradPix(pic.getIntRadPx());
+                pz.setAzimAngle(pic.getAzimAper());
+                pz.setBkgpt(pic.getNbkgpix());
+                pz.setCentralPoint(pic.getPixelCentre());
+                pz.setPatt2d(this.patt2d);
+                pic.setZona(pz);
+                
+                pic.setIntegrated(true);
+                
+                realPeaks.add(pic);
+                
+                if (singleImg){
+                    if (cnum>inum){
+                        log.debug("cnum>inum");
+                        break; //ja hem llegit la imatge bona
+                    }
+                }
+            }
+            patt2d.setPkSearchResult(realPeaks);
+            scOUTfile.close();
+            this.updateTable();
+        } catch (Exception e) {
+            if (D2Dplot_global.isDebug()) e.printStackTrace();
+            log.warning("Error reading OUT file");
+        }
+    }
+   
+    protected void do_btnBatchout_actionPerformed(ActionEvent arg0) {
+        //obrir un fchoser multiple i seleccionar imatges
+        FileUtils.InfoDialog(this, "Selected images will be integrated with current options \nand a single OUT file will be generated." , "batch pk search and integrate");
+        
+        //integrar amb les opcions actuals
+        this.readSearchOptions();
+        this.readIntegrateOptions();//aqui s'assigna iosc
+        
+        //carregar imatge, integrar, escriure PCS amb el mateix nom 
+        //i tal s'encarrega el swingworker de imgops
+        FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
+        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, filt.length-1);
+        if (flist==null) return;
+        D2Dplot_global.setWorkdir(flist[0]);
+        
+        pm = new ProgressMonitor(null,
+                "Peak Search and Integrate on several images in progress...",
+                "", 0, 100);
+        pm.setProgress(0);
+        //TODO POSAR LOG DEL MAINFRAME
+        pkscwk = new ImgOps.PkSCIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
+                chckbxAutodelsig.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
+                angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc);
+        
+        pkscwk.addPropertyChangeListener(new PropertyChangeListener() {
+
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                log.debug(evt.getPropertyName());
+                if ("progress" == evt.getPropertyName() ) {
+                    int progress = (Integer) evt.getNewValue();
+                    pm.setProgress(progress);
+                    pm.setNote(String.format("%d%%\n", progress));
+                    if (pm.isCanceled() || pkscwk.isDone()) {
+                        Toolkit.getDefaultToolkit().beep();
+                        if (pm.isCanceled()) {
+                            pkscwk.cancel(true);
+                            log.debug("Pk Search and Integrate stopped by user");
+                        } else {
+                            log.debug("Pk Search and Integrate finished!!");
+                        }
+                        pm.close();
+                    }
+                }
+            }
+        });
+        pkscwk.execute();
+    }
 }
-
-
-//==============================================================================
-//TTS_REDUC: PICS DE DIAGRAMES DE DIFRACCIO 2D [160311]
-//(c) Prof. Dr. Jordi Rius
-//Collaborator: O. Vallcorba
-//Institut de Ciencia de Materials de Barcelona (CSIC)
-//08193-Bellaterra, Catalonia, Spain
-//
-//==============================================================================
-//NOM DE LA IMATGE:                   dickin_1_0010
-//NPIX_X,NPIX_Y,CENT_X,CENT_Y:  2048  2048     1024.37   1024.15
-//PIXLEN,SEPOD,WAVE: 79.000   185.150  0.42460
-//EIX DE GIR VERTICAL
-//N. PIXELS SATURATS=               0
-//N. PICS SATURATS=               0
-//VALOR DE SATURACIO=       65500.
-//SIGMA_I,n_SIGMA:      39.810     2.000
-//INTEGRACIO CIRCULAR: SEMIARC EN GRAUS=     2.000
-//INTEGRACIO RADIAL MAX. EN PIXELS(MEITAT)=          15
-//------------------------------------------------------------------------------
-//NPEAK     XPIXEL    YPIXEL    RO_VAL        YMAX         FH2     sigma(FH2)    p    CODI INTRAD   D
-//1   1386.89   1080.29    366.84      32637.09      185.76        9.00   0.879    1   10    2.7375
-//2    675.13    844.85    392.58      10186.30      106.72        6.90   0.824    1    8    2.5613
-//3    558.00   1359.46    574.40       6638.55      112.24        7.81   0.703    1    9    1.7709
-//4    733.42   1047.07    291.86       6422.27       72.59        5.69   0.897    1    9    3.4294
-//5   1190.97    347.87    696.50       4736.42       58.86        4.38   0.648    1    8    1.4750
-//6    938.10    357.30    672.40       3562.69       45.63        3.27   0.485    1    9    1.5247
-
-////MODEL ROW VS VIEW ROW!!!
-////int viewRow = table.getSelectedRow();
-////int modelRow = table.convertRowIndexToModel(viewRow);
-////int viewColumn = table.getSelectedColumn();
-////int modelColumn = table.convertColumnIndexToModel(viewColumn);
-////Object cell = model.getValueAt( modelRow, modelColumn );

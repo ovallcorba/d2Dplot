@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.geom.Point2D;
 
@@ -20,6 +20,7 @@ public class Peak implements Comparable<Peak> {
     //per escriure fitxers
     public static final String pcs_header = " NPEAK     XPIXEL     YPIXEL     RO_VAL         YMAX          FH2   sigma(FH2)        p  CODI INTRAD      D";
     public static final String all_header = " Npeak     Xpix     Ypix  Radi(px)      Ymax      Fh2   s(Fh2)      Ymean     Npix     Ybkg  s(Ybkg) nBkgPx RadWthPx RadWth2t AzimDeg      dsp  Nbour Nsatur NearMsk      p";
+    public static final String out_header = " NPEAK     XPIXEL    YPIXEL    RO_VAL        YMAX         FH      sigma(FH)    p    CODI INTRAD   D";
     
     public Peak(Point2D.Float pix,int neixam, int nSatur, boolean nearMask){
         this.pixelCentre=pix;
@@ -103,9 +104,10 @@ public class Peak implements Comparable<Peak> {
         this.sfh2 = 0;
         if (inten > 0){
             if(lpfac[1]>0){
-                esdinten = (float)FastMath.sqrt(this.getZona().getYsum()+2*this.getZona().getYbkgdesv())/inten;
-                this.fh2 = (float)FastMath.sqrt(inten*lpfac[1]*lpfac[2]);
-                this.sfh2 = (float)FastMath.sqrt(esdinten*(fh2*fh2));                
+                //esdinten = (float)FastMath.sqrt(this.getZona().getYsum()+2*this.getZona().getYbkgdesv())/inten;
+                esdinten = (float)FastMath.sqrt(inten)/inten;
+                this.fh2 = (float) (inten*lpfac[1]*lpfac[2]);
+                this.sfh2 = esdinten*fh2;                
             }else{
                 esdinten=-1.f;
                 this.fh2 = -1;
@@ -276,6 +278,19 @@ public class Peak implements Comparable<Peak> {
                 pixelCentre.x,pixelCentre.y,radi,ymax,fh2,sfh2,p,flag,intRadPx,dsp);
     }
     
+// NPEAK     XPIXEL    YPIXEL    RO_VAL        YMAX         FH      sigma(FH)    p    CODI INTRAD   D
+//      1   1031.08   1316.02    292.06       2762.50        9.42        0.78   0.739    1   11    0.1538
+    public String getFormmattedStringOUT_singleCryst(){
+        int flag = 1;
+        if (nVeinsEixam>1) flag = nVeinsEixam;
+        if (nearMask) flag = -1;
+        if (nSatur>0) flag = nSatur*(-1);
+//        return String.format("%10.2f%10.2f%10.2f%14.2f%12.2f%12.2f%8.3f%5d%5d%10.4f",
+//                pixelCentre.x,pixelCentre.y,radi,ymax,FastMath.sqrt(fh2),FastMath.sqrt(sfh2),p,flag,intRadPx,dsp);
+        return String.format("%10.2f%10.2f%10.2f%14.2f%12.2f%12.2f%8.3f%5d%5d%10.4f",
+                  pixelCentre.x,pixelCentre.y,radi,ymax,FastMath.sqrt(fh2),FastMath.sqrt(sfh2),p,flag,intRadPx,this.getZona().getPatt2d().calc2T(this.getPixelCentre(), false));
+    }
+    
     public String getFormmattedStringAll(){
         String msk = "No";
         if (nearMask) msk = "Yes";
@@ -283,12 +298,32 @@ public class Peak implements Comparable<Peak> {
                 pixelCentre.x,pixelCentre.y,radi,ymax,fh2,sfh2,Ymean,npix,Ybkg,YbkgSD,nbkgpix,intRadPx,intRad2th,azimAper,dsp,nVeinsEixam,nSatur,msk,p);
     }
 
+    public String toString(){
+        return String.format("%8.2f %8.2f %8.2f", pixelCentre.x,pixelCentre.y,ymax);
+    }
+    
     @Override
     public int compareTo(Peak arg0) {
-        if (this.ymax>arg0.ymax){
-            return 0;
-        }else{
-            return 1;    
-        }
+        if (this.ymax>arg0.ymax)return -1;
+        if (this.ymax<arg0.ymax)return 1;
+        return 0;
+    }
+//    public int compareTo(Peak arg0) {
+//        if (this.ymax>arg0.ymax){
+//            return 0;
+//        }else{
+//            return 1;    
+//        }
+//    }
+    
+    public boolean isSatur(){
+        if (nSatur>0)return true;
+        return false;
+    }
+    
+    public boolean isDiamond(){
+        if (isSatur() && p<0.25) return true; // si la forma del pic es rara i està saturat
+        if ((nSatur/npix)>0.02) return true; //mes del 2% dels pixels saturats
+        return false;
     }
 }
