@@ -1882,7 +1882,7 @@ public class ImagePanel extends JPanel {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             
-            log.debug("paint Component dades2d called");
+            log.fine("paint Component dades2d called");
             
             Graphics2D g2 = (Graphics2D) g;
             

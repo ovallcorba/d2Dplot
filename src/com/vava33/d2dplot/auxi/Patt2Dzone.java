@@ -1,6 +1,7 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.Locale;
 
 /*
@@ -21,9 +22,11 @@ public class Patt2Dzone implements Comparable<Patt2Dzone>{
 	float azimAngle;
 	Point2D.Float centralPoint;
 	Pattern2D patt2d; //referencia a quin pattern es la zona
+	ArrayList<Point2D.Float> pixelList; //afegit el 25/4/2017
 	
 	//new zone
 	public Patt2Dzone(int npix, int ysum, int ymax, float ymean, float ymeandesv, float ybkg, float ybkgdesv){
+	    this();
 		this.npix=npix;
 		this.ysum=ysum;
 		this.ymax=ymax;
@@ -31,14 +34,14 @@ public class Patt2Dzone implements Comparable<Patt2Dzone>{
 		this.ymeandesv=ymeandesv;
 		this.ybkg=ybkg;
 		this.ybkgdesv=ybkgdesv;
-		this.intradPix=-1;
-		this.azimAngle=-1;
-		this.centralPoint=null;
-	}
+    }
 	
 	//new empty zone
 	public Patt2Dzone(){
-	    
+	    pixelList = new ArrayList<Point2D.Float>();
+	    this.intradPix=-1;
+	    this.azimAngle=-1;
+	    this.centralPoint=null;
 	}
 
 	public int getYsum() {
@@ -135,6 +138,14 @@ public class Patt2Dzone implements Comparable<Patt2Dzone>{
 
     public void setPatt2d(Pattern2D patt2d) {
         this.patt2d = patt2d;
+    }
+
+    public ArrayList<Point2D.Float> getPixelList() {
+        return pixelList;
+    }
+
+    public void setPixelList(ArrayList<Point2D.Float> pixelList) {
+        this.pixelList = pixelList;
     }
 
     public String toString(){
