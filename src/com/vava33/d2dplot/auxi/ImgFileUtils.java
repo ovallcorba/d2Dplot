@@ -83,7 +83,7 @@ public final class ImgFileUtils {
         while (itrformats.hasNext()) {
             String frm = itrformats.next();
             // this line returns the FORMAT in the ENUM or NULL
-            ImgFileUtils.SupportedWriteExtensions wfrm = (SupportedWriteExtensions) FileUtils.searchEnum(
+            ImgFileUtils.SupportedWriteExtensions wfrm = FileUtils.searchEnum(
                     ImgFileUtils.SupportedWriteExtensions.class, frm);
             if (wfrm != null) {
                 // afegim filtre
@@ -107,7 +107,7 @@ public final class ImgFileUtils {
         while (itrformats.hasNext()) {
             String frm = itrformats.next();
             // this line returns the FORMAT in the ENUM or NULL
-            ImgFileUtils.SupportedReadExtensions wfrm = (SupportedReadExtensions) FileUtils.searchEnum(
+            ImgFileUtils.SupportedReadExtensions wfrm = FileUtils.searchEnum(
                     ImgFileUtils.SupportedReadExtensions.class, frm);
             if (wfrm != null) {
                 // afegim filtre
@@ -736,7 +736,139 @@ public final class ImgFileUtils {
 
         return patt2D; // correcte
     }
+    
+    public static Pattern2D readEDFheaderOnly(File d2File) {
+        Pattern2D patt2D = null;
+        int binSize = 0;
+        float pixSizeX = 0, pixSizeY = 0;
+        float distOD = 0;
+        float beamCX = 0, beamCY = 0, wl = 0;
+        int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
+        float omeIni = 0, omeFin = 0, acqTime = -1;
+        float tilt = 0, rot = 0;
+        boolean fit2d = false;
+        
+        // primer treiem la info de les linies de text
+        try {
+            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
+            log.debug(scD2file.toString());
+            for (int i = 0; i < 50; i++) {
+                if (scD2file.hasNextLine()) {
+                    String line = scD2file.nextLine();
+                    log.debug("edf line="+line);
+                    int iigual = line.indexOf("=") + 1;
+                    if (FileUtils.containsIgnoreCase(line, "Size =")) {
+                        binSize = Integer.parseInt(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "Dim_1")) {
+                        dimX = Integer.parseInt(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "Dim_2")) {
+                        dimY = Integer.parseInt(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "beam_center_x")) {
+                        beamCX = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "beam_center_y")) {
+                        beamCY = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "pixel_size_x")
+                            || FileUtils
+                                    .containsIgnoreCase(line, "pixelsize_x")) {
+                        pixSizeX = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                        pixSizeX = pixSizeX / 1000.f;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "pixel_size_y")
+                            || FileUtils
+                                    .containsIgnoreCase(line, "pixelsize_y")) {
+                        pixSizeY = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                        pixSizeY = pixSizeY / 1000.f;
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_distance")) {
+                        distOD = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_wave")) {
+                        wl = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_tilt")) {
+                        tilt = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_rot")) {
+                        rot = Float.parseFloat(line.substring(iigual,
+                                line.trim().length() - 1).trim());
+                    }
+                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
+                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
+                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
+                            fit2d = true;
+                        } //else d2dplot convention
+                    }
 
+                    try {
+                        // scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
+                        // scan_type = mar_ct (1.0,) ;
+                        if (FileUtils.containsIgnoreCase(line, "scan_type")) {
+                            String line2 = line.substring(iigual,
+                                    line.trim().length() - 1).trim();
+                            if (FileUtils.containsIgnoreCase(line2, "mar_scan")) {
+                                String[] values = line2.split(",");
+                                omeIni = Float.parseFloat(values[1]);
+                                omeFin = Float.parseFloat(values[2]);
+                                acqTime = Float.parseFloat(values[3]
+                                        .split("\\)")[0]);
+                            }
+                            if (FileUtils.containsIgnoreCase(line2, "mar_ct")) {
+                                omeIni = 0;
+                                omeFin = 0;
+                                String[] values = line2.split(",");
+                                acqTime = Float.parseFloat(values[0]
+                                        .split("\\(")[1]);
+                            }
+                        }
+
+                    } catch (Exception ex) {
+                        log.warning("Could not read the scan type from image header");
+                    }
+
+                }
+            }
+        } catch (Exception e) {
+            if (D2Dplot_global.isDebug()) e.printStackTrace();
+            log.warning("error reading EDF header");
+            return null;
+        }
+        patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,
+                -1.0f, true);
+        patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
+        if ((tilt!=0) && (rot!=0)){
+            if (!fit2d){
+                //d2dplot convention, directly the values
+                patt2D.setTiltDeg(tilt);
+                patt2D.setRotDeg(rot);
+            }else{
+                //fit2d convention, convert to d2d
+                patt2D.setRotDeg(ImageTiltRot_diag.f2dRotToD2d(rot));
+                patt2D.setTiltDeg(ImageTiltRot_diag.f2dTiltToD2d(tilt));
+            }
+        }
+
+        // parametres adquisicio
+        patt2D.setScanParameters(omeIni, omeFin, acqTime);
+
+        return patt2D;
+    }
+    
+    
     public static Pattern2D readEDF(File d2File) {
         Pattern2D patt2D = null;
         long start = System.nanoTime(); // control temps
@@ -1391,7 +1523,7 @@ public final class ImgFileUtils {
         String ext = FileUtils.getExtension(d2File).trim();
 
         // this line returns the FORMAT in the ENUM or NULL
-        SupportedReadExtensions format = (SupportedReadExtensions) FileUtils.searchEnum(
+        SupportedReadExtensions format = FileUtils.searchEnum(
                 SupportedReadExtensions.class, ext);
         if (format != null) {
             log.debug("Format=" + format.toString());
@@ -1474,7 +1606,7 @@ public final class ImgFileUtils {
         String ext = FileUtils.getExtension(d2File).trim();
 
         // this line returns the FORMAT in the ENUM or NULL
-        SupportedWriteExtensions format = (SupportedWriteExtensions) FileUtils.searchEnum(
+        SupportedWriteExtensions format = FileUtils.searchEnum(
                 SupportedWriteExtensions.class, ext);
         if (format != null) {
             log.debug("Format=" + format.toString());
@@ -1771,7 +1903,7 @@ public final class ImgFileUtils {
             // scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
             // scan_type = mar_ct (1.0,) ;
             float omeIni = patt2D.getOmeIni();
-            float omeFin = patt2D.getOmeIni();
+            float omeFin = patt2D.getOmeFin();
             float acqTime = patt2D.getAcqTime();
             if ((omeIni != 0) && (omeFin != 0)) {
                 // marScan

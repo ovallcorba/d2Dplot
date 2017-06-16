@@ -3,7 +3,9 @@ package com.vava33.d2dplot.auxi;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.io.File;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 import org.apache.commons.math3.util.FastMath;
@@ -44,6 +46,7 @@ public class Pattern2D {
     private ArrayList<OrientSolucio> solucions; // contindra les solucions
     private ArrayList<PuntClick> puntsCercles;
     private ArrayList<Peak> pkSearchResult; //de la cerca de pics
+    private Pattern2D fonsPerCercaPk;
     
     //zones excloses
     private ArrayList<PolyExZone> polyExZones;
@@ -166,6 +169,14 @@ public class Pattern2D {
                 }
             }
         }
+    }
+    
+    public void copyInstrParamFromOtherPatt(Pattern2D in){
+        this.setExpParam(in.getPixSx(), in.getPixSy(), in.getDistMD(), in.getWavel());
+        this.setWavel(in.getWavel());
+        this.setCentrX(in.getCentrX());
+        this.setCentrY(in.getCentrY());
+        
     }
     
     public void zeroIntensities(){
@@ -363,6 +374,7 @@ public class Pattern2D {
     //calcula i estableix els valors de meanI i sdevI de tota la imatge excepte mascares
     //tamb� calcula els nombre de pixels saturats
     public void calcMeanI(){
+//        BigInteger byacum = BigInteger.valueOf(0);
         long yacum=0;
         int npix=0;
         int satur=0;
@@ -382,6 +394,7 @@ public class Pattern2D {
                 if(this.getInten(j, i)<0)continue;
                 yacum=yacum+this.getInten(j, i);
                 npix=npix+1;
+
                 if(this.getInten(j, i)>=getSaturValue()){
                     satur=satur+1;
                     satPixels.add(new pixel(j,i));
@@ -391,14 +404,20 @@ public class Pattern2D {
         this.nSatur=satur;
         this.meanI= FastMath.round((float)yacum/(float)npix);
         //desviacio
-        long numerador=0;
+        double sd=0.0;
+
         for (int i = 0; i < this.getDimY(); i++) { // per cada fila (Y)
             for (int j = 0; j < this.getDimX(); j++) { // per cada columna (X)
                 if(this.getInten(j, i)<0)continue;
-                numerador=numerador + (this.getInten(j, i)-this.meanI)*(this.getInten(j, i)-this.meanI);
+
+                long a = this.getInten(j, i)-this.meanI;
+                long b = a*a;
+                double c = b/(float)npix;
+                sd = sd + c; 
+                
             }
         }
-        this.sdevI=(float) FastMath.sqrt((float)numerador/(float)npix);
+        this.sdevI=(float) FastMath.sqrt(FastMath.abs((float) sd));
         
         //afegit el 160906  calcul pics saturats (a partir dels pixels)
         //REVISAR HP:     Centre del pic (HP(J)) amb fons substret (BACKJ)
@@ -1166,6 +1185,10 @@ public class Pattern2D {
     public ArrayList<Peak> getPkSearchResult() {
         return pkSearchResult;
     }
+    
+    public void sortPkSearchResultYmax() {
+        Collections.sort(pkSearchResult);
+    }
 
     public void setPkSearchResult(ArrayList<Peak> pkSearchResult) {
         this.pkSearchResult = pkSearchResult;
@@ -1238,6 +1261,298 @@ public class Pattern2D {
 
     public void setFileFormat(ImgFileUtils.SupportedReadExtensions fileFormat) {
         this.fileFormat = fileFormat;
+    }
+    
+    public int getFileNameNumber(){
+        String fnameCurrent = FileUtils.getFNameNoExt(this.getImgfile());
+        int imgNum = -1;
+        try{
+            log.debug("substring "+fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+            imgNum = Integer.parseInt(fnameCurrent.substring(fnameCurrent.length()-4, fnameCurrent.length()));
+        }catch(Exception e){
+            log.debug("trying to get the file numbering");
+            int indexGuio = fnameCurrent.lastIndexOf("_");
+            if (indexGuio>0){
+                log.debug("index guio="+indexGuio);
+                imgNum = Integer.parseInt(fnameCurrent.substring(indexGuio+1, fnameCurrent.length()));
+            }
+        }
+        return imgNum;
+    }
+    
+    //retorna tots els pics potencials per damunt d'un llindar
+    //lhaperture= longitudinal Half-aperture in pixels, to determine the angdeg (tenia 75 pero era molt poc, amb 500 funciona be)
+    public ArrayList<Peak> findPeakCandidates(float delsig, boolean t2dependent, int zones2t, int lhaperture, int minpix){
+        
+        log.debug("************* FIND PEAK CANDIDATES *************");
+        
+        int maxPixBkg = 2000;
+        
+        ArrayList<Peak> pkCandidates = new ArrayList<Peak>();
+        
+        if (this.meanI<=0)this.calcMeanI();
+        //llindar general (despres es pot fer per 2t)
+        float llindarGeneral = this.meanI + delsig*this.sdevI;
+        
+        //llindar per zones (algunes variables fora perque s'utilitzen mes avall)
+        int nzones = zones2t; //i.e. caldran nzones+1 valors de px (un valor de 8 va be)
+        float[] izone2t = new float[nzones+1]; //llindars de les zones en 2THETA en la direccio horitzontal (X)
+        float dbLlin[] = new float[nzones];
+        float dbLlinSuau[] = new float[nzones];
+        
+        //primer determinem les zones: py=centre, px=divisioPelNombreDeZones
+        if (t2dependent){
+            float py=this.getCentrY();
+            float angdeg = 15f; //es sobreesciura
+            
+//            if (lhaperture<0) lhaperture = 500; //longitudinal Half-aperture in pixels, to determine the angdeg (tenia 75 pero era molt poc)
+            if (lhaperture<0) lhaperture = 1000; //longitudinal Half-aperture in pixels, to determine the angdeg (tenia 75 pero era molt poc)
+            
+            float div = (this.getDimX()-this.getCentrX())/nzones;
+            float[] izonepx = new float[nzones+1]; //llindars de les zones en PIXELS en la direccio horitzontal (X)
+            izonepx[0]=this.getCentrX();
+            izone2t[0]=0f;
+            StringBuilder szonespx = new StringBuilder();
+            StringBuilder szonest2 = new StringBuilder();
+            szonespx.append(FileUtils.dfX_2.format(izonepx[0])+" ");
+            szonest2.append(FileUtils.dfX_3.format(izone2t[0])+" ");
+            for (int i=1;i<nzones+1;i++){
+                izonepx[i]=izonepx[i-1]+div;
+                izone2t[i]=(float) this.calc2T(izonepx[i],py, true);
+                szonespx.append(FileUtils.dfX_2.format(izonepx[i])+" ");
+                szonest2.append(FileUtils.dfX_3.format(izone2t[i])+" ");
+            }
+            
+//            log.writeNameNums("CONFIG", true, "izonePX", izonepx[0],izonepx[1],izonepx[2],izonepx[3],izonepx[4],izonepx[5],izonepx[6],izonepx[7],izonepx[8]);
+//            log.writeNameNums("CONFIG", true, "izone2t", izone2t[0],izone2t[1],izone2t[2],izone2t[3],izone2t[4],izone2t[5],izone2t[6],izone2t[7],izone2t[8]);
+            
+            log.debug("izonesPX= "+szonespx.toString());
+            log.debug("izones2T= "+szonest2.toString());
+            
+            //ara a quina tol2t correspon div
+//            float t2a = (float) this.calc2T(izonepx[nzones/2], py, true);
+//            float t2b = (float) this.calc2T(izonepx[nzones/2+1], py, true);
+//            float tol2t = t2b-t2a;
+//            
+//            log.debug("tol2t= "+tol2t);
+            
+            Patt2Dzone[] zones = new Patt2Dzone[nzones];
+            
+            for (int i=1;i<nzones+1;i++){
+                int pxcen = FastMath.round((izonepx[i]+izonepx[i-1])/2);
+                angdeg = (float) FastMath.atan(lhaperture/((izonepx[i]+izonepx[i-1])/2));
+                angdeg = (float) FastMath.toDegrees(angdeg);
+//                angdeg = 180;
+                float tol2t = izone2t[i]-izone2t[i-1];
+                int npixZona = ImgOps.ArcNPix(this,pxcen,this.getCentrYI(),tol2t,angdeg);
+//                int npixFons = (int) FastMath.min((0.15*npixZona),maxPixBkg);
+                int npixFons = (int) (0.15*npixZona); //tenia npixZona/3
+                zones[i-1] = ImgOps.YarcTilt(this,pxcen,this.getCentrYI(),tol2t,angdeg,true,npixFons,false);
+                log.debug("ZONA="+(i-1)+" pxcen="+pxcen+" angdeg="+angdeg+" tol2t="+tol2t+" npixZona="+npixZona+" npixFons="+npixFons);
+            }
+            
+            StringBuilder sdbLlin = new StringBuilder();
+            StringBuilder sdbLlinSuau = new StringBuilder();
+            //llista dels llindars
+            for (int k=0;k<nzones;k++){
+//                dbLlin[k] = zones[k].getYmean() + delsig*patt2d.sdevI;//delsig*zones[k].getYmeandesv();
+//                dbLlin[k] = zones[k].getYmean() + delsig*zones[k].getYmeandesv();//delsig*zones[k].getYmeandesv();
+                dbLlin[k] = zones[k].getYbkg() + delsig*zones[k].getYbkgdesv();//delsig*zones[k].getYmeandesv();
+//                dbLlinSuau[k] = zones[k].getYmean();
+                dbLlinSuau[k] = zones[k].getYbkg();
+                log.writeNameNums("CONFIG", true, "dblinN,Ymean,Ysd,Bkg,Bkgsd", k,zones[k].getYmean(),zones[k].getYmeandesv(),zones[k].getYbkg(),zones[k].getYbkgdesv());
+                
+                sdbLlin.append(FileUtils.dfX_2.format(dbLlin[k])+" ");
+                sdbLlinSuau.append(FileUtils.dfX_2.format(dbLlinSuau[k])+" ");
+                
+            }
+//            log.writeNameNums("CONFIG", true, "dbLlin", dbLlin[0],dbLlin[1],dbLlin[2],dbLlin[3],dbLlin[4],dbLlin[5],dbLlin[6],dbLlin[7]);
+            log.debug("dbLlin= "+sdbLlin.toString());
+            log.debug("dbLlinSuau= "+sdbLlinSuau.toString());
+            log.writeNameNums("CONFIG", true, "LlindarGeneral", llindarGeneral);
+        }
+        
+        //de 1 a -1 per no agafar els pixels de les vores
+        for(int i=1; i<this.getDimY()-1;i++){
+            for(int j=1; j<this.getDimX()-1;j++){
+                
+                if (this.isInExZone(j, i))continue;
+                
+                int pxInten = this.getInten(j, i);
+                
+                float llindar = llindarGeneral;
+                float llindarVeins = llindarGeneral;
+                
+                if (t2dependent){
+                    //establim el llindar segons 2th
+                    float t2p = (float) this.calc2T(j, i,true);
+                    for (int k=0;k<nzones;k++){
+                        if ((t2p>=izone2t[k])&&(t2p<izone2t[k+1])){
+                            
+                            if (j==555 && i==1067) log.writeNameNums("CONFIG",true,"j,i,t2p,pxInten,llindar,llindarVeins",j,i,t2p,pxInten,llindar,llindarVeins);
+                            if (j==1160 && i==1096) log.writeNameNums("CONFIG",true,"j,i,t2p,pxInten,llindar,llindarVeins",j,i,t2p,pxInten,llindar,llindarVeins);
+                            
+                            //esta a la zona
+                            llindar = dbLlin[k];
+                            llindarVeins = dbLlinSuau[k];
+                            break;
+                        }
+                    }
+                }
+                
+                if (pxInten<llindar)continue;
+                
+                boolean possiblepeak = true;
+                //2n comprovem quie la intensitat es superior als 8 veins
+                search8neigbors:
+                    for (int ii=i-1;ii<i+2;ii++){
+                        for (int jj=j-1;jj<j+2;jj++){
+                            if (this.isInExZone(jj, ii))continue;
+                            if ((ii==i)&&(jj==j))continue; //same pixel
+                            try{
+                                if (pxInten< this.getInten(jj, ii)){ //px no es pic
+                                    possiblepeak = false;
+                                    break search8neigbors;
+                                }; 
+                            }catch(Exception e){
+                                e.printStackTrace();
+                            }
+                            //si la intensitat es igual o major pot ser pic (igual pot ser saturat...)
+                        }
+                    }
+
+                if (!possiblepeak)continue;
+//                log.writeNameNums("CONFIG", true, "possible peak (x,y,inten,llindar)", j,i,pxInten,llindar);
+                
+                boolean hasMinEnough = true;
+                if(minpix>1){
+                    if (minpix > 20) minpix=20; //restriccio que poso
+                    int npixbons = 0;
+                    for (int ii=i-2;ii<i+3;ii++){
+                        for (int jj=j-2;jj<j+3;jj++){
+                            if (!this.isInside(jj, ii))continue;
+                            if (this.isInExZone(jj, ii))continue;
+                            
+                            if (this.getInten(jj, ii)>(llindarVeins)){ //unicament Ymean pels veins
+                                npixbons=npixbons+1;
+                            }
+                        }
+                    }
+                    if (npixbons<minpix) {
+                        hasMinEnough=false;
+                        log.debug("peak containing less than minpix");
+                    }
+                }
+                
+                //i estem aqui es que pot ser un pic en aquesta primera ronda, el guardem a un arraylist
+                if (hasMinEnough) {
+                    Peak pk = new Peak(j,i);
+                    pk.setYmax(pxInten);
+                    pkCandidates.add(pk);
+                }
+//                if (i==testPeakY && j==testPeakX)System.out.println(String.format("hasMinEnough %b", hasMinEnough));
+            }
+        }
+        return pkCandidates;
+        
+    }
+    
+    
+    public ArrayList<Peak> findPeakCandidatesBKG(float delsig, int minpix){
+        
+        log.debug("************* FIND PEAK CANDIDATES USING BKG SUB *************");
+        
+        
+//        Pattern2D it[] = new Pattern2D[2];
+//        it[0] = ImgOps.firstBkgPass(this);
+//        it[1] = ImgOps.calcIterAvsq(ImgOps.firstBkgPass(this),10,null,null);
+        if (fonsPerCercaPk == null){
+            int oldThr=this.getExz_threshold();
+            this.setExz_threshold(1);
+            try {
+                fonsPerCercaPk = ImgOps.calcIterAvsq(ImgOps.firstBkgPass(this),10,null,null);
+            } catch (InterruptedException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            this.setExz_threshold(oldThr);
+            fonsPerCercaPk.calcMeanI();
+        }
+        ArrayList<Peak> pkCandidates = new ArrayList<Peak>();
+        if (this.meanI<=0)this.calcMeanI();
+        if (this.fonsPerCercaPk.meanI<=0)fonsPerCercaPk.calcMeanI();
+
+        log.writeNameNumPairs("CONFIG", true, "meanI, sdevI, fonsMeanI,fonsSDevI", meanI, sdevI, fonsPerCercaPk.meanI,fonsPerCercaPk.sdevI);
+        
+        //de 1 a -1 per no agafar els pixels de les vores
+        for(int i=1; i<this.getDimY()-1;i++){
+            for(int j=1; j<this.getDimX()-1;j++){
+                
+                if (this.isInExZone(j, i))continue;
+                
+                int pxInten = this.getInten(j, i);
+                
+                int fonsInten = fonsPerCercaPk.getInten(j, i);
+//                float llindar = fonsInten + delsig*this.sdevI; 
+//                float llindarVeins = this.meanI;
+                float llindar = fonsInten + delsig*fonsPerCercaPk.sdevI; 
+                float llindarVeins = fonsPerCercaPk.meanI;
+                
+                if (pxInten<llindar)continue;
+                
+                boolean possiblepeak = true;
+                //2n comprovem quie la intensitat es superior als 8 veins
+                search8neigbors:
+                    for (int ii=i-1;ii<i+2;ii++){
+                        for (int jj=j-1;jj<j+2;jj++){
+                            if (this.isInExZone(jj, ii))continue;
+                            if ((ii==i)&&(jj==j))continue; //same pixel
+                            try{
+                                if (pxInten< this.getInten(jj, ii)){ //px no es pic
+                                    possiblepeak = false;
+                                    break search8neigbors;
+                                }; 
+                            }catch(Exception e){
+                                e.printStackTrace();
+                            }
+                            //si la intensitat es igual o major pot ser pic (igual pot ser saturat...)
+                        }
+                    }
+
+                if (!possiblepeak)continue;
+//                log.writeNameNums("CONFIG", true, "possible peak (x,y,inten,llindar)", j,i,pxInten,llindar);
+                
+                boolean hasMinEnough = true;
+                if(minpix>1){
+                    if (minpix > 20) minpix=20; //restriccio que poso
+                    int npixbons = 0;
+                    for (int ii=i-2;ii<i+3;ii++){
+                        for (int jj=j-2;jj<j+3;jj++){
+                            if (!this.isInside(jj, ii))continue;
+                            if (this.isInExZone(jj, ii))continue;
+                            
+                            if (this.getInten(jj, ii)>(llindarVeins)){ //unicament Ymean pels veins
+                                npixbons=npixbons+1;
+                            }
+                        }
+                    }
+                    if (npixbons<minpix) {
+                        hasMinEnough=false;
+                        log.debug("peak containing less than minpix");
+                    }
+                }
+                
+                //i estem aqui es que pot ser un pic en aquesta primera ronda, el guardem a un arraylist
+                if (hasMinEnough) {
+                    Peak pk = new Peak(j,i);
+                    pk.setYmax(pxInten);
+                    pkCandidates.add(pk);
+                }
+//                if (i==testPeakY && j==testPeakX)System.out.println(String.format("hasMinEnough %b", hasMinEnough));
+            }
+        }
+        return pkCandidates;
+        
     }
     
 }
