@@ -20,7 +20,8 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String welcomeMSG = "d2Dplot v1703 (170616) by OV"; //nomes canviare la versio global quan faci un per distribuir
+    public static final String version = "v1703 (170721)"; //nomes canviare la versio global quan faci un per distribuir
+    public static final String welcomeMSG = "d2Dplot "+version+" by OV";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
     public static final String userDir = System.getProperty("user.dir");
@@ -44,7 +45,7 @@ public final class D2Dplot_global {
     
 //*** parametres que es poden canviar a les opcions *****
     //global 
-    public static boolean logging = true;
+    public static boolean logging = false;
     public static String loglevel = "info"; //info, config, etc...
     private static final boolean overrideLogLevelConfigFile = false;
     private static String workdir = System.getProperty("user.dir");

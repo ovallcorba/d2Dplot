@@ -755,11 +755,10 @@ public final class ImgOps {
     
     
     
-    public static ArrayList<Peak> findPeaksBetter(Pattern2D patt2d, float delsig, int zoneRadius, boolean t2dependent, int zones2t, int minpix, boolean roundToInt, int lhaperture){
+    public static ArrayList<Peak> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, int minpix, boolean roundToInt){
         
         //1r busquem candidats
-//        ArrayList<Peak> pkCandidates = patt2d.findPeakCandidates(delsig, t2dependent, zones2t, lhaperture, minpix);
-        ArrayList<Peak> pkCandidates = patt2d.findPeakCandidatesBKG(delsig, minpix);
+        ArrayList<Peak> pkCandidates = patt2d.findPeakCandidates(delsig, minpix);
         if (pkCandidates.size()<=0)return null;
 
         log.debug("====> N initial candidates="+pkCandidates.size());
@@ -933,8 +932,6 @@ public final class ImgOps {
             pkCandidates.remove(pk); //l'eliminem
 
             Ellipse2D.Float elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
-//            float radibig = zoneRadius * 5;
-//            Ellipse2D.Float elliSatur = new Ellipse2D.Float(x-radibig,y-radibig,radibig*2,radibig*2);
             int niguals = 1;
             
             for (int i=0; i<pkCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
@@ -942,14 +939,6 @@ public final class ImgOps {
                 if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
                 int pk2inten = patt2d.getInten(Math.round(pk2.getPixelCentre().x), Math.round(pk2.getPixelCentre().y));
                 if (elli.contains(pk2.getPixelCentre())){
-//                    if (pkinten == pk2inten){
-//                        sumX = sumX + pk2.getPixelCentre().x;
-//                        sumY = sumY + pk2.getPixelCentre().y;
-//                        niguals = niguals +1;
-//                        toRemove.add(pk2); //l'eliminarem al sortir del bucle
-//                        log.writeNameNums("fine", true, "removed candidate (x,y)=", pk2.getPixelCentre().x,pk2.getPixelCentre().y);
-//                        continue;
-//                    }
                     //ponderem posició
                     sumX = sumX + (pk2.getPixelCentre().x * pk2inten);
                     sumY = sumY + (pk2.getPixelCentre().y * pk2inten);
@@ -959,16 +948,6 @@ public final class ImgOps {
                     log.writeNameNums("fine", true, "removed candidate (x,y)=", pk2.getPixelCentre().x,pk2.getPixelCentre().y);
                     continue;
                 }
-//                if (pkinten>=patt2d.getSaturValue()){
-//                    if(elliSatur.contains(pk2.getPixelCentre())){
-//                        sumX = sumX + pk2.getPixelCentre().x;
-//                        sumY = sumY + pk2.getPixelCentre().y;
-//                        niguals = niguals +1;
-//                        toRemove.add(pk2); //l'eliminarem al sortir del bucle
-//                        log.writeNameNums("fine", true, "removed candidate (x,y)=", pk2.getPixelCentre().x,pk2.getPixelCentre().y);
-//                        continue;
-//                    }
-//                }
             }
             
             pkCandidates.removeAll(toRemove); //eliminem els que ja hem considerat
@@ -1022,25 +1001,7 @@ public final class ImgOps {
             toRemove = new ArrayList<Peak>();
             
             Ellipse2D.Float elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
-//            for (int i=0; i<pkCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
-//                Point2D.Float pk2 = pkCandidates.get(i).getPixelCentre();
-//                if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
-//                if (elli.contains(pk2)){
-//                    int pk2inten = patt2d.getInten(Math.round(pk2.x), Math.round(pk2.y));
-//                    if (pk2inten>maxInten){
-//                        //aquest es mes intens, ens el quedem
-//                        bestX = pk2.x;
-//                        bestY = pk2.y;
-//                        maxInten = pk2inten;
-//                    }
-//                    nEixam = nEixam+1;
-//                    toRemove.add(pkCandidates.get(i)); //l'eliminarem al sortir del bucle
-//                    log.config("eixam found");
-//                }
-//            }
-            
             //PROVEM DE FER-HO AMB ZONA ARC
-            
             //tenim tolerancia radial en pixels 
             int intRadPixels = zoneRadius; //ho passarem a tol2t
             //i la tolerancia de l'arc (longitudinal)
@@ -1111,6 +1072,9 @@ public final class ImgOps {
             for (int i=0; i<pkCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
                 Peak pk2 = pkCandidates.get(i);
                 if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
+                if (!(pk2.getPixelCentre().x>minX && pk2.getPixelCentre().x<maxX && pk2.getPixelCentre().y>minY && pk2.getPixelCentre().y<maxY)){
+                    continue;
+                }
                 int pk2inten = patt2d.getInten(Math.round(pk2.getPixelCentre().x), Math.round(pk2.getPixelCentre().y));
                 
                 //el busquem a dins de la zona
@@ -1210,7 +1174,7 @@ public final class ImgOps {
             //ja hem acabat!!
             
             realPeaks.add(pic);
-            log.writeNameNums("CONFIG", true, "peak added (x,y,inten,neixam,nsatur)", pic.getPixelCentre().x, pic.getPixelCentre().y,patt2d.getInten(x,y),pic.getnVeinsEixam(),pic.getnSatur());
+            log.writeNameNums("CONFIG", true, "peak added (NUM,x,y,inten,neixam,nsatur)", realPeaks.size()-1,pic.getPixelCentre().x, pic.getPixelCentre().y,patt2d.getInten(x,y),pic.getnVeinsEixam(),pic.getnSatur());
         }
 
         log.debug("====> N final peaks="+realPeaks.size());
@@ -1221,357 +1185,6 @@ public final class ImgOps {
     
     
     //roundToInt fa que es guardin fent un round
-    public static ArrayList<Peak> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, boolean t2dependent, int zones2t, int minpix, boolean roundToInt){      
-
-        ArrayList<Point2D.Float> foundCandidates = new ArrayList<Point2D.Float>();
-        
-        patt2d.calcMeanI();
-        
-        //llindar general (despres es pot fer per 2t)
-        float llindarGeneral = patt2d.meanI + delsig*patt2d.sdevI;
-        
-        //llindar per zones (algunes variables fora perque s'utilitzen mes avall)
-        int nzones = zones2t; //i.e. caldran nzones+1 valors de px (un valor de 8 va be)
-        float[] izone2t = new float[nzones+1]; //llindars de les zones en 2THETA en la direccio horitzontal (X)
-        float dbLlin[] = new float[nzones];
-        float dbLlinSuau[] = new float[nzones];
-
-        //primer determinem les zones: py=centre, px=divisioPelNombreDeZones
-        if (t2dependent){
-            float py=patt2d.getCentrY();
-            float angdeg = 15f; //es sobreesciura
-            
-            int lhaperture = 500;//longitudinal Half-aperture in pixels, to determine the angdeg (tenia 75 pero era molt poc)
-            
-            float div = (patt2d.getDimX()-patt2d.getCentrX())/nzones;
-            float[] izonepx = new float[nzones+1]; //llindars de les zones en PIXELS en la direccio horitzontal (X)
-            izonepx[0]=patt2d.getCentrX();
-            izone2t[0]=0f;
-            for (int i=1;i<nzones+1;i++){
-                izonepx[i]=izonepx[i-1]+div;
-                izone2t[i]=(float) patt2d.calc2T(izonepx[i],py, true);
-            }
-            log.writeNameNums("INFO", true, "izonePX", izonepx[0],izonepx[1],izonepx[2],izonepx[3],izonepx[4],izonepx[5],izonepx[6],izonepx[7],izonepx[8]);
-            log.writeNameNums("INFO", true, "izone2t", izone2t[0],izone2t[1],izone2t[2],izone2t[3],izone2t[4],izone2t[5],izone2t[6],izone2t[7],izone2t[8]);
-            
-            //ara a quina tol2t correspon div
-            float t2a = (float) patt2d.calc2T(izonepx[nzones/2], py, true);
-            float t2b = (float) patt2d.calc2T(izonepx[nzones/2+1], py, true);
-            float tol2t = t2b-t2a;
-            
-            Patt2Dzone[] zones = new Patt2Dzone[nzones];
-            
-            for (int i=1;i<nzones+1;i++){
-                int pxcen = FastMath.round((izonepx[i]+izonepx[i-1])/2);
-                angdeg = (float) FastMath.atan(lhaperture/((izonepx[i]+izonepx[i-1])/2));
-                angdeg = (float) FastMath.toDegrees(angdeg);
-//                angdeg = 180;
-                int npixZona = ArcNPix(patt2d,pxcen,patt2d.getCentrYI(),tol2t,angdeg);
-                zones[i-1] = YarcTilt(patt2d,pxcen,patt2d.getCentrYI(),tol2t,angdeg,true,npixZona/3,false);
-                log.info("angdeg="+angdeg+" npixZona="+npixZona);
-            }
-            
-            //llista dels llindars
-            for (int k=0;k<nzones;k++){
-//                dbLlin[k] = zones[k].getYmean() + delsig*patt2d.sdevI;//delsig*zones[k].getYmeandesv();
-                dbLlin[k] = zones[k].getYmean() + delsig*zones[k].getYmeandesv();//delsig*zones[k].getYmeandesv();
-                dbLlinSuau[k] = zones[k].getYmean();
-                log.writeNameNums("INFO", true, "dblinN,Ymean,Ysd,Bkg,Bkgsd", k,zones[k].getYmean(),zones[k].getYmeandesv(),zones[k].getYbkg(),zones[k].getYbkgdesv());
-                
-            }
-            log.writeNameNums("INFO", true, "dbLlin", dbLlin[0],dbLlin[1],dbLlin[2],dbLlin[3],dbLlin[4],dbLlin[5],dbLlin[6],dbLlin[7]);
-            log.writeNameNums("INFO", true, "LlindarGeneral", llindarGeneral);
-        }
-        
-        //DEBUG
-//        int testPeakX=1372;
-//        int testPeakY=309;
-//        int testPeakX=257;
-//        int testPeakY=1256;
-        
-        
-        //de 1 a -1 per no agafar els pixels de les vores
-        for(int i=1; i<patt2d.getDimY()-1;i++){
-            for(int j=1; j<patt2d.getDimX()-1;j++){
-                
-                if (patt2d.isInExZone(j, i))continue;
-                
-                int pxInten = patt2d.getInten(j, i);
-                
-                float llindar = llindarGeneral;
-                float llindarVeins = llindarGeneral;
-                
-                if (t2dependent){
-                    //establim el llindar segons 2th
-                    float t2p = (float) patt2d.calc2T(j, i,true);
-                    for (int k=0;k<nzones;k++){
-                        if ((t2p>=izone2t[k])&&(t2p<izone2t[k+1])){
-                            //esta a la zona
-                            llindar = dbLlin[k];
-                            llindarVeins = dbLlinSuau[k];
-                            break;
-                        }
-                    }
-                }
-                
-//                if (i==testPeakY && j==testPeakX)System.out.println(String.format("pixel %d %d inten=%d llindar=%f llindarlaxe=%f", j,i,pxInten, llindar,llindar-delsig*patt2d.sdevI));
-
-                if (pxInten<llindar)continue;
-                
-                boolean possiblepeak = true;
-                //2n comprovem quie la intensitat es superior als 8 veins
-                search8neigbors:
-                    for (int ii=i-1;ii<i+2;ii++){
-                        for (int jj=j-1;jj<j+2;jj++){
-                            if (patt2d.isInExZone(jj, ii))continue;
-                            if ((ii==i)&&(jj==j))continue; //same pixel
-                            try{
-                                if (pxInten< patt2d.getInten(jj, ii)){ //px no es pic
-                                    possiblepeak = false;
-                                    break search8neigbors;
-                                }; 
-                            }catch(Exception e){
-                                e.printStackTrace();
-                            }
-                        
-                            //si la intensitat es igual o major pot ser pic (igual pot ser saturat...)
-                        
-                        }
-                    }
-//                if (i==testPeakY && j==testPeakX)System.out.println(String.format("possible peak %b", possiblepeak));
-                if (!possiblepeak)continue;
-                log.writeNameNums("INFO", true, "possible peak (x,y,inten,llindar)", j,i,pxInten,llindar);
-                
-                boolean hasMinEnough = true;
-                if(minpix>1){
-                    if (minpix > 20) minpix=20; //restriccio que poso
-                    int npixbons = 0;
-                    for (int ii=i-2;ii<i+3;ii++){
-                        for (int jj=j-2;jj<j+3;jj++){
-                            if (!patt2d.isInside(jj, ii))continue;
-                            if (patt2d.isInExZone(jj, ii))continue;
-                            
-//                            if (patt2d.getInten(jj, ii)>(llindar-delsig*patt2d.sdevI)){
-                            if (patt2d.getInten(jj, ii)>(llindarVeins)){
-                                npixbons=npixbons+1;
-                            }
-//                      
-                            
-                            //per ell mateix criteri estricte
-//                            if (ii==i && jj==j){
-//                                if (patt2d.getInten(jj, ii)>llindar){
-//                                    npixbons=npixbons+1;
-//                                }                                
-//                            }else{ //pels veins criteri més laxe (unicament Ymean)
-//                                if (patt2d.getInten(jj, ii)>(llindar-delsig*patt2d.sdevI)){
-//                                    npixbons=npixbons+1;
-//                                }
-//                            }
-                            
-
-                        }
-                    }
-                    if (npixbons<minpix) {
-                        hasMinEnough=false;
-                        log.info("peak containing less than minpix");
-                    }
-                }
-                
-                //i estem aqui es que pot ser un pic en aquesta primera ronda, el guardem a un arraylist
-                if (hasMinEnough) foundCandidates.add(new Point2D.Float(j,i));
-//                if (i==testPeakY && j==testPeakX)System.out.println(String.format("hasMinEnough %b", hasMinEnough));
-            }
-        }
-        if (foundCandidates.size()==0)return null;
-
-        //REALMENT LA SEGONA PASSADA ES PODRIA FER DUES VEGADES SI ES VEU QUE FALTA RANG...
-        //segona passada, colapsem els pics on hi ha intensitat igual en pixels consecutius (i identifiquem els saturats?)
-        ArrayList<Point2D.Float> toRemove = new ArrayList<Point2D.Float>();
-        ArrayList<Point2D.Float> toAdd = new ArrayList<Point2D.Float>();
-        
-        boolean finished = false;
-        while (!finished){
-            if (foundCandidates.isEmpty()){
-                finished=true;
-                continue;
-            }
-            Point2D.Float pk = foundCandidates.get(0);
-            int x = (int)(pk.x);
-            int y = (int)(pk.y);
-
-            float sumX = pk.x;
-            float sumY = pk.y;
-            int pkinten = patt2d.getInten(x, y);
-            
-            foundCandidates.remove(pk); //l'eliminem
-            toRemove = new ArrayList<Point2D.Float>();
-
-//            Rectangle2D.Float rect = new Rectangle2D.Float(x-zoneRadius, y-zoneRadius, zoneRadius*2, zoneRadius*2);
-            Ellipse2D.Float elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
-            float radibig = zoneRadius * 15;
-            Ellipse2D.Float elliSatur = new Ellipse2D.Float(x-radibig,y-radibig,radibig*2,radibig*2);
-            int niguals = 1;
-            
-            for (int i=0; i<foundCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
-                Point2D.Float pk2 = foundCandidates.get(i);
-                if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
-                int pk2inten = patt2d.getInten(Math.round(pk2.x), Math.round(pk2.y));
-                if (elli.contains(pk2)){
-                    if (pkinten == pk2inten){
-                        sumX = sumX + pk2.x;
-                        sumY = sumY + pk2.y;
-                        niguals = niguals +1;
-                        toRemove.add(pk2); //l'eliminarem al sortir del bucle
-                        log.writeNameNums("CONFIG", true, "removed candidate (x,y)=", pk2.x,pk2.y);
-                        continue;
-                    }
-//                    if(pkinten==patt2d.getSaturValue()||pk2inten==patt2d.getSaturValue()){
-//                        sumX = sumX + pk2.x;
-//                        sumY = sumY + pk2.y;
-//                        niguals = niguals +1;
-//                        toRemove.add(pk2); //l'eliminarem al sortir del bucle
-//                        log.writeNameNums("CONFIG", true, "removed candidate (x,y)=", pk2.x,pk2.y);
-//                        continue;
-//                    }
-                    
-                  if(pkinten==patt2d.getSaturValue()||pk2inten==patt2d.getSaturValue()){
-                      if (elliSatur.contains(pk2)){
-                          sumX = sumX + pk2.x;
-                          sumY = sumY + pk2.y;
-                          niguals = niguals +1;
-                          toRemove.add(pk2); //l'eliminarem al sortir del bucle
-                          log.writeNameNums("CONFIG", true, "removed candidate (x,y)=", pk2.x,pk2.y);
-                          continue;
-                      }
-                  }
-
-                }
-                
-                
-//                if (elli.contains(pk2)){
-//                    if(pkinten==patt2d.getSaturValue()||pk2inten==patt2d.getSaturValue()){
-//                        sumX = sumX + pk2.x;
-//                        sumY = sumY + pk2.y;
-//                        niguals = niguals +1;
-//                        toRemove.add(pk2); //l'eliminarem al sortir del bucle
-//                        log.writeNameNums("CONFIG", true, "removed candidate (x,y)=", pk2.x,pk2.y);
-//                    }
-//                }
-            }
-            foundCandidates.removeAll(toRemove); //eliminem els que ja hem considerat
-
-            if (niguals > 1){//hi ha hagut merging
-                //afegim el pic "suma"
-                float xf = sumX/niguals;
-                float yf = sumY/niguals;
-                if (roundToInt){
-                    xf = FastMath.round(xf);
-                    yf = FastMath.round(yf);
-                }
-                toAdd.add(new Point2D.Float(xf,yf));
-                log.writeNameNums("INFO", true, "removed candidate (x,y)=", pk.x,pk.y);
-                log.writeNameNums("INFO", true, "added new candidate (from merging) (x,y)=", xf,yf);
-            }else{
-                //hem de tornar a afegir el pic que hem eliminat!
-                toAdd.add(new Point2D.Float(pk.x,pk.y));
-            }
-            
-        }
-        if (!toAdd.isEmpty())foundCandidates.addAll(toAdd);
-
-        
-        //tercera passada busquem pics aprop dels altres (tambe col·lapsem) pero considerem eixam i ens quedem amb el major maxim.
-        //tambe identifiquem pics propers a mascara
-        ArrayList<Peak> realPeaks = new ArrayList<Peak>();
-        finished = false;
-        while (!finished){
-            if (foundCandidates.isEmpty()){
-                finished=true;
-                continue;
-            }
-            Point2D.Float pk = foundCandidates.get(0);
-            int x = (int)(pk.x);
-            int y = (int)(pk.y);
-
-            float bestX = pk.x;
-            float bestY = pk.y;
-            int maxInten = patt2d.getInten(x, y);
-            int nEixam = 1;
-
-            foundCandidates.remove(pk); //l'eliminem
-            toRemove = new ArrayList<Point2D.Float>();
-            Ellipse2D.Float elli = new Ellipse2D.Float(x-zoneRadius,y-zoneRadius,zoneRadius*2,zoneRadius*2);
-            
-            for (int i=0; i<foundCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
-                Point2D.Float pk2 = foundCandidates.get(i);
-                if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
-                if (elli.contains(pk2)){
-                    int pk2inten = patt2d.getInten(Math.round(pk2.x), Math.round(pk2.y));
-                    if (pk2inten>maxInten){
-                        //aquest es mes intens, ens el quedem
-                        bestX = pk2.x;
-                        bestY = pk2.y;
-                        maxInten = pk2inten;
-                    }
-                    nEixam = nEixam+1;
-                    toRemove.add(pk2); //l'eliminarem al sortir del bucle
-                    log.config("eixam found");
-                }
-            }
-            foundCandidates.removeAll(toRemove); //eliminem els que ja hem considerat
-
-            //afegim el pic
-            Peak pic = new Peak(bestX,bestY);
-            pic.setnVeinsEixam(nEixam);
-
-            //mirem ara els saturats i si està prop d'una mascara
-            x = (int)(pic.getPixelCentre().x);
-            y = (int)(pic.getPixelCentre().y);
-            
-            for(int i=y-zoneRadius; i<y+(zoneRadius*2);i++){
-                for(int j=x-zoneRadius; j<x+(zoneRadius*2);j++){
-                    if (elli.contains(j, i)){
-                        if (!patt2d.isInside(j, i)){
-                            pic.setNearMask(true);
-                            continue;
-                        }
-                        if (patt2d.isInExZone(j, i)){
-                            pic.setNearMask(true);
-                            continue;
-                        }
-                        if (patt2d.getInten(j, i)>=(patt2d.getSaturValue()-1)){
-                            pic.setnSatur(pic.getnSatur()+1);
-                        }
-                    }
-                }
-            }
-            
-            //TEST de determinar una mica millor el màxim amb els 8 veins ---> FUNCIONA PERO HO PROVARE AMB MES VEINS PER TAMBE MIRAR EL FONS ... no, ho fare a l'integrar millor...
-            int sumaX=0;
-            int sumaY=0;
-            int sumaInt=0;
-            for (int ii=y-1;ii<y+2;ii++){
-                for (int jj=x-1;jj<x+2;jj++){
-                    if (patt2d.isInExZone(jj, ii))continue;
-                    sumaX = sumaX + patt2d.getInten(jj, ii)*jj;
-                    sumaY = sumaY + patt2d.getInten(jj, ii)*ii;
-                    sumaInt = sumaInt + patt2d.getInten(jj, ii);
-                }
-            }
-            float xpond = (float)sumaX/(float)sumaInt;
-            float ypond = (float)sumaY/(float)sumaInt;
-            pic.getPixelCentre().x=xpond;
-            pic.getPixelCentre().y=ypond;
-            
-            //ja hem acabat!!
-            
-            realPeaks.add(pic);
-            log.writeNameNums("INFO", true, "peak added (x,y,inten,neixam,nsatur)", pic.getPixelCentre().x, pic.getPixelCentre().y,patt2d.getInten(x,y),pic.getnVeinsEixam(),pic.getnSatur());
-        }
-        
-        return realPeaks;
-    }
-	
     //HA d'eliminar els diamant i també els que estan a PROP dels diamant
     public static int removeDiamondPeaks(ArrayList<Peak> pks){
         ArrayList<Peak> toRemove = new ArrayList<Peak>();
@@ -2661,18 +2274,17 @@ public final class ImgOps {
         private File[] flist;
         LogJTextArea taOut;
         float delsig, angDeg;
-        boolean autoDS, autoBkgPt, autoTol2T, autoAngD, lorCorr;
+        boolean autoBkgPt, autoTol2T, autoAngD, lorCorr;
         int zoneR,minPix,bkgpt,iosc,tol2tpix;
 
         // distMD & wavel -1 to take the ones from the original image,
         // exzfile=null for the same.
         public PkIntegrateFileWorker(File[] files, LogJTextArea textAreaOutput,
-                float delsig, boolean autoDS, int zoneR, int minPix, int bkgpt, 
+                float delsig, int zoneR, int minPix, int bkgpt, 
                 boolean autoBkgPt, int tol2tpix, boolean autoTol2t, float angDeg, 
                 boolean autoAngDeg, boolean lorCorr, int iosc) {
             this.flist = files;
             this.delsig=delsig;
-            this.autoDS=autoDS;
             this.zoneR=zoneR;
             this.minPix=minPix;
             this.bkgpt=bkgpt;
@@ -2707,7 +2319,7 @@ public final class ImgOps {
                     continue;
                 }
                 taOut.stat("   Finding peaks...");
-                in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, autoDS, PKsearch_frame.nzonesFindPeaks, minPix, false));
+                in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false));
                 Iterator<Peak> itrpks = in.getPkSearchResult().iterator();
                 taOut.stat("   Integrating...");
                 while (itrpks.hasNext()){
@@ -2735,6 +2347,9 @@ public final class ImgOps {
                     in.setIscan(iosc);
                     pk.calculate(lorCorr);
                 }
+                
+                ImgOps.removeDiamondPeaks(in.getPkSearchResult());
+                
                 //Escribim PCS
                 File out = FileUtils.canviExtensio(flist[i],"PCS");
                 if (out.exists()){
@@ -2753,7 +2368,7 @@ public final class ImgOps {
                     if (!owrite)continue;
                 }
                 
-                File f = ImgFileUtils.writePCS(in,out,delsig,autoDS,angDeg,autoTol2T,zoneR,minPix,bkgpt,autoBkgPt,autoAngD);
+                File f = ImgFileUtils.writePCS(in,out,delsig,angDeg,autoTol2T,zoneR,minPix,bkgpt,autoBkgPt,autoAngD);
                 
                 if (f != null) {
                     if (this.taOut!=null) taOut.stat("   "+f.toString()+" written!");
@@ -2776,18 +2391,17 @@ public final class ImgOps {
         private File[] flist;
         LogJTextArea taOut;
         float delsig, angDeg;
-        boolean autoDS, autoBkgPt, autoTol2T, autoAngD, lorCorr;
+        boolean autoBkgPt, autoTol2T, autoAngD, lorCorr;
         int zoneR,minPix,bkgpt,iosc,tol2tpix;
 
         // distMD & wavel -1 to take the ones from the original image,
         // exzfile=null for the same.
         public PkSCIntegrateFileWorker(File[] files, LogJTextArea textAreaOutput,
-                float delsig, boolean autoDS, int zoneR, int minPix, int bkgpt, 
+                float delsig, int zoneR, int minPix, int bkgpt, 
                 boolean autoBkgPt, int tol2tpix, boolean autoTol2t, float angDeg, 
                 boolean autoAngDeg, boolean lorCorr, int iosc) {
             this.flist = files;
             this.delsig=delsig;
-            this.autoDS=autoDS;
             this.zoneR=zoneR;
             this.minPix=minPix;
             this.bkgpt=bkgpt;
@@ -2852,11 +2466,7 @@ public final class ImgOps {
                                 output.println("NO rotation axis");
                                 break;
                         }
-                        if (autoDS){
-                            output.println(String.format("ESD factor (º)= %.2f (2theta dependance ENABLED)",delsig));    
-                        }else{
-                            output.println(String.format("ESD factor (º)= %.2f",delsig));    
-                        }
+                        output.println(String.format("ESD factor = %.2f",delsig));    
                         if (autoAngD){
                             output.println(String.format("Automatic azim aperture of the integration for each peak"));
                         }else{
@@ -2881,7 +2491,7 @@ public final class ImgOps {
                     }
                     
                     taOut.stat("   Finding peaks...");
-                    in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, autoDS, PKsearch_frame.nzonesFindPeaks, minPix, false));
+                    in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false));
                     if (in.getPkSearchResult()==null)continue;
                     Iterator<Peak> itrpks = in.getPkSearchResult().iterator();
                     taOut.stat("   Integrating...");
@@ -2911,6 +2521,8 @@ public final class ImgOps {
                         pk.calculate(lorCorr);
                     }
 
+                    ImgOps.removeDiamondPeaks(in.getPkSearchResult());
+                    
                     output.println(Peak.out_header);
                     output.println(String.format("%10d%10d",in.getFileNameNumber(),in.getPkSearchResult().size()));
                     

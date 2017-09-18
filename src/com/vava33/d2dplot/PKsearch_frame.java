@@ -135,7 +135,6 @@ public class PKsearch_frame extends JFrame {
     
     private JPanel panel_3;
     private JPanel panel_4;
-    private JCheckBox chckbxAutodelsig;
     private JLabel lblMinNrPixels;
     private JTextField txtMinpixels;
     private JCheckBox chckbxAutointrad;
@@ -233,10 +232,6 @@ public class PKsearch_frame extends JFrame {
         txtDelsig.setText("1.5");
         txtDelsig.setColumns(10);
         
-        chckbxAutodelsig = new JCheckBox("f(2"+D2Dplot_global.theta+")");
-        chckbxAutodelsig.setSelected(true);
-        panel_3.add(chckbxAutodelsig, "cell 2 0");
-        
         lblZoneradius = new JLabel("Peak merge zone (px)=");
         panel_3.add(lblZoneradius, "cell 0 1,alignx right");
         
@@ -329,6 +324,9 @@ public class PKsearch_frame extends JFrame {
         panel_2.add(spinerAxis, "cell 1 3,growx");
         panel.add(btnCalculate, "flowx,cell 0 2 2 1,alignx center");
         
+        lblNpks = new JLabel("");
+        panel.add(lblNpks, "cell 1 2,alignx right");
+        
         scrollPane_1 = new JScrollPane();
         splitPane.setRightComponent(scrollPane_1);
         table = new JTable(){
@@ -391,9 +389,6 @@ public class PKsearch_frame extends JFrame {
         panel_1 = new JPanel();
         contentPane.add(panel_1, "flowx,cell 0 1,grow");
         panel_1.setLayout(new MigLayout("", "[][][][grow][][grow]", "[][]"));
-        
-        lblNpks = new JLabel("");
-        panel_1.add(lblNpks, "cell 0 0");
         
         btnExportPeakList = new JButton("Write PCS file for INCO");
         panel_1.add(btnExportPeakList, "cell 1 0 2 1,growx");
@@ -522,10 +517,10 @@ public class PKsearch_frame extends JFrame {
     }
     
     private void searchPeaks(){
-        boolean t2dep = chckbxAutodelsig.isSelected();
+//        boolean t2dep = chckbxAutodelsig.isSelected();
         this.readSearchOptions();
 //        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, t2dep, nzonesFindPeaks, minpix, false);
-        ArrayList<Peak> pks = ImgOps.findPeaksBetter(patt2d, delsig, zoneR, t2dep, nzonesFindPeaks, minpix, false,-1);
+        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, minpix, false);
         
 //        if(chckbxAvoidDiamonds.isSelected()){
 //            
@@ -820,7 +815,7 @@ public class PKsearch_frame extends JFrame {
         if (f==null) return;
         D2Dplot_global.setWorkdir(f);
         f = FileUtils.canviExtensio(f, "PCS");
-        ImgFileUtils.writePCS(patt2d,f,delsig,chckbxAutodelsig.isSelected(),angDeg,chckbxAutointrad.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),chckbxAutoazim.isSelected());
+        ImgFileUtils.writePCS(patt2d,f,delsig,angDeg,chckbxAutointrad.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),chckbxAutoazim.isSelected());
         
     }
     
@@ -930,11 +925,7 @@ public class PKsearch_frame extends JFrame {
             output.println(String.format("Saturated pixels= %d (sat. value= %d)",patt2d.getnSatur(),patt2d.getSaturValue()));
             output.println(String.format("Saturated peaks= %d",patt2d.getnPkSatur())); 
             output.println(String.format("MeanI= %d Sigma(I)= %.3f",patt2d.getMeanI(),patt2d.getSdevI()));
-            if (chckbxAutodelsig.isSelected()){
-                output.println(String.format("ESD factor (º)= %.2f (2theta dependance ENABLED)",angDeg));    
-            }else{
-                output.println(String.format("ESD factor (º)= %.2f",angDeg));    
-            }
+            output.println(String.format("ESD factor= %.2f",angDeg));    
             if (chckbxAutoazim.isSelected()){
                 output.println(String.format("Auto azim aperture of the integration (º) in the range %.2f to %.2f",minAzim,maxAzim));
             }else{
@@ -1001,7 +992,7 @@ public class PKsearch_frame extends JFrame {
         pm.setProgress(0);
         //TODO POSAR LOG DEL MAINFRAME
         convwk = new ImgOps.PkIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
-                chckbxAutodelsig.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
+                zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
                 angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc);
         
         convwk.addPropertyChangeListener(new PropertyChangeListener() {
@@ -1343,7 +1334,7 @@ public class PKsearch_frame extends JFrame {
         pm.setProgress(0);
         //TODO POSAR LOG DEL MAINFRAME
         pkscwk = new ImgOps.PkSCIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
-                chckbxAutodelsig.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
+                zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
                 angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc);
         
         pkscwk.addPropertyChangeListener(new PropertyChangeListener() {

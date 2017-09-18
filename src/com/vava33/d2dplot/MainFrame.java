@@ -17,8 +17,15 @@ package com.vava33.d2dplot;
 *   - exportar jar EXTRAIENT les llibreries
 *   - ofuscar amb proguard ignorant els warnings!
 *   - aixi obting un jar que ocupa molt poc... pero funciona!
+ *  - TODO: ABANS DE GENERAR EL JAR -- canvi numero versio a global, posar overrideLogLevelConfigFile a False
 
  * Current:
+ *  - *** es l'ultim fet amb ordinador antic compliance 1.6 *** 
+ *  - Neteja finestra PKsearch (simplificacio) 
+ *  - TODO: mirar si l'ultim pas de findpeaks es pot fer amb un patt2dzone i mirar llista pixels (potser es més rapid...)
+ *  - Canviat IntRad a writePCS perque donava el valor de la zona (longitud radial) i hauria de ser el radi del pic en pixels.
+ *  
+ * 170616:
  *  - TODO: posar label de X peaks found! a la dreta del frame sino mou els botons
  *  - TODO: a l'obrir peaksearch podria anar calculant el fons en 2n pla...
  *  - CAMBIAT EL METODE DE DETECCIÓ DE PICS, ARA S'UTILITZA EL CALCUL DEL FONS AVSQ
@@ -28,7 +35,6 @@ package com.vava33.d2dplot;
  *  - Canviat el llindar a findpeaks (mes obertura angular als trams i utilitzar altre cop la mitjana de tram) ... fact 6.0, veins30, minpx8 funcionen prou be
  *  - TODO: fer unsa subrutina copy instr parameters from anoter patt2D... (per evitar capçaleres corruptes i utilitzar la primera d'una serie)
  *  - TODO: Obrir OUT (corregit index imatge 1a linia) i escriure OUT donada una serie de imatges
- *  - TODO: ABANS DE GENERAR EL JAR -- canvi numero versio a global, posar overrideLogLevelConfigFile a False
  *  - TODO: revisar manual (fer una nova versio)
  *  - TODO: video sequencies imatges (halfdone, revisar, millorar i integrar al programa)
  *  - TODO: es pot posar a export PNG una opcio que et calculi l'escala per mida real de la imatge MANTENINT els dibuixets
@@ -728,7 +734,7 @@ public class MainFrame extends JFrame {
         mnFile.add(mntmSubtractImages);
         mnFile.add(mntmBatchConvert);
         
-        mntmFastopen = new JMenuItem("FastOpen");
+        mntmFastopen = new JMenuItem("Fast Viewer");
         mntmFastopen.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmFastopen_actionPerformed(e);
@@ -1549,16 +1555,58 @@ public class MainFrame extends JFrame {
                 log.debug("fnameExtNew="+fnameExtNew);
             }
         }
-        if (fnameExtNew.isEmpty())return;
-        
+            
         File d2File = new File(fnameExtNew);
         if (d2File.exists()){
             this.reset();
             this.updatePatt2D(d2File);
             this.closePanels();
+            return;
         }else{
             tAOut.stat("No file found with fname "+fnameExtNew);
         }
+
+        //SECOND TEST buscar dXXX_0000.edf (realment podriem mirar la part esquerra del guio per ser mes generals...)
+        
+        //agafem el nom sense el _000X.edf
+        String basFname = fnameCurrent.substring(0, fnameCurrent.length()-5);
+        log.debug("basFname="+basFname);
+        int indexNoDigit=-1;
+        for (int i=1;i<basFname.length()-2;i++){
+            char c = basFname.charAt(basFname.length()-i);
+            if (!Character.isDigit(c)) {
+                indexNoDigit=i;
+                break;
+            }
+        }
+        log.debug("indexNoDigit="+indexNoDigit);
+        if (indexNoDigit>0){
+            String sdom = basFname.substring(basFname.length()-(indexNoDigit-1), basFname.length());
+            log.debug("sdom="+sdom);
+            int ndom = -1;
+            try{
+                ndom = Integer.parseInt(sdom);
+            }catch(Exception ex){
+                log.debug("error parsing domain number");
+            }
+            if (ndom>=0){
+                ndom = ndom + 1;
+                fnameExtNew = basFname.substring(0,basFname.length()-(indexNoDigit-1)).concat(Integer.toString(ndom)).concat("_0000.").concat(fextCurrent);
+                log.debug("fnameExtNew="+fnameExtNew);
+            }
+        }
+        
+        d2File = new File(fnameExtNew);
+        if (d2File.exists()){
+            this.reset();
+            this.updatePatt2D(d2File);
+            this.closePanels();
+            return;
+        }else{
+            tAOut.stat("No file found with fname "+fnameExtNew);
+        }
+        
+        if (fnameExtNew.isEmpty())return;
         
         //prova pksearchframe
         if (pksframe!=null){
@@ -1596,7 +1644,7 @@ public class MainFrame extends JFrame {
                 log.debug("fnameExtNew="+fnameExtNew);
             }
         }
-        if (fnameExtNew.isEmpty())return;
+        
         File d2File = new File(fnameExtNew);
         if (d2File.exists()){
             this.reset();
@@ -1605,6 +1653,46 @@ public class MainFrame extends JFrame {
         }else{
             tAOut.stat("No file found with fname "+fnameExtNew);
         }
+        
+        //agafem el nom sense el _000X.edf
+        String basFname = fnameCurrent.substring(0, fnameCurrent.length()-5);
+        log.debug("basFname="+basFname);
+        int indexNoDigit=-1;
+        for (int i=1;i<basFname.length()-2;i++){
+            char c = basFname.charAt(basFname.length()-i);
+            if (!Character.isDigit(c)) {
+                indexNoDigit=i;
+                break;
+            }
+        }
+        log.debug("indexNoDigit="+indexNoDigit);
+        if (indexNoDigit>0){
+            String sdom = basFname.substring(basFname.length()-(indexNoDigit-1), basFname.length());
+            log.debug("sdom="+sdom);
+            int ndom = -1;
+            try{
+                ndom = Integer.parseInt(sdom);
+            }catch(Exception ex){
+                log.debug("error parsing domain number");
+            }
+            if (ndom>=0){
+                ndom = ndom - 1;
+                fnameExtNew = basFname.substring(0,basFname.length()-(indexNoDigit-1)).concat(Integer.toString(ndom)).concat("_0000.").concat(fextCurrent);
+                log.debug("fnameExtNew="+fnameExtNew);
+            }
+        }
+        
+        d2File = new File(fnameExtNew);
+        if (d2File.exists()){
+            this.reset();
+            this.updatePatt2D(d2File);
+            this.closePanels();
+            return;
+        }else{
+            tAOut.stat("No file found with fname "+fnameExtNew);
+        }
+        
+        if (fnameExtNew.isEmpty())return;
         
         //prova pksearchframe
         if (pksframe!=null){

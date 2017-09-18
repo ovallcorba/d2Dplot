@@ -3065,7 +3065,7 @@ public final class ImgFileUtils {
         return pdc;
     }
     
-    public static File writePCS(Pattern2D patt2d, File PCSfile, float delsig, boolean autoDelSig,
+    public static File writePCS(Pattern2D patt2d, File PCSfile, float delsig,
             float angDeg,boolean autoAngDeg,int zoneR,int minpix,int bkgpt,boolean autoBkgPt,boolean autoazim){
         
         //TODO MOSTRAR ALERTA DE QUE PRIMER S'HA DE FER EL CALCUL SI NO S'HA FET
@@ -3091,7 +3091,7 @@ public final class ImgFileUtils {
             PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(PCSfile)));
             // ESCRIBIM AL FITXER:
             output.println(eqLine);
-            output.println("D2Dplot peak integration for TTS_INCO");
+            output.println("D2Dplot "+D2Dplot_global.version+" peak integration for TTS_INCO");
             output.println(eqLine);
             output.println("Image File= "+patt2d.getImgfileString());
             output.println(String.format("dimX= %d, dimY= %d, centX= %.2f, centY= %.2f",patt2d.getDimX(),patt2d.getDimY(),patt2d.getCentrX(),patt2d.getCentrY()));
@@ -3110,11 +3110,7 @@ public final class ImgFileUtils {
             output.println(String.format("Saturated pixels= %d (sat. value= %d)",patt2d.getnSatur(),patt2d.getSaturValue()));
             output.println(String.format("Saturated peaks= %d",patt2d.getnPkSatur())); 
             output.println(String.format("MeanI= %d Sigma(I)= %.3f",patt2d.getMeanI(),patt2d.getSdevI()));
-            if (autoDelSig){
-                output.println(String.format("ESD factor (º)= %.2f (2theta dependance ENABLED)",delsig));    
-            }else{
-                output.println(String.format("ESD factor (º)= %.2f",delsig));    
-            }
+            output.println(String.format("ESD factor = %.2f",delsig));    
             if (autoazim){
                 output.println(String.format("Auto azim aperture of the integration (º) in the range %.2f to %.2f",minAzim,maxAzim));
             }else{

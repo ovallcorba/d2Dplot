@@ -275,7 +275,7 @@ public class Peak implements Comparable<Peak> {
         if (nearMask) flag = -1;
         if (nSatur>0) flag = nSatur*(-1);
         return String.format("%10.2f %10.2f %10.2f %12.2f %12.2f %12.2f %8.3f %5d %4d %9.4f",
-                pixelCentre.x,pixelCentre.y,radi,ymax,fh2,sfh2,p,flag,intRadPx,dsp);
+                pixelCentre.x,pixelCentre.y,radi,ymax,fh2,sfh2,p,flag,intRadPx/2.0f,dsp);
     }
     
 // NPEAK     XPIXEL    YPIXEL    RO_VAL        YMAX         FH      sigma(FH)    p    CODI INTRAD   D
@@ -323,7 +323,9 @@ public class Peak implements Comparable<Peak> {
     
     public boolean isDiamond(){
         if (isSatur() && p<0.25) return true; // si la forma del pic es rara i està saturat
-        if ((nSatur/npix)>0.02) return true; //mes del 2% dels pixels saturats
+        if (isSatur()){
+            if ((nSatur/npix)>0.02) return true; //mes del 2% dels pixels saturats
+        }
         return false;
     }
 }

@@ -48,6 +48,7 @@ public class VideoImg extends JDialog {
     private int currentLoadedImage=-1;
     private JButton button;
     private Timer timer;
+    private JButton btnStop;
     /**
      * Launch the application.
      */
@@ -68,16 +69,17 @@ public class VideoImg extends JDialog {
      * Create the frame.
      */
     public VideoImg() {
+        setTitle("Fast Viewer");
         setIconImage(Toolkit.getDefaultToolkit().getImage(VideoImg.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBounds(100, 100, 842, 646);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
         setContentPane(contentPane);
-        contentPane.setLayout(new MigLayout("", "[][][grow]", "[grow][]"));
+        contentPane.setLayout(new MigLayout("", "[][][][grow]", "[grow][]"));
         
         imgpanel = new ImagePanel(true);
-        contentPane.add(imgpanel, "cell 0 0 3 1,grow");
+        contentPane.add(imgpanel, "cell 0 0 4 1,grow");
         
         JButton btnOpenImgs = new JButton("Open Imgs");
         btnOpenImgs.addActionListener(new ActionListener() {
@@ -103,8 +105,25 @@ public class VideoImg extends JDialog {
                 do_button_actionPerformed(e);
             }
         });
-        contentPane.add(button, "cell 1 1");
-        contentPane.add(slider, "cell 2 1,growx");
+        
+        btnStop = new JButton("Stop");
+        btnStop.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnStop_actionPerformed(e);
+            }
+        });
+        contentPane.add(btnStop, "cell 1 1");
+        contentPane.add(button, "cell 2 1");
+        contentPane.add(slider, "cell 3 1,growx");
+    }
+    
+    @Override
+    public void dispose() {
+        if (timer!=null){
+            timer.cancel();
+            timer=null;
+        }
+        super.dispose();
     }
 
     protected void do_btnOpenImgs_actionPerformed(ActionEvent arg0) {
@@ -346,14 +365,23 @@ public class VideoImg extends JDialog {
                 slider.setValue(ini+1);
             }else{
                 timer.cancel();
+                timer=null;
             }
         }
         
     
     }
     protected void do_button_actionPerformed(ActionEvent e) {
-        timer = new Timer();
-        timer.scheduleAtFixedRate(new MyTimerTask(), 0, 1000);
-        log.debug("TimerTask started");
+        if (timer==null){
+            timer = new Timer();
+            timer.scheduleAtFixedRate(new MyTimerTask(), 0, 1000);
+            log.debug("TimerTask started");
+        }
+    }
+    protected void do_btnStop_actionPerformed(ActionEvent e) {
+        if (timer!=null){
+            timer.cancel();
+            timer=null;
+        }
     }
 }
