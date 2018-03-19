@@ -118,7 +118,7 @@ public class PKsearch_frame extends JFrame {
     public static float def_angDeg = 4.0f;
     public static float def_delsig = 6.0f;
     public static int def_zoneR=FastMath.round(def_tol2tpix/2);
-    public static int def_minpix=6;
+    public static int def_minpix=15;
     public static int nzonesFindPeaks = 24;
     public static float def_bkgPxAutoPercent = 0.005f;
     public static int def_minbkgPx = 10;
@@ -132,6 +132,8 @@ public class PKsearch_frame extends JFrame {
     public static int zoneR;
     public static int minpix;
     public static int iosc=0;
+    public static boolean estimbkg=false;
+    public static boolean pondmerging=true;
     
     private JPanel panel_3;
     private JPanel panel_4;
@@ -158,6 +160,8 @@ public class PKsearch_frame extends JFrame {
     
     private File fileout;
     private JButton btnBatchout;
+    private JCheckBox chckbxCalcBkgslow;
+    private JCheckBox chckbxAvg;
     
     /**
      * Create the frame.
@@ -229,7 +233,7 @@ public class PKsearch_frame extends JFrame {
         
         txtDelsig = new JTextField();
         panel_3.add(txtDelsig, "cell 1 0,growx");
-        txtDelsig.setText("1.5");
+        txtDelsig.setText("3.0");
         txtDelsig.setColumns(10);
         
         lblZoneradius = new JLabel("Peak merge zone (px)=");
@@ -240,16 +244,23 @@ public class PKsearch_frame extends JFrame {
         txtZoneradius.setText(Integer.toString(def_zoneR));
         txtZoneradius.setColumns(10);
         
+        chckbxAvg = new JCheckBox("avg");
+        chckbxAvg.setSelected(true);
+        panel_3.add(chckbxAvg, "cell 2 1");
+        
         lblMinNrPixels = new JLabel("Min. pixels for a peak=");
         panel_3.add(lblMinNrPixels, "cell 0 2,alignx right");
         
         txtMinpixels = new JTextField();
-        txtMinpixels.setText(Integer.toString(def_minpix));
+        txtMinpixels.setText("12");
         panel_3.add(txtMinpixels, "cell 1 2,growx");
         txtMinpixels.setColumns(10);
         
         chckbxAddremovePeaks = new JCheckBox("Add/Remove peaks");
-        panel_3.add(chckbxAddremovePeaks, "cell 0 3 3 1,alignx center");
+        panel_3.add(chckbxAddremovePeaks, "cell 0 3,alignx center");
+        
+        chckbxCalcBkgslow = new JCheckBox("Calc bkg (slow)");
+        panel_3.add(chckbxCalcBkgslow, "cell 1 3");
         
         btnRemoveDiamonds = new JButton("Remove Diamonds");
         panel_3.add(btnRemoveDiamonds, "cell 0 4");
@@ -520,7 +531,7 @@ public class PKsearch_frame extends JFrame {
 //        boolean t2dep = chckbxAutodelsig.isSelected();
         this.readSearchOptions();
 //        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, t2dep, nzonesFindPeaks, minpix, false);
-        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, minpix, false);
+        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, minpix, false,estimbkg,pondmerging);
         
 //        if(chckbxAvoidDiamonds.isSelected()){
 //            
@@ -562,6 +573,8 @@ public class PKsearch_frame extends JFrame {
         }catch(Exception e){
             log.warning(String.format("Cannot read min pixels, using default value %d",def_minpix));
         }          
+        estimbkg = chckbxCalcBkgslow.isSelected();
+        pondmerging = chckbxAvg.isSelected();
     }
     
     private void integratePeaks(){
@@ -993,7 +1006,7 @@ public class PKsearch_frame extends JFrame {
         //TODO POSAR LOG DEL MAINFRAME
         convwk = new ImgOps.PkIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
                 zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
-                angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc);
+                angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging);
         
         convwk.addPropertyChangeListener(new PropertyChangeListener() {
 
@@ -1335,7 +1348,7 @@ public class PKsearch_frame extends JFrame {
         //TODO POSAR LOG DEL MAINFRAME
         pkscwk = new ImgOps.PkSCIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
                 zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
-                angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc);
+                angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging);
         
         pkscwk.addPropertyChangeListener(new PropertyChangeListener() {
 

@@ -62,6 +62,8 @@ public class Pattern2D {
     public boolean oldBIN=false; //variable temporal que indica si �s old o new BIN
     private boolean useB4inten = true;  //by default use B4 intensities
 
+    int NbkgForPksearch =3;
+    
     // Crea un pattern amb unes mides concretes X Y (pixels)
     public Pattern2D(int columnes_X, int files_Y, boolean b4int) {
         this.dimX = columnes_X;
@@ -889,6 +891,8 @@ public class Pattern2D {
         }
         double t2 = this.calc2T(pixel, false);
         this.addPuntCercle(new PuntClick(pixel,this,(float)t2,inten));
+        //DEBUG
+        this.addPuntCercle(new PuntClick(pixel,this,(float)t2,inten));
     }
     
     public void removePuntCercle(PuntClick s){
@@ -925,7 +929,7 @@ public class Pattern2D {
         }
     }
     
-    public double calc2T(float col_px, float row_py, boolean degrees) {
+    public double OLDcalc2T(float col_px, float row_py, boolean degrees) {
         
         double distMDpix = (this.getDistMD()/this.getPixSx())/this.costilt;
         float vCPx=col_px-this.getCentrX();
@@ -941,6 +945,70 @@ public class Pattern2D {
         }        
         return t2p;
     }    
+    
+    public double calc2T(float col_px, float row_py, boolean degrees) {
+        
+        double distMDpix = (this.getDistMD()/this.getPixSx())/this.costilt;
+        float vCPx=col_px-this.getCentrX();
+        float vCPy=this.getCentrY()-row_py;
+        
+        float distprima = (-vCPx*this.sinrot + vCPy*this.cosrot)*this.sintilt;
+        double t2p = (vCPx*vCPx) + (vCPy*vCPy) - (distprima*distprima);
+        t2p = FastMath.sqrt(t2p);
+        t2p = t2p/(distMDpix-distprima);
+        t2p = FastMath.atan(t2p);
+        if (degrees) {
+            t2p = FastMath.toDegrees(t2p);
+        }        
+        return t2p;
+        
+    } 
+    
+    public double Testcalc2T(float col_px, float row_py, boolean degrees) {
+      double distMDpix = (this.getDistMD()/this.getPixSx())/this.costilt;
+      double vCPx=col_px-this.getCentrX();
+      double vCPy=this.getCentrY()-row_py;
+      double A1 = (vCPx*this.cosrot-vCPy*this.sinrot)*(vCPx*this.cosrot-vCPy*this.sinrot);
+      double A2 = (vCPx*this.sinrot+vCPy*this.cosrot)*(vCPx*this.sinrot+vCPy*this.cosrot)*this.costilt*this.costilt;
+      double A = A1+A2;
+      double B = (distMDpix - (vCPx*this.sinrot+vCPy*this.cosrot)*this.sintilt)*(distMDpix - (vCPx*this.sinrot+vCPy*this.cosrot)*this.sintilt);
+      double t2p = FastMath.atan(FastMath.sqrt(A/B));
+      if (degrees) {
+          t2p = FastMath.toDegrees(t2p);
+      }        
+      return t2p;
+  }
+    
+    public double testCalc2Tb(float col_px, float row_py, boolean degrees) {
+        log.writeNameNumPairs("CONFIG", true, "tilt,rot", this.tiltDeg,this.rotDeg);
+        double distMDpix = (this.getDistMD()/this.getPixSx());
+        double vCPx=col_px-this.getCentrX();
+        double vCPy=this.getCentrY()-row_py;
+        double A1 = (vCPx*this.cosrot-vCPy*this.sinrot)*(vCPx*this.cosrot-vCPy*this.sinrot)*this.costilt*this.costilt;
+        double A2 = (vCPx*this.sinrot+vCPy*this.cosrot)*(vCPx*this.sinrot+vCPy*this.cosrot);
+        double A = A1+A2;
+        double B = (distMDpix + (vCPx*this.cosrot-vCPy*this.sinrot)*this.sintilt)*(distMDpix + (vCPx*this.cosrot-vCPy*this.sinrot)*this.sintilt);
+        double t2p = FastMath.atan(FastMath.sqrt(A/B));
+        if (degrees) {
+            t2p = FastMath.toDegrees(t2p);
+        }        
+        return t2p;
+    }
+    
+    public double CACAcalc2T(float col_px, float row_py, boolean degrees) {
+      double distMDpix = (this.getDistMD()/this.getPixSx());
+      double vCPx=col_px-this.getCentrX();
+      double vCPy=this.getCentrY()-row_py;
+      double tiltRad = FastMath.toRadians(this.tiltDeg);
+      double rotRad = FastMath.toRadians(this.rotDeg);
+      double term1 = (vCPx * FastMath.sin(-rotRad)+vCPy*FastMath.cos(-rotRad));
+      double yprim = term1*FastMath.sin(tiltRad)*FastMath.sin(-tiltRad)+term1*FastMath.cos(tiltRad)*FastMath.cos(-tiltRad);
+      double t2p = FastMath.atan(yprim/distMDpix);
+      if (degrees) {
+          t2p = FastMath.toDegrees(t2p);
+      }        
+      return t2p;
+  }
     
     public double calc2T(Point2D.Float pixel, boolean degrees) {
         return this.calc2T(pixel.x,pixel.y, degrees);
@@ -1280,28 +1348,31 @@ public class Pattern2D {
         return imgNum;
     }
         
-    public ArrayList<Peak> findPeakCandidates(float delsig, int minpix){
+    public ArrayList<Peak> findPeakCandidates(float delsig, int minpix, boolean estimbkg){
         
         log.debug("************* FIND PEAK CANDIDATES *************");
-
-        if (fonsPerCercaPk == null){
-            int oldThr=this.getExz_threshold();
-            this.setExz_threshold(1);
-            try {
-                fonsPerCercaPk = ImgOps.calcIterAvsq(ImgOps.firstBkgPass(this),10,null,null);
-            } catch (InterruptedException e1) {
-                log.info("error calculating image background");
-//                e1.printStackTrace();
-                return null;
-            }
-            this.setExz_threshold(oldThr);
-            fonsPerCercaPk.calcMeanI();
-        }
         ArrayList<Peak> pkCandidates = new ArrayList<Peak>();
-        if (this.meanI<=0)this.calcMeanI();
-        if (this.fonsPerCercaPk.meanI<=0)fonsPerCercaPk.calcMeanI();
+        if (estimbkg) {
+            if (fonsPerCercaPk == null){
+                int oldThr=this.getExz_threshold();
+                this.setExz_threshold(1);
+                try {
+                    fonsPerCercaPk = ImgOps.calcIterAvsq(ImgOps.firstBkgPass(this),NbkgForPksearch,null,null);
+                } catch (InterruptedException e1) {
+                    log.info("error calculating image background");
+//                    e1.printStackTrace();
+                    return null;
+                }
+                this.setExz_threshold(oldThr);
+                fonsPerCercaPk.calcMeanI();
+            }
+            if (this.meanI<=0)this.calcMeanI();
+            if (this.fonsPerCercaPk.meanI<=0)fonsPerCercaPk.calcMeanI();
+            log.writeNameNumPairs("CONFIG", true, "meanI, sdevI, fonsMeanI,fonsSDevI", meanI, sdevI, fonsPerCercaPk.meanI,fonsPerCercaPk.sdevI);
+        }else {
+            log.writeNameNumPairs("CONFIG", true, "meanI, sdevI", meanI, sdevI);
+        }
 
-        log.writeNameNumPairs("CONFIG", true, "meanI, sdevI, fonsMeanI,fonsSDevI", meanI, sdevI, fonsPerCercaPk.meanI,fonsPerCercaPk.sdevI);
         
         //de 1 a -1 per no agafar els pixels de les vores
         for(int i=1; i<this.getDimY()-1;i++){
@@ -1310,12 +1381,19 @@ public class Pattern2D {
                 if (this.isInExZone(j, i))continue;
                 
                 int pxInten = this.getInten(j, i);
+                if (this.meanI<=0)this.calcMeanI();
+                float llindar = this.meanI + delsig*this.sdevI;
+                float llindarVeins = this.meanI + this.sdevI;
                 
-                int fonsInten = fonsPerCercaPk.getInten(j, i);
+                if (estimbkg) {
+                    int fonsInten = fonsPerCercaPk.getInten(j, i);
+                    llindar = fonsInten + delsig*fonsPerCercaPk.sdevI; 
+                    llindarVeins = fonsPerCercaPk.meanI;
+                }
+                
+                
 //                float llindar = fonsInten + delsig*this.sdevI; 
 //                float llindarVeins = this.meanI;
-                float llindar = fonsInten + delsig*fonsPerCercaPk.sdevI; 
-                float llindarVeins = fonsPerCercaPk.meanI;
                 
                 if (pxInten<llindar)continue;
                 
@@ -1343,7 +1421,7 @@ public class Pattern2D {
                 
                 boolean hasMinEnough = true;
                 if(minpix>1){
-                    if (minpix > 20) minpix=20; //restriccio que poso
+//                    if (minpix > 20) minpix=20; //restriccio que poso
                     int npixbons = 0;
                     for (int ii=i-2;ii<i+3;ii++){
                         for (int jj=j-2;jj<j+3;jj++){

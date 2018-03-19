@@ -392,7 +392,7 @@ public class ImagePanel extends JPanel {
             incY = (p.y - dragPoint.y);
             this.dragPoint = p;
             this.moveOrigin(incX, incY, true);    
-            log.writeNameNumPairs("fine", true, "fX,fY,imX,imY,scfit,orX,orY,panw,panh", e.getPoint().x,e.getPoint().y,p.x,p.y,scalefit,originX,originY,getPanelImatge().getWidth(),getPanelImatge().getHeight());
+            log.writeNameNumPairs("finer", true, "fX,fY,imX,imY,scfit,orX,orY,panw,panh", e.getPoint().x,e.getPoint().y,p.x,p.y,scalefit,originX,originY,getPanelImatge().getWidth(),getPanelImatge().getHeight());
         }
         if (this.mouseZoom == true && this.isPatt2D()) {
             Point2D.Float p = new Point2D.Float(e.getPoint().x, e.getPoint().y);
@@ -441,8 +441,9 @@ public class ImagePanel extends JPanel {
           }
           float azim = patt2D.getAzimAngle((int)(pix.x), (int)(pix.y), true);
           this.setLabelValues(pix.x, pix.y, (float)FastMath.toDegrees(tthRad), dsp, azim, inten);
+//          log.writeNameNumPairs("CONFIG", true, "tth_book", patt2D.testCalc2T(pix.x, pix.y, true));
           
-          log.writeNameNumPairs("fine", true, "fX,fY,imX,imY,scfit,orX,orY,panw,panh", e.getPoint().x,e.getPoint().y,pix.x,pix.y,scalefit,originX,originY,getPanelImatge().getWidth(),getPanelImatge().getHeight());
+          log.writeNameNumPairs("finer", true, "fX,fY,imX,imY,scfit,orX,orY,panw,panh", e.getPoint().x,e.getPoint().y,pix.x,pix.y,scalefit,originX,originY,getPanelImatge().getWidth(),getPanelImatge().getHeight());
         }
         if (exZones!=null){
             if (exZones.isDrawingFreeExZone()) this.actualitzarVista();    
@@ -1514,6 +1515,12 @@ public class ImagePanel extends JPanel {
         log.debug("do_txtConminval_actionPerformed called");
     }
     
+    //TEEEEEEEEEEEEEEEEEEEEEEEEEEEST
+//    @Override
+//    protected void paintComponent(Graphics g) {
+//        log.fine("paint Component ImagePanel called");
+//        super.paintComponent(g);
+//    }
 //    ------------------------------------ PANELL DE DIBUIX
     
     public class dades2d extends JPanel {
@@ -1711,6 +1718,21 @@ public class ImagePanel extends JPanel {
                 PuntClick pc = itrPC.next();
                 EllipsePars e = pc.getEllipse();
                 Ellipse2D.Float p = pc.getPunt();
+                
+                //debug pintem centre i focci
+                g1.setPaint(Color.RED);
+                Point2D.Float cen = getFramePointFromPixel(new Point2D.Float((float)e.getXcen(),(float)e.getYcen()));
+                g1.drawOval((int)cen.x-2, (int)cen.y-2, 4,4);
+                
+                g1.setPaint(Color.GREEN);
+                Point2D.Float foc = e.getF1(FastMath.toRadians(patt2D.getRotDeg()));
+                foc = getFramePointFromPixel(foc);
+                g1.drawOval((int)foc.x-2, (int)foc.y-2, 4,4);
+                g1.setPaint(Color.GREEN.darker());
+                foc = e.getF2(FastMath.toRadians(patt2D.getRotDeg()));
+                foc = getFramePointFromPixel(foc);
+                g1.drawOval((int)foc.x-2, (int)foc.y-2, 4,4);
+
                 
                 //PRIMER DIBUIXEM L'ELIPSE I DESPRES EL PUNT (el centre de l'elipse no el dibuixem en aquest cas, nomes a la calibracio)
                 // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
@@ -1937,6 +1959,11 @@ public class ImagePanel extends JPanel {
                     if (dbCompound != null)drawPDCompoundRings(g1,dbCompound,colorDBcomp);
                 }
 
+                //draw beam center
+                g1.setPaint(Color.CYAN);
+                Point2D.Float c = getFramePointFromPixel(new Point2D.Float(patt2D.getCentrX(),patt2D.getCentrY()));
+                g1.drawOval((int)c.x-2, (int)c.y-2, 4, 4);
+                
                 g1.dispose();
                 g2.dispose();
                 

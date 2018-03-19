@@ -619,6 +619,8 @@ public class Calib_dialog extends JDialog {
             float estMD = -1;
             estMD = estimMDdist(p, 1);//estimacio distMD primer pic
             float wave = patt2D.getWavel();
+            log.debug("estMD="+estMD);
+            
             
             //now we use the previous ellipse to fit the next one
             int fitCount = 1; //number of rings fitted
@@ -733,10 +735,14 @@ public class Calib_dialog extends JDialog {
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
         log.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
-        
+        System.out.println(FastMath.toDegrees(elli.getAngrot()));
         //debug Posem les max i min elli de la cerca
         ellicerques.add(new EllipsePars((cradi-tol)*facRmax, (cradi-tol)*facRmin, elli.getXcen(),elli.getYcen(),elli.getAngrot()));
         ellicerques.add(new EllipsePars((cradi+tol)*facRmax, (cradi+tol)*facRmin, elli.getXcen(),elli.getYcen(),elli.getAngrot()));
+        
+        log.config("ellicerques");
+        ellicerques.get(0).logElliPars("CONFIG");
+        ellicerques.get(1).logElliPars("CONFIG");
         
         for (float a = 0f; a<2*FastMath.PI; a = a + angstep){
             float xmaxI=0;
@@ -827,7 +833,7 @@ public class Calib_dialog extends JDialog {
 
             //estimate of tilt,distMD 
             double exen = FastMath.sqrt(FastMath.max(0.,1.-((e.getRmin()*e.getRmin())/(e.getRmax()*e.getRmax()))));
-            double tilt = FastMath.asin(exen*FastMath.cos(tth));
+            double tilt = FastMath.asin(exen*FastMath.cos(tth)); //tenia un -1 pero no hi hauria de ser...
             double distMD = (e.getRmin()*e.getRmin())/(tantth*e.getRmax());
             //distance from the ellipse center to the beam center
             double c = e.getRmax()*tantth*FastMath.tan(tilt); 
@@ -837,10 +843,17 @@ public class Calib_dialog extends JDialog {
             //angrot es l'angle "azimut" respecte les 12h (+cw) que ens diu quan està rotat Rmaj
             //agafem punt 0,0 el centre de l'ellipse (relatiu) i apliquem la rotacio de "c"
             //l'angle el faig negatiu perque sigui una rotacio clockwise tal com defineix angrot
-            double xmes = 0*FastMath.cos(-rot) - c*FastMath.sin(-rot);
-            double ymes = 0*FastMath.sin(-rot) + (-c)*FastMath.cos(-rot);
-            double xmenys = 0*FastMath.cos(-rot) - (-c)*FastMath.sin(-rot);
-            double ymenys = 0*FastMath.sin(-rot) + c*FastMath.cos(-rot);
+//            double xmes = 0*FastMath.cos(-rot) - c*FastMath.sin(-rot);
+//            double ymes = 0*FastMath.sin(-rot) + (-c)*FastMath.cos(-rot);
+//            double xmenys = 0*FastMath.cos(-rot) - (-c)*FastMath.sin(-rot);
+//            double ymenys = 0*FastMath.sin(-rot) + c*FastMath.cos(-rot);
+            
+            //tenim la c, que es damunt de Rmaj, seria el modul del vector ElliCen-BeamCen. Cal aplicar-li rot,
+            //es a dir, rotacio ACW de ROT per passar de eix horitzontal al real, alerta que les y van negatives!
+            double xmes = c*FastMath.cos(rot-FastMath.PI/2);
+            double ymes = c*FastMath.sin(rot-FastMath.PI/2); 
+            double xmenys = (-c)*FastMath.cos(rot-FastMath.PI/2);
+            double ymenys = (-c)*FastMath.sin(rot-FastMath.PI/2);
             
             //ara ja tinc en relatiu (centre ellipse) les dues possibles posicions del beam, hem de tornar-ho a pixels absoluts:
             //atencio, es -y perque tenim l'origen a dalt a l'esquerra
@@ -853,7 +866,7 @@ public class Calib_dialog extends JDialog {
             //logging debug
             log.config("---- RING nr."+i+" 2theta="+FastMath.toDegrees(tth));
             log.writeNameNumPairs("CONFIG",true,"angRotDeg,tiltDeg,distMD",FastMath.toDegrees(rot), FastMath.toDegrees(tilt), distMD);
-            log.writeNameNumPairs("FINE",true,"c,xmes,ymes,xmenys,ymenys", c,xmes,ymes,xmenys,ymenys);
+            log.writeNameNumPairs("CONFIG",true,"c,xmes,ymes,xmenys,ymenys", c,xmes,ymes,xmenys,ymenys);
             log.writeNameNumPairs("CONFIG",true,"centreX+,centreY+,centreX-,centreY-", centreXmes,centreYmes,centreXmenys,centreYmenys);
             
             distsMD.add(distMD*patt2D.getPixSx());

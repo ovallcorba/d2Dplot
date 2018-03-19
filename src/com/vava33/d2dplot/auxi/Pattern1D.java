@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -11,7 +11,7 @@ import java.util.Locale;
 
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.VavaLogger;
 
 public class Pattern1D {

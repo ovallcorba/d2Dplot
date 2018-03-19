@@ -351,8 +351,8 @@ public class IntegracioRadial extends JFrame {
             stepsize = minstep;
         }
         
-        //t2fin dins dels limits:
-        t2fin = FastMath.min(t2fin, patt2D.getMax2TdegCircle() - 2*stepsize);
+        //t2fin dins dels limits: --ho trec a veure que passa (util quan el centre no es al centre)
+//        t2fin = FastMath.min(t2fin, patt2D.getMax2TdegCircle() - 2*stepsize);
         
         //cake
         float cakein = -1f;

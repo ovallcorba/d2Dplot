@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Scanner;
 
 import com.vava33.d2dplot.auxi.PDDatabase;
@@ -20,7 +21,7 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String version = "v1703 (170721)"; //nomes canviare la versio global quan faci un per distribuir
+    public static final String version = "v1703 (180207)"; //nomes canviare la versio global quan faci un per distribuir
     public static final String welcomeMSG = "d2Dplot "+version+" by OV";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
@@ -45,9 +46,9 @@ public final class D2Dplot_global {
     
 //*** parametres que es poden canviar a les opcions *****
     //global 
-    public static boolean logging = false;
-    public static String loglevel = "info"; //info, config, etc...
-    private static final boolean overrideLogLevelConfigFile = false;
+    public static boolean logging = true;
+    public static String loglevel = "debug"; //info, config, etc...
+    private static final boolean overrideLogLevelConfigFile = true;
     private static String workdir = System.getProperty("user.dir");
     public static boolean sideControls = true;
     private static Integer def_Width=768;
@@ -519,16 +520,16 @@ public final class D2Dplot_global {
             output.println("colorClickPoints = "+getColorName(colorClickPoints));
             output.println("colorClickPointsCircle = "+getColorName(colorClickPointsCircle));
             output.println(String.format("%s = %d", "clickPointSize",clickPointSize));
-            output.println(String.format("%s = %.4f", "t2tolDegClickPoints",t2tolDegClickPoints));
-            output.println(String.format("%s = %.4f", "incZoom",incZoom));
-            output.println(String.format("%s = %.3f", "maxScaleFit",maxScaleFit));
-            output.println(String.format("%s = %.3f", "minScaleFit",minScaleFit));
-            output.println(String.format("%s = %.3f", "factorAutoContrast",factorAutoContrast));
+            output.println(String.format(Locale.ROOT,"%s = %.4f", "t2tolDegClickPoints",t2tolDegClickPoints));
+            output.println(String.format(Locale.ROOT,"%s = %.4f", "incZoom",incZoom));
+            output.println(String.format(Locale.ROOT,"%s = %.3f", "maxScaleFit",maxScaleFit));
+            output.println(String.format(Locale.ROOT,"%s = %.3f", "minScaleFit",minScaleFit));
+            output.println(String.format(Locale.ROOT,"%s = %.3f", "factorAutoContrast",factorAutoContrast));
             
             output.println("# Compound DB");
             output.println("defQuickListDB = "+QLfile);
             output.println("defCompoundDB = "+DBfile);
-            output.println(String.format("%s = %.4f", "minDspacingToSearch",minDspacingToSearch));
+            output.println(String.format(Locale.ROOT,"%s = %.4f", "minDspacingToSearch",minDspacingToSearch));
             output.println("colorQLcomp = "+getColorName(colorQLcomp));
             output.println("colorDBcomp = "+getColorName(colorDBcomp));
             
@@ -536,7 +537,7 @@ public final class D2Dplot_global {
             output.println(String.format("%s = %d", "hklfontSize",hklfontSize));
             output.println("dincoSolPointSizeByFc = "+Boolean.toString(dincoSolPointSizeByFc));
             output.println(String.format("%s = %d", "dincoSolPointSize",dincoSolPointSize));
-            output.println(String.format("%s = %.1f", "dincoSolPointStrokeSize",dincoSolPointStrokeSize));
+            output.println(String.format(Locale.ROOT,"%s = %.1f", "dincoSolPointStrokeSize",dincoSolPointStrokeSize));
             output.println("dincoSolPointFill = "+Boolean.toString(dincoSolPointFill));
 
             output.println("# Calib");

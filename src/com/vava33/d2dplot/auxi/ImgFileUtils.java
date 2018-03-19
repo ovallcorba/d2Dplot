@@ -2128,6 +2128,7 @@ public final class ImgFileUtils {
                 return null;
             }
         }
+        log.warning("no 2D image opened");
         return null;
     }
 

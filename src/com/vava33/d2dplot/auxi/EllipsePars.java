@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.VavaLogger;
 
 
@@ -83,8 +83,11 @@ public class EllipsePars {
 
         //ROTACIO
         float angr = (float) (0.5*Math.atan(2*b/(a-c)));
-        log.debug("angr directe="+FastMath.toDegrees(angr));
+//        float angr = (float) FastMath.atan2(2*b, a-c);
+        log.info("angr directe="+FastMath.toDegrees(angr));
         this.isFit = true;
+        
+        log.writeNameNumPairs("INFO", true, "rH,rV", rH,rV);
         
         /*
          * ATENCIO:
@@ -100,23 +103,33 @@ public class EllipsePars {
          * serà positiu en sentit horari.
          *  
          *  
-         * 
+         * FIT2D: angle of Rmaj respecte eix X en ACW
          */
         
-        if (rH>rV){ //vol dir que nomes hem de restar 90º
+        //realment rot es l'angle de l'eix de gir del detector, que coincideix amb Rmin de l'ellipse
+        if (rH>rV){ //vol dir Rmaj es a les X, angr es l'angle CW des de les 3 respecte Rmaj, cal canviar-ho
             this.rmaj = rH;
             this.rmin = rV;
-            this.angrot = angr + (Math.PI/2);
-            //corregim si passem de 360º
-            if (this.angrot > (2*Math.PI)){
-                this.angrot = this.angrot - (2*Math.PI);
+            if (angr<0) {
+                this.angrot = angr + (FastMath.PI/2);
+            }else {
+                this.angrot = (FastMath.PI/2) - angr;
             }
-        }else{ //angr ens dona directament la variacio de rmaj respecte la vertical
+        }else{ //tenim l'angle de rmin respecte l'eix X, nomes cal canviar signe
             this.rmaj = rV;
             this.rmin = rH;
-            this.angrot = angr;
+            this.angrot = -1*angr;
         }
         
+        //el fem negatiu (per conveni amb getellipars) sino no va i es mes dificil de pintar
+        this.angrot = -1*angrot;
+        //en principi ara amb atan2 hauria de ser sempre respecte Rmaj...
+//        if (angr<0) {
+//            this.angrot = angr + (FastMath.PI/2);
+//        }else {
+//            this.angrot = (FastMath.PI/2) - angr;
+//        }
+        log.writeNameNumPairs("INFO", true, "rmaj,rmin,angrot", this.rmaj,this.rmin,FastMath.toDegrees(this.angrot));
     }
     
     public void logElliPars(String level){
@@ -143,11 +156,11 @@ public class EllipsePars {
     public Point2D.Float getEllipsePoint(float angleDeg, double rM, double rm){
         if (!isFit) return null;
 
-        float zero = (float) ((-this.angrot) -(Math.PI/2)); //value of the vertical zero according d2dplot convention and the parametric eq below
-        float drawpoint = (float) (zero + FastMath.toRadians(angleDeg));
-        float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*Math.cos(this.angrot) - rM*Math.sin(drawpoint)*Math.sin(this.angrot));
-        float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*Math.sin(this.angrot) + rM*Math.sin(drawpoint)*Math.cos(this.angrot));
-        return new Point2D.Float(ex,ey);
+        float zero = (float) ((-this.angrot)); //value of the vertical zero according d2dplot convention and the parametric eq below
+        float drawpoint = (float) (zero - FastMath.toRadians(angleDeg));
+        float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*FastMath.cos(this.angrot) + rM*Math.sin(drawpoint)*FastMath.sin(this.angrot));
+        float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*FastMath.sin(this.angrot) - rM*Math.sin(drawpoint)*FastMath.cos(this.angrot));
+        return new Point2D.Float((float)ex,(float)ey);
 
     }
     
@@ -160,7 +173,8 @@ public class EllipsePars {
     public ArrayList<Point2D.Float> getEllipsePoints(float angleIni, float angleFin, float step){
         if (!isFit) return null;
         ArrayList<Point2D.Float> fit = new ArrayList<Point2D.Float>();
-        if (step<0) step = (float) FastMath.toRadians(1);
+//        if (step<0) step = (float) FastMath.toRadians(1);
+        if (step<0) step = 0.05f;
         for (float i = angleIni; i<angleFin;i=(float) (i+step)){
           fit.add(getEllipsePoint(i));
         }
@@ -259,6 +273,26 @@ public class EllipsePars {
 
     }
     
+    public double getDistTofocus() {
+        //c**2 = a**2 -b**2
+        return FastMath.sqrt(this.getRmax()*this.getRmax()-this.getRmin()*this.getRmin());
+    }
+    
+    public Point2D.Float getF1(double rotRad) {
+        //first focus considering ROT
+        float c = (float) this.getDistTofocus();
+        float f1x = (float) (this.getXcen() + c * FastMath.sin(rotRad));
+        float f1y = (float) (this.getYcen() + c * FastMath.cos(rotRad));
+        return new Point2D.Float(f1x, f1y);
+    }
+    
+    public Point2D.Float getF2(double rotRad) {
+        //first focus considering ROT
+        float c = (float) this.getDistTofocus();
+        float f1x = (float) (this.getXcen() - c * FastMath.sin(rotRad));
+        float f1y = (float) (this.getYcen() - c * FastMath.cos(rotRad));
+        return new Point2D.Float(f1x, f1y);
+    }
     
     public double getA() {
         return a;

@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.geom.Point2D;
 import java.io.File;
@@ -10,9 +10,8 @@ import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.D2Dplot_global;
 
 public final class CalibOps {
     private static VavaLogger log = D2Dplot_global.getVavaLogger(CalibOps.class.getName());
@@ -418,23 +417,25 @@ public final class CalibOps {
     }
 
     public static Pattern2D createLaB6Img(float xcen, float ycen,
-            float distMDmm, float tiltD, float rotD, float wavel) {
+            float distMDmm, float tiltD, float rotD, float wavel, float pixsizeMM) {
 
         Pattern2D lab6 = new Pattern2D(2048, 2048, xcen, ycen, 5000, 0, 1, true);
         lab6.setWavel(wavel);
         lab6.setDistMD(distMDmm);
         lab6.setTiltDeg(tiltD);
         lab6.setRotDeg(rotD);
-        lab6.setPixSx(0.079f);
-        lab6.setPixSy(0.079f);
+        lab6.setPixSx(pixsizeMM);
+        lab6.setPixSy(pixsizeMM);
         lab6.zeroIntensities();
 
         // hem de posar intensitat als anells amb uncert fwhm
 //        float fwhmPx = 5;
         int maxInten = 10000;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 15; i++) {
             double tth = 2 * FastMath.asin(lab6.getWavel() / (2 * LaB6_d[i]));
             EllipsePars p = ImgOps.getElliPars(lab6, tth);
+            log.config("lab6 ring"+i);
+            p.logElliPars("CONFIG");
             ArrayList<Point2D.Float> punts = p.getEllipsePoints(0, 360, -1);
             Iterator<Point2D.Float> itrp = punts.iterator();
             while (itrp.hasNext()) {

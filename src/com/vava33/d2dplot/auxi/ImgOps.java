@@ -755,11 +755,17 @@ public final class ImgOps {
     
     
     
-    public static ArrayList<Peak> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, int minpix, boolean roundToInt){
+    public static ArrayList<Peak> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, int minpix, boolean roundToInt,boolean estimBKG, boolean pond){
+        
+        int maxPeakCandidates=1500;
         
         //1r busquem candidats
-        ArrayList<Peak> pkCandidates = patt2d.findPeakCandidates(delsig, minpix);
+        ArrayList<Peak> pkCandidates = patt2d.findPeakCandidates(delsig, minpix,estimBKG);
         if (pkCandidates.size()<=0)return null;
+        if (pkCandidates.size()>maxPeakCandidates) {
+            boolean yes = FileUtils.YesNoDialog(null, "Too many candidates, it will take long unless you reduce the ESD factor, continue anyway?");
+            if (!yes) return null;
+        }
 
         log.debug("====> N initial candidates="+pkCandidates.size());
 
@@ -786,9 +792,10 @@ public final class ImgOps {
         //now we deal with the saturated if any (estaran a dalt de tot de la llista)
         boolean finished = false;
         int nsatur = 0;
+        int processedpks = 0; // afegit perque si nomes hi ha saturats a la llista es queda amb bucle infinit
         while (!finished){
             int pkinten = (int) pkCandidates.get(0).getYmax();
-            if (pkinten<patt2d.getSaturValue()){
+            if ((pkinten<patt2d.getSaturValue())||(processedpks > pkCandidates.size())){
                 finished=true;
                 continue;
             }
@@ -893,7 +900,8 @@ public final class ImgOps {
             Peak newPk = new Peak((float)rect.getCenterX(),(float)rect.getCenterY());
             newPk.setYmax(patt2d.getSaturValue()); //el torno a posar saturat pero com que estara al final de la llista no afectara
             log.fine("substituted by "+(float)rect.getCenterX()+" "+(float)rect.getCenterY());
-
+            
+            processedpks = processedpks + 1;
             pkCandidates.add(newPk);
         }
         
@@ -924,7 +932,10 @@ public final class ImgOps {
             int x = (int)(pk.getPixelCentre().x);
             int y = (int)(pk.getPixelCentre().y);
             int pkinten = patt2d.getInten(x, y);
-
+            int mxinten = pkinten;
+            float mxX = pk.getPixelCentre().x;
+            float mxY = pk.getPixelCentre().y;
+            
             //NOU 170616 ponderacio
             float sumX = pk.getPixelCentre().x * pkinten;
             float sumY = pk.getPixelCentre().y * pkinten;
@@ -942,6 +953,11 @@ public final class ImgOps {
                     //ponderem posició
                     sumX = sumX + (pk2.getPixelCentre().x * pk2inten);
                     sumY = sumY + (pk2.getPixelCentre().y * pk2inten);
+                    if (pk2inten>mxinten) {
+                        mxinten = pk2inten;
+                        mxX = pk2.getPixelCentre().x;
+                        mxY = pk2.getPixelCentre().y;
+                    }
                     pkinten = pkinten + pk2inten;
                     niguals = niguals +1;
                     toRemove.add(pk2); //l'eliminarem al sortir del bucle
@@ -956,8 +972,12 @@ public final class ImgOps {
                 //afegim el pic "suma"
 //                float xf = sumX/niguals;
 //                float yf = sumY/niguals;
-                float xf = sumX/pkinten;
-                float yf = sumY/pkinten;
+                float xf = mxX;
+                float yf = mxY;
+                if (pond) {
+                    xf = sumX/pkinten;
+                    yf = sumY/pkinten;                    
+                }
                 if (roundToInt){
                     xf = FastMath.round(xf);
                     yf = FastMath.round(yf);
@@ -2136,13 +2156,21 @@ public final class ImgOps {
     }
     
     //from pixel or twoteta calculate the ellipse considering pattern calibratino
-    public static EllipsePars getElliPars(Pattern2D patt2D, double twothRad){
+//    public static EllipsePars TestgetElliPars(Pattern2D patt2D, Point2D.Float pixel){
+//        double twothRad = patt2D.testCalc2T(pixel, false);
+//        log.fine(String.format("TWO THETA CLICK = %f",FastMath.toDegrees(twothRad)));
+//        return TestgetElliPars(patt2D,twothRad);
+//    }
+    
+    //from pixel or twoteta calculate the ellipse considering pattern calibratino
+    public static EllipsePars OLDgetElliPars(Pattern2D patt2D, double twothRad){
 
         double rotRad = FastMath.toRadians(patt2D.getRotDeg());
         double sintth = FastMath.sin(twothRad);
         double tiltrad = FastMath.toRadians(patt2D.getTiltDeg());
         double tanTilt = FastMath.tan(tiltrad);
         double cosTilt = FastMath.cos(tiltrad);
+        double tantth = FastMath.tan(twothRad);
         double tmenys = FastMath.tan((twothRad-tiltrad)/2);
         double tmes = FastMath.tan((twothRad+tiltrad)/2);
         double distPix = patt2D.getDistMD()/patt2D.getPixSx();
@@ -2161,6 +2189,62 @@ public final class ImgOps {
         double ellicentY = patt2D.getCentrY()+zdis * FastMath.cos(rotRad); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
 
         return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
+    }
+    
+    public static EllipsePars getElliPars(Pattern2D patt2D, double twothRad){
+
+        double rotRad = -FastMath.toRadians(patt2D.getRotDeg()); //amb negativa funcionava
+        double sintth = FastMath.sin(twothRad);
+        double tiltrad = FastMath.toRadians(patt2D.getTiltDeg());
+        double tanTilt = FastMath.tan(tiltrad);
+        double cosTilt = FastMath.cos(tiltrad);
+        double tantth = FastMath.tan(twothRad);
+        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
+        double tmes = FastMath.tan((twothRad+tiltrad)/2);
+        double distPix = patt2D.getDistMD()/patt2D.getPixSx();
+
+        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
+        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
+
+        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
+        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
+
+        double rMaj = (vmes+vmenys)/2;
+        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
+        double zdis = (fmes-fmenys)/2;
+
+        double ellicentX = patt2D.getCentrX()+zdis * FastMath.cos(rotRad-FastMath.PI/2);
+        double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad-FastMath.PI/2); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
+
+        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
+    }
+    
+    public static EllipsePars NOVAgetElliPars(Pattern2D patt2D, double twothRad){
+
+        double rotRad = -FastMath.toRadians(patt2D.getRotDeg());
+        double sintth = FastMath.sin(twothRad);
+        double tiltrad = -FastMath.toRadians(patt2D.getTiltDeg());
+        double tanTilt = FastMath.tan(tiltrad);
+        double cosTilt = FastMath.cos(tiltrad);
+        double sinTilt = FastMath.sin(tiltrad);
+        double tantth = FastMath.tan(twothRad);
+        double distPix = (patt2D.getDistMD()/patt2D.getPixSx())/patt2D.costilt;
+
+        double dtantth = distPix * tantth;
+        double ga = cosTilt/(cosTilt*cosTilt-tantth*tantth*sinTilt*sinTilt);
+        double gb = 1/FastMath.sqrt(1-tantth*tantth*sinTilt*sinTilt);
+        double gc = tantth*sinTilt/(cosTilt*cosTilt-tantth*tantth*sinTilt*sinTilt);
+        double a = ga*dtantth;
+        double b = gb*dtantth;
+        double c = gc*dtantth; 
+        System.out.println(FastMath.toDegrees(rotRad));
+        //el centre es mou per l'eix llarg, que es en el que la ellipse no es "constant", és a dir, girat 90º de l'eix de gir (que està sobre Rmin)
+        double ellicentX = patt2D.getCentrX()+c * FastMath.cos(rotRad-FastMath.PI/2); 
+        double ellicentY = patt2D.getCentrY()+c * FastMath.sin(rotRad-FastMath.PI/2); 
+        
+        log.writeNameNumPairs("INFO", true, "a,b,c", a,b,c);
+        
+        return new EllipsePars(a, b, ellicentX, ellicentY,rotRad);
     }
     
     public static class sumImagesFileWorker extends SwingWorker<Integer,Integer> {
@@ -2274,7 +2358,7 @@ public final class ImgOps {
         private File[] flist;
         LogJTextArea taOut;
         float delsig, angDeg;
-        boolean autoBkgPt, autoTol2T, autoAngD, lorCorr;
+        boolean autoBkgPt, autoTol2T, autoAngD, lorCorr,estimbkg,pond;
         int zoneR,minPix,bkgpt,iosc,tol2tpix;
 
         // distMD & wavel -1 to take the ones from the original image,
@@ -2282,7 +2366,7 @@ public final class ImgOps {
         public PkIntegrateFileWorker(File[] files, LogJTextArea textAreaOutput,
                 float delsig, int zoneR, int minPix, int bkgpt, 
                 boolean autoBkgPt, int tol2tpix, boolean autoTol2t, float angDeg, 
-                boolean autoAngDeg, boolean lorCorr, int iosc) {
+                boolean autoAngDeg, boolean lorCorr, int iosc,boolean estimbkg,boolean pond) {
             this.flist = files;
             this.delsig=delsig;
             this.zoneR=zoneR;
@@ -2296,6 +2380,8 @@ public final class ImgOps {
             this.taOut = textAreaOutput;
             this.lorCorr=lorCorr;
             this.iosc=iosc;
+            this.estimbkg=estimbkg;
+            this.pond=pond;
         }
 
         @Override
@@ -2319,7 +2405,7 @@ public final class ImgOps {
                     continue;
                 }
                 taOut.stat("   Finding peaks...");
-                in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false));
+                in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false,estimbkg,pond));
                 Iterator<Peak> itrpks = in.getPkSearchResult().iterator();
                 taOut.stat("   Integrating...");
                 while (itrpks.hasNext()){
@@ -2391,7 +2477,7 @@ public final class ImgOps {
         private File[] flist;
         LogJTextArea taOut;
         float delsig, angDeg;
-        boolean autoBkgPt, autoTol2T, autoAngD, lorCorr;
+        boolean autoBkgPt, autoTol2T, autoAngD, lorCorr,estimbkg,pond;
         int zoneR,minPix,bkgpt,iosc,tol2tpix;
 
         // distMD & wavel -1 to take the ones from the original image,
@@ -2399,7 +2485,7 @@ public final class ImgOps {
         public PkSCIntegrateFileWorker(File[] files, LogJTextArea textAreaOutput,
                 float delsig, int zoneR, int minPix, int bkgpt, 
                 boolean autoBkgPt, int tol2tpix, boolean autoTol2t, float angDeg, 
-                boolean autoAngDeg, boolean lorCorr, int iosc) {
+                boolean autoAngDeg, boolean lorCorr, int iosc, boolean estimbkg,boolean pond) {
             this.flist = files;
             this.delsig=delsig;
             this.zoneR=zoneR;
@@ -2413,6 +2499,8 @@ public final class ImgOps {
             this.taOut = textAreaOutput;
             this.lorCorr=lorCorr;
             this.iosc=iosc;
+            this.estimbkg=estimbkg;
+            this.pond=pond;
         }
 
         @Override
@@ -2484,6 +2572,11 @@ public final class ImgOps {
                         }else{
                             output.println(String.format("Background pixels= %d",bkgpt));
                         }
+                        if (estimbkg){
+                            output.println(String.format("Using background estimation for local thresholds"));
+                        }else{
+                            output.println(String.format("No bakground estimation, general threshold"));
+                        }
                         output.println(minLine);
                         output.println(minLine);
                     }else{
@@ -2491,7 +2584,7 @@ public final class ImgOps {
                     }
                     
                     taOut.stat("   Finding peaks...");
-                    in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false));
+                    in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false,estimbkg,pond));
                     if (in.getPkSearchResult()==null)continue;
                     Iterator<Peak> itrpks = in.getPkSearchResult().iterator();
                     taOut.stat("   Integrating...");

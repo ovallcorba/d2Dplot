@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.Color;
 import java.awt.geom.Ellipse2D;
@@ -36,6 +36,8 @@ public class PuntClick implements Comparable<PuntClick>{
         this.py = (float) p.getY();
         setPunt(new Ellipse2D.Float(px - midaPunt / 2, py - midaPunt / 2, midaPunt, midaPunt));
         setEllipse(ImgOps.getElliPars(patt2D, p));
+        System.out.println("puntClick");
+        this.getEllipse().logElliPars("CONFIG");
         this.t2rad = t2rad;
         this.intensity = inten;
         this.whereIBelong=patt2D;
