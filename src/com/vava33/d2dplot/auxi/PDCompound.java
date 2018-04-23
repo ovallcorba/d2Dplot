@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -6,11 +6,10 @@ import java.util.Iterator;
 
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.VavaLogger;
 
-import vava33.d2dplot.D2Dplot_global;
-
-public class PDCompound {
+public class PDCompound implements Comparable<PDCompound>{
     
 //    private int cnumber; //compound number in the DB
     private ArrayList<String> compName;
@@ -67,6 +66,17 @@ public class PDCompound {
         this.gamma = ga;
         this.spaceGroup = sg;
         this.formula = elem;
+    }
+    
+    public void setDefParams() {
+        this.a=1.0f;
+        this.b=1.0f;
+        this.c=1.0f;
+        this.alfa=90.0f;
+        this.beta=90.0f;
+        this.gamma=90.0f;
+        spaceGroup="P1";
+        peaks.add(new PDReflection(0,0,0,0,0));
     }
     
     public String toString(){
@@ -187,8 +197,8 @@ public class PDCompound {
     
     public String getAllComments(){
         StringBuilder sb = new StringBuilder();
-        if (this.getComment().size()>1){
-            int index = 1;
+        if (this.getComment().size()>0){
+            int index = 0;
             while (index < getComment().size()){
                 sb.append(this.getComment().get(index));
                 sb.append(" ");
@@ -378,6 +388,26 @@ public class PDCompound {
             r.setDsp((float) FastMath.sqrt(1.f/d2hkl));
             log.writeNameNums("CONFIG", true, "h k l dsp", r.getH(),r.getK(),r.getL(),r.getDsp());
         }
+    }
+
+    @Override
+    public int compareTo(PDCompound o) {
+        float tolDist = 0.01f;
+        float tolAng = 0.1f;
+        if ((this.a-o.a)>tolDist)return 1;
+        if ((this.b-o.b)>tolDist)return 1;
+        if ((this.c-o.c)>tolDist)return 1;
+        if ((this.alfa-o.alfa)>tolAng)return 1;
+        if ((this.beta-o.beta)>tolAng)return 1;
+        if ((this.gamma-o.gamma)>tolAng)return 1;
+        if (!(this.compName.get(0).equalsIgnoreCase(o.compName.get(0))))return 1;
+        if (!(this.getAltNames().equalsIgnoreCase(o.getAltNames())))return 1;
+        if (!this.getSpaceGroup().equalsIgnoreCase(o.getSpaceGroup()))return 1;
+        if (!this.getDspacingsString().equalsIgnoreCase(o.getDspacingsString()))return 1;
+        if (!this.getFormula().equalsIgnoreCase(o.getFormula()))return 1;
+        if (!this.getAllComments().equalsIgnoreCase(o.getAllComments()))return 1;
+        if (!this.getReference().equalsIgnoreCase(o.getReference()))return 1;
+        return 0;
     }
 
 }

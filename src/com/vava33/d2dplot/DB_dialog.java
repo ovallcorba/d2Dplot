@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -14,8 +14,10 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Scanner;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -31,25 +33,33 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.ProgressMonitor;
 import javax.swing.SwingConstants;
-import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import com.vava33.cellsymm.Cell;
+import com.vava33.cellsymm.SpaceGroup;
+import com.vava33.d2dplot.auxi.FilteredListModel;
+import com.vava33.d2dplot.auxi.ImgOps;
+import com.vava33.d2dplot.auxi.PDCompound;
+import com.vava33.d2dplot.auxi.PDDatabase;
+import com.vava33.d2dplot.auxi.PDReflection;
+import com.vava33.d2dplot.auxi.PDSearchResult;
+import com.vava33.d2dplot.auxi.Pattern2D;
+import com.vava33.jutils.Cif_file;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
-import vava33.d2dplot.auxi.FilteredListModel;
-import vava33.d2dplot.auxi.PDCompound;
-import vava33.d2dplot.auxi.PDDatabase;
-import vava33.d2dplot.auxi.PDSearchResult;
-import vava33.d2dplot.auxi.Pattern2D;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.JProgressBar;
+import javax.swing.JScrollBar;
 
 import net.miginfocom.swing.MigLayout;
+import javax.swing.JTextArea;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class DB_dialog extends JFrame {
 
@@ -62,7 +72,7 @@ public class DB_dialog extends JFrame {
     private JCheckBox chckbxPDdata;
     private final JPanel contentPanel = new JPanel();
     private JLabel lblHelp;
-    private JList listCompounds;
+    private JList<Object> listCompounds;
     private JPanel panel_left;
     private JPanel panel_right;
     private JScrollPane scrollPane;
@@ -70,9 +80,8 @@ public class DB_dialog extends JFrame {
     private JSplitPane splitPane;
     private static LogJTextArea tAOut;
     
-    private DefaultListModel lm;
+    private DefaultListModel<Object> lm;
     private boolean showPDDataRings;
-    private JButton btnShowDsp;
     private static JProgressBar pBarDB;
     private ProgressMonitor pm;
     private PDDatabase.openDBfileWorker openDBFwk;
@@ -89,30 +98,59 @@ public class DB_dialog extends JFrame {
     private JLabel lblHeader;
     private JPanel panel;
     private JPanel panel_1;
-    private JPanel panel_2;
     private JButton btnAddCompound;
-    private JButton btnEditCompound;
     private static VavaLogger log = D2Dplot_global.getVavaLogger(DB_dialog.class.getName());
 
     private Pattern2D patt2d;
     private ImagePanel ipanel;
     private JButton btnAddToQuicklist;
-    
+    private JPanel panel_3;
+    private JLabel lblName;
+    private JLabel lblNamealt;
+    private JLabel lblFormula;
+    private JLabel lblCellParameters;
+    private JLabel lblSpaceGroup;
+    private JLabel lblReference;
+    private JLabel lblComment;
+    private JLabel label;
+    private JTextArea textAreaDsp;
+    private JScrollPane scrollPane_2;
+    private JTextField txtName;
+    private JTextField txtNamealt;
+    private JTextField txtFormula;
+    private JTextField txtCellParameters;
+    private JTextField txtSpaceGroup;
+    private JTextField txtReference;
+    private JTextField txtComment;
+    private JButton btnCalcRefl;
+    private JButton btnApplyChanges;
+    private JButton btnRemove;
+    private JButton btnAddAsNew;
+    private JButton btnImportCif;
+    private JButton btnImportHkl;
+    private PDCompound currCompound;
+    private JSplitPane splitPane_1;
     /**
      * Create the dialog.
      */
     public DB_dialog(ImagePanel ip) {
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                do_this_windowClosing(e);
+            }
+        });
         this.setIpanel(ip);
         
         setIconImage(Toolkit.getDefaultToolkit().getImage(DB_dialog.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setTitle("Compound DB");
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 680, 680);
+        setBounds(x, y, 820, 680);
         getContentPane().setLayout(new MigLayout("fill, insets 5", "[grow]", "[grow][37px]"));
         getContentPane().add(this.contentPanel, "cell 0 0,grow");
         contentPanel.setLayout(new MigLayout("fill, insets 0", "[grow]", "[598px,grow]"));
@@ -127,11 +165,11 @@ public class DB_dialog extends JFrame {
                 {
                     {
                         {
-                            panel_left.setLayout(new MigLayout("fill, insets 0", "[grow]", "[25px][grow][]"));
+                            panel_left.setLayout(new MigLayout("fill, insets 0", "[grow]", "[25px][grow]"));
                             {
                                 panel = new JPanel();
                                 panel_left.add(panel, "cell 0 0,grow");
-                                panel.setLayout(new MigLayout("fill, insets 0", "[][][][][grow]", "[][][]"));
+                                panel.setLayout(new MigLayout("fill, insets 0", "[][][][grow][]", "[][][]"));
                                 this.btnLoadDB = new JButton("Load DB");
                                 panel.add(btnLoadDB, "cell 0 0,growx,aligny center");
                                 {
@@ -188,13 +226,6 @@ public class DB_dialog extends JFrame {
                                         });
                                         this.lblHelp.setFont(new Font("Tahoma", Font.BOLD, 14));
                                         {
-                                            chckbxNameFilter = new JCheckBox("Apply name filter:");
-                                            panel.add(chckbxNameFilter, "cell 0 2 2 1,alignx right,aligny center");
-                                        }
-                                        {
-                                            txtNamefilter = new JTextField();
-                                            panel.add(txtNamefilter, "cell 2 2 3 1,growx,aligny center");
-                                            txtNamefilter.setColumns(10);
                                             {
                                                 chckbxNpksInfo = new JCheckBox("Use nr. of total reflections");
                                                 chckbxNpksInfo.addItemListener(new ItemListener() {
@@ -205,18 +236,6 @@ public class DB_dialog extends JFrame {
                                                 panel.add(chckbxNpksInfo, "hidemode 3,cell 2 1,alignx left,aligny center");
                                                 chckbxNpksInfo.setSelected(true);
                                             }
-                                            
-                                            txtNamefilter.getDocument().addDocumentListener(new DocumentListener() {
-                                                public void changedUpdate(DocumentEvent e) {
-                                                    filterList();
-                                                  }
-                                                  public void removeUpdate(DocumentEvent e) {
-                                                    filterList();
-                                                  }
-                                                  public void insertUpdate(DocumentEvent e) {
-                                                    filterList();
-                                                  }
-                                                });
                                         }
                                         btnSearchByPeaks.addActionListener(new ActionListener() {
                                             public void actionPerformed(ActionEvent e) {
@@ -233,7 +252,7 @@ public class DB_dialog extends JFrame {
                                 this.btnLoadDB.addActionListener(new ActionListener() {
                                     @Override
                                     public void actionPerformed(ActionEvent arg0) {
-                                        do_btnLoadDB_actionPerformed(arg0,true);
+                                        do_btnLoadDB_actionPerformed(arg0);
                                     }
                                 });
                             }
@@ -241,40 +260,221 @@ public class DB_dialog extends JFrame {
                     }
                 }
                 {
-                    panel_1 = new JPanel();
-                    panel_left.add(panel_1, "cell 0 1,grow");
-                    panel_1.setLayout(new MigLayout("fill, insets 0", "[grow][]", "[][grow][]"));
+                    splitPane_1 = new JSplitPane();
+                    splitPane_1.setResizeWeight(0.5);
+                    splitPane_1.setContinuousLayout(true);
+                    panel_left.add(splitPane_1, "cell 0 1,grow");
                     {
-                        lblHeader = new JLabel("");
-                        panel_1.add(lblHeader, "cell 0 0 2 1");
-                    }
-                    {
-                        this.scrollPane = new JScrollPane();
-                        panel_1.add(scrollPane, "cell 0 1 2 1,grow");
+                        panel_3 = new JPanel();
+                        splitPane_1.setRightComponent(panel_3);
+                        panel_3.setLayout(new MigLayout("", "[][grow][]", "[][][][][][][][][][grow][]"));
                         {
-                            this.listCompounds = new JList();
-                            listCompounds.setFont(new Font("Monospaced", Font.PLAIN, 15));
-                            listCompounds.addListSelectionListener(new ListSelectionListener() {
-                                public void valueChanged(ListSelectionEvent arg0) {
-                                    do_listCompounds_valueChanged(arg0);
+                            btnImportCif = new JButton("Import CIF");
+                            btnImportCif.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    do_btnImportCif_actionPerformed(e);
                                 }
                             });
-                            this.listCompounds.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-                            this.scrollPane.setViewportView(this.listCompounds);
+                            panel_3.add(btnImportCif, "cell 1 0,alignx right");
+                        }
+                        {
+                            btnImportHkl = new JButton("Import HKL");
+                            btnImportHkl.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    do_btnImportHkl_actionPerformed(e);
+                                }
+                            });
+                            panel_3.add(btnImportHkl, "cell 2 0,alignx right");
+                        }
+                        {
+                            lblName = new JLabel("Name");
+                            panel_3.add(lblName, "cell 0 1,alignx trailing");
+                        }
+                        {
+                            txtName = new JTextField();
+                            txtName.setText("Name");
+                            panel_3.add(txtName, "cell 1 1 2 1,growx");
+                            txtName.setColumns(10);
+                        }
+                        {
+                            lblNamealt = new JLabel("Name (alt)");
+                            panel_3.add(lblNamealt, "cell 0 2,alignx trailing");
+                        }
+                        {
+                            txtNamealt = new JTextField();
+                            txtNamealt.setText("NameAlt");
+                            panel_3.add(txtNamealt, "cell 1 2 2 1,growx");
+                            txtNamealt.setColumns(10);
+                        }
+                        {
+                            lblFormula = new JLabel("Formula");
+                            panel_3.add(lblFormula, "cell 0 3,alignx trailing");
+                        }
+                        {
+                            txtFormula = new JTextField();
+                            txtFormula.setText("Formula");
+                            panel_3.add(txtFormula, "cell 1 3 2 1,growx");
+                            txtFormula.setColumns(10);
+                        }
+                        {
+                            lblCellParameters = new JLabel("Cell parameters");
+                            panel_3.add(lblCellParameters, "cell 0 4,alignx trailing");
+                        }
+                        {
+                            txtCellParameters = new JTextField();
+                            txtCellParameters.setText("Cell Parameters");
+                            panel_3.add(txtCellParameters, "cell 1 4 2 1,growx");
+                            txtCellParameters.setColumns(10);
+                        }
+                        {
+                            lblSpaceGroup = new JLabel("Space group");
+                            panel_3.add(lblSpaceGroup, "cell 0 5,alignx trailing");
+                        }
+                        {
+                            txtSpaceGroup = new JTextField();
+                            txtSpaceGroup.setText("Space Group");
+                            panel_3.add(txtSpaceGroup, "cell 1 5,growx");
+                            txtSpaceGroup.setColumns(10);
+                        }
+                        {
+                            btnCalcRefl = new JButton("Calc Refl.");
+                            btnCalcRefl.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    do_btnCalcRefl_actionPerformed(e);
+                                }
+                            });
+                            panel_3.add(btnCalcRefl, "cell 2 5,growx");
+                        }
+                        {
+                            lblReference = new JLabel("Reference");
+                            panel_3.add(lblReference, "cell 0 6,alignx trailing");
+                        }
+                        {
+                            txtReference = new JTextField();
+                            txtReference.setText("Reference");
+                            panel_3.add(txtReference, "cell 1 6 2 1,growx");
+                            txtReference.setColumns(10);
+                        }
+                        {
+                            lblComment = new JLabel("Comment");
+                            panel_3.add(lblComment, "cell 0 7,alignx trailing");
+                        }
+                        {
+                            txtComment = new JTextField();
+                            txtComment.setText("Comment");
+                            panel_3.add(txtComment, "cell 1 7 2 1,growx");
+                            txtComment.setColumns(10);
+                        }
+                        {
+                            label = new JLabel("list of (one per line): h k l d-spacing intensity");
+                            panel_3.add(label, "cell 0 8 3 1,alignx left");
+                        }
+                        {
+                            scrollPane_2 = new JScrollPane();
+                            panel_3.add(scrollPane_2, "cell 0 9 3 1,grow");
+                            {
+                                textAreaDsp = new JTextArea();
+                                scrollPane_2.setViewportView(textAreaDsp);
+                                textAreaDsp.setRows(3);
+                            }
+                        }
+                        {
+                            btnApplyChanges = new JButton("Apply Changes");
+                            btnApplyChanges.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    do_btnApplyChanges_actionPerformed(e);
+                                }
+                            });
+                            panel_3.add(btnApplyChanges, "cell 1 10,alignx right");
+                        }
+                        {
+                            btnAddAsNew = new JButton("Add as New");
+                            btnAddAsNew.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    do_btnAddAsNew_actionPerformed(e);
+                                }
+                            });
+                            panel_3.add(btnAddAsNew, "cell 2 10");
                         }
                     }
                     {
-                        pBarDB = new JProgressBar();
-                        panel_1.add(pBarDB, "cell 0 2,growx");
-                        pBarDB.setStringPainted(true);
-                    }
-                    btnResetSearch = new JButton("reset list");
-                    panel_1.add(btnResetSearch, "cell 1 2");
-                    btnResetSearch.addActionListener(new ActionListener() {
-                        public void actionPerformed(ActionEvent arg0) {
-                            do_btnResetSearch_actionPerformed(arg0);
+                        panel_1 = new JPanel();
+                        splitPane_1.setLeftComponent(panel_1);
+                        panel_1.setLayout(new MigLayout("fill, insets 2", "[][][grow][]", "[][][grow][]"));
+                        {
+                            chckbxNameFilter = new JCheckBox("Apply name filter:");
+                            panel_1.add(chckbxNameFilter, "cell 0 0 2 1,alignx left");
                         }
-                    });
+                        txtNamefilter = new JTextField();
+                        panel_1.add(txtNamefilter, "cell 2 0 2 1,growx,aligny center");
+                        
+                        txtNamefilter.getDocument().addDocumentListener(new DocumentListener() {
+                            public void changedUpdate(DocumentEvent e) {
+                                filterList();
+                              }
+                              public void removeUpdate(DocumentEvent e) {
+                                filterList();
+                              }
+                              public void insertUpdate(DocumentEvent e) {
+                                filterList();
+                              }
+                            });
+                        {
+                            lblHeader = new JLabel("header");
+                            panel_1.add(lblHeader, "cell 0 1 3 1,alignx left");
+                        }
+                        btnResetSearch = new JButton("reset list");
+                        panel_1.add(btnResetSearch, "cell 3 1,alignx right");
+                        btnResetSearch.addActionListener(new ActionListener() {
+                            public void actionPerformed(ActionEvent arg0) {
+                                do_btnResetSearch_actionPerformed(arg0);
+                            }
+                        });
+                        {
+                            this.scrollPane = new JScrollPane();
+                            panel_1.add(scrollPane, "cell 0 2 4 1,grow");
+                            {
+                                this.listCompounds = new JList<Object>();
+                                listCompounds.setFont(new Font("Monospaced", Font.PLAIN, 15));
+                                listCompounds.addListSelectionListener(new ListSelectionListener() {
+                                    public void valueChanged(ListSelectionEvent arg0) {
+                                        do_listCompounds_valueChanged(arg0);
+                                    }
+                                });
+                                this.listCompounds.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                                this.scrollPane.setViewportView(this.listCompounds);
+                            }
+                        }
+                        {
+                            btnAddCompound = new JButton("New");
+                            panel_1.add(btnAddCompound, "cell 0 3,growx");
+                            {
+                                btnRemove = new JButton("Remove");
+                                btnRemove.addActionListener(new ActionListener() {
+                                    public void actionPerformed(ActionEvent e) {
+                                        do_btnRemove_actionPerformed(e);
+                                    }
+                                });
+                                panel_1.add(btnRemove, "cell 1 3,alignx left");
+                            }
+                            {
+                                btnAddToQuicklist = new JButton("Add to Quicklist");
+                                panel_1.add(btnAddToQuicklist, "cell 3 3,alignx right");
+//                                splitPane_1.setDividerLocation(375);
+                                splitPane_1.setDividerLocation(this.getWidth()/2);
+                                btnAddToQuicklist.addActionListener(new ActionListener() {
+                                    public void actionPerformed(ActionEvent e) {
+                                        do_btnAddToQuicklist_actionPerformed(e);
+                                    }
+                                });
+                            }
+                            btnAddCompound.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent arg0) {
+                                    do_btnAddCompound_actionPerformed(arg0);
+                                }
+                            });
+                        }
+                    }
                 }
                 {
                 }
@@ -311,52 +511,16 @@ public class DB_dialog extends JFrame {
                 }
             });
             {
-                buttonPane.setLayout(new MigLayout("fill, insets 0", "[][]", "[]"));
+                buttonPane.setLayout(new MigLayout("fill, insets 0", "[grow][]", "[]"));
+            }
+            {
+                pBarDB = new JProgressBar();
+                buttonPane.add(pBarDB, "cell 0 0,growx");
+                pBarDB.setStringPainted(true);
             }
             okButton.setActionCommand("OK");
             buttonPane.add(okButton, "cell 1 0,alignx right,aligny center");
             getRootPane().setDefaultButton(okButton);
-        }
-        {
-            {
-                panel_2 = new JPanel();
-                panel_left.add(panel_2, "cell 0 2,grow");
-                panel_2.setLayout(new MigLayout("fill, insets 0", "[][][][]", "[]"));
-                {
-                    btnAddCompound = new JButton("Add Compound");
-                    btnAddCompound.addActionListener(new ActionListener() {
-                        public void actionPerformed(ActionEvent arg0) {
-                            do_btnAddCompound_actionPerformed(arg0);
-                        }
-                    });
-                    panel_2.add(btnAddCompound, "cell 0 0,alignx center");
-                }
-                {
-                    btnEditCompound = new JButton("Edit Compound");
-                    btnEditCompound.addActionListener(new ActionListener() {
-                        public void actionPerformed(ActionEvent e) {
-                            do_btnEditCompound_actionPerformed(e);
-                        }
-                    });
-                    panel_2.add(btnEditCompound, "cell 1 0,alignx center");
-                }
-                btnShowDsp = new JButton("Compound info");
-                panel_2.add(btnShowDsp, "cell 2 0,alignx center,aligny center");
-                {
-                    btnAddToQuicklist = new JButton("Add to Quicklist");
-                    btnAddToQuicklist.addActionListener(new ActionListener() {
-                        public void actionPerformed(ActionEvent e) {
-                            do_btnAddToQuicklist_actionPerformed(e);
-                        }
-                    });
-                    panel_2.add(btnAddToQuicklist, "cell 3 0,alignx center");
-                }
-                btnShowDsp.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent arg0) {
-                        do_btnShowDsp_actionPerformed(arg0);
-                    }
-                });
-            }
         }
         this.setAlwaysOnTop(cbox_onTop.isSelected());
         tAOut.ln("** PDDatabase **");
@@ -371,14 +535,14 @@ public class DB_dialog extends JFrame {
 
     public void inicia(){
         this.setPatt2d(this.getIpanel().getPatt2D());
-        lm = new DefaultListModel();
+        lm = new DefaultListModel<Object>();
         listCompounds.setModel(lm);
         tAOut.ln(" Reading default database: "+PDDatabase.getDefaultDBpath());
-        do_btnLoadDB_actionPerformed(null,false);
+        this.readDB(true);
+        //select the first compound
     }
    
-    //boolean ask for default or not
-    protected void do_btnLoadDB_actionPerformed(ActionEvent arg0,boolean askIfDefaultDB) {
+    private void readDB(boolean readDefault) {
         
         //primer creem el progress monitor, 
         pm = new ProgressMonitor(this,
@@ -391,34 +555,15 @@ public class DB_dialog extends JFrame {
         //db per defecte:
         File DBFile = new File(PDDatabase.getDefaultDBpath());
         
-        //Ara preguntem (si s'escau) sobre obrir una externa o la default
-        if (askIfDefaultDB){
-            Object[] options = {"Load default DB",
-            "Open external DB file"};
-            int n = JOptionPane.showOptionDialog(this,
-            "Open default DB or one from a file?",
-            "Load DB",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            options,
-            options[0]);
-            
-            log.debug("option = "+n);
-            
-            if (n == JOptionPane.CLOSED_OPTION) {
+        if (!readDefault) {
+            //Load file
+            FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat")};
+            DBFile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+            if(DBFile==null){
+                tAOut.stat("No data file selected");
                 return;
             }
-            if (n != JOptionPane.YES_OPTION) {
-                //Carrega un fitxer de base de dades
-                FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat")};
-                DBFile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
-                if(DBFile==null){
-                    tAOut.stat("No data file selected");
-                    return;
-                }
-                D2Dplot_global.setWorkdir(DBFile);
-            }
+            D2Dplot_global.setWorkdir(DBFile);
         }
         
         //Si hem arribat aquí creem el worker, hi afegim el listener
@@ -447,6 +592,7 @@ public class DB_dialog extends JFrame {
                       pBarDB.setValue(100);
                       pBarDB.setStringPainted(true);
                       updateListAllCompounds();
+                      PDDatabase.setDBmodified(false);
                       //startButton.setEnabled(true);
                   }
               }
@@ -457,6 +603,18 @@ public class DB_dialog extends JFrame {
         PDDatabase.resetDB();
         //read database file, executing the swingworker task
         openDBFwk.execute();
+        if (!new File(D2Dplot_global.DBfile).getName().equalsIgnoreCase(DBFile.getName())){
+            //ask if this new file should become the default one on config
+            boolean defDB = FileUtils.YesNoDialog(this, "Set this DB file as the default for further sessions?");
+            if (defDB) {
+                D2Dplot_global.DBfile=DBFile.getAbsolutePath();
+            }
+        }
+    }
+    
+    //boolean ask for default or not
+    protected void do_btnLoadDB_actionPerformed(ActionEvent arg0) {
+        this.readDB(false);
     }
 
     protected void do_cbox_onTop_itemStateChanged(ItemEvent arg0) {
@@ -500,7 +658,7 @@ public class DB_dialog extends JFrame {
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
-        this.dispose();
+        this.checkSaveAndDispose();
     }
 
     public PDCompound getCurrentCompound() {
@@ -508,10 +666,12 @@ public class DB_dialog extends JFrame {
         if (listCompounds.getSelectedIndex() >= 0) {
             if (listCompounds.getSelectedValue() instanceof PDCompound){
                 PDCompound comp = (PDCompound) listCompounds.getSelectedValue();
+                this.currCompound=comp;
                 return comp;
             }
             if (listCompounds.getSelectedValue() instanceof PDSearchResult){
                 PDSearchResult sr = (PDSearchResult) listCompounds.getSelectedValue();
+                this.currCompound=sr.getC();
                 return sr.getC();
             }
         }
@@ -538,20 +698,10 @@ public class DB_dialog extends JFrame {
                 pBarDB.setValue((int)(((float)n/(float)ncomp)/100.f));    
             }
         }
-        lblHeader.setText(" RefNum  Name  [Formula]  (alt. names)");
+        lblHeader.setText(" Name  [Formula]  (alt. names)");
         pBarDB.setValue(100);
         pBarDB.setStringPainted(false);
-        
-    }
-    protected void do_btnShowDsp_actionPerformed(ActionEvent arg0) {
-        PDCompound c = this.getCurrentCompound();
-        if (c == null){
-            tAOut.ln("Select a compound first");
-            return;
-        }
-        tAOut.ln(c.printInfoMultipleLines());
-
-        this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), c);
+        listCompounds.setSelectedIndex(0);//TODO: mirar que no s'hagi de cambiar a algun altre lloc
     }
 
     public boolean isShowPDDataRings() {
@@ -563,12 +713,51 @@ public class DB_dialog extends JFrame {
     }
     protected void do_listCompounds_valueChanged(ListSelectionEvent arg0) {
         if (arg0.getValueIsAdjusting()) return;
+
+        //Test for changes in compound
+        if (currCompound!=null) {
+            PDCompound oldCompound = this.currCompound;
+            PDCompound edited = new PDCompound("aa");
+            this.updateCompoundFromFields(edited,false);
+            if (edited.compareTo(oldCompound)!=0) {
+                boolean update = FileUtils.YesNoDialog(this, "Previous compound had changed, update it?");
+                if (update) {
+                    this.updateCompoundFromFields(oldCompound,true);
+                    PDDatabase.setDBmodified(true);
+                }
+            }
+        }
+        
         PDCompound comp = this.getCurrentCompound();
         this.getIpanel().setShowDBCompoundRings(this.isShowDataRings(), comp);
-        if (comp!=null)tAOut.ln(comp.printInfo2Line());
+        if (comp!=null) {
+//            tAOut.ln(comp.printInfo2Line());
+            //fill the fields of DB
+            this.updateInfo(comp);
+        }
         this.getIpanel().actualitzarVista();
     }
     
+    public void updateInfo(PDCompound c){
+        txtName.setText(c.getCompName().get(0));
+        txtNamealt.setText(c.getAltNames());
+        txtFormula.setText(c.getFormula());
+        txtCellParameters.setText(c.getCellParameters());
+        txtSpaceGroup.setText(c.getSpaceGroup());
+        txtReference.setText(c.getReference());
+        txtComment.setText(c.getAllComments());
+        textAreaDsp.setText(c.getHKLlines());
+    }
+    
+    public void prepareFields(){
+        txtName.setText("");
+        txtNamealt.setText("");
+        txtFormula.setText("");
+        txtCellParameters.setText("");
+        txtSpaceGroup.setText("");
+        txtReference.setText("");
+        txtComment.setText("");
+    }
     
     //CANVIEM PER NO UTILITZAR EL LM AMB TOTS ELS COMPOSTOS  -- AL FINAL NO, fem boto per tornar a mostrar tots
     public void loadSearchPeaksResults(){
@@ -718,7 +907,7 @@ public class DB_dialog extends JFrame {
     }
     protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB files", "db", "DB")};
-        File f = FileUtils.fchooserSaveAsk(this, new File(D2Dplot_global.getWorkdir()),filter);
+        File f = FileUtils.fchooserSaveAsk(this, new File(PDDatabase.getCurrentDB()),filter);
         if (f == null)return;
         D2Dplot_global.setWorkdir(f);
         //primer creem el progress monitor, 
@@ -752,21 +941,20 @@ public class DB_dialog extends JFrame {
                         pBarDB.setValue(100);
                         pBarDB.setStringPainted(true);
                         updateListAllCompounds();
+                        PDDatabase.setDBmodified(false);
                     }
                 }
             }
         });
         
         saveDBFwk.execute();
-        
-    }
-    protected void do_btnAddCompound_actionPerformed(ActionEvent arg0) {
-        DB_editor dbe = new DB_editor(null,this);
-        dbe.setVisible(true);
-    }
-    protected void do_btnEditCompound_actionPerformed(ActionEvent e) {
-        DB_editor dbe = new DB_editor(this.getCurrentCompound(),this);
-        dbe.setVisible(true);
+        if (!new File(D2Dplot_global.DBfile).getName().equalsIgnoreCase(saveDBFwk.getDbFileString())){
+            //ask if this new file should become the default one on config
+            boolean defDB = FileUtils.YesNoDialog(this, "Set this DB file as the default for further sessions?");
+            if (defDB) {
+                D2Dplot_global.DBfile=f.getAbsolutePath();
+            }
+        }
     }
 
     public Pattern2D getPatt2d() {
@@ -803,5 +991,280 @@ public class DB_dialog extends JFrame {
 
     public static void setMinDspacingToSearch(float minDspacingToSearch) {
         DB_dialog.minDspacingToSearch = minDspacingToSearch;
+    }
+    
+    protected void do_btnApplyChanges_actionPerformed(ActionEvent e) {
+        this.updateCompoundFromFields(this.getCurrentCompound(),true);
+        this.updateListAllCompounds();
+    }
+    
+    
+    protected void do_btnAddAsNew_actionPerformed(ActionEvent e) {
+        //ADD COMPOUND:
+        PDCompound co = new PDCompound(txtName.getText().trim());
+        PDDatabase.addCompoundDB(co);
+        this.updateCompoundFromFields(co,true);
+        this.updateListAllCompounds();
+        PDDatabase.setDBmodified(true);
+        listCompounds.setSelectedIndex(listCompounds.getModel().getSize()-1);
+        this.scrollPane.validate();
+        JScrollBar vertical = this.scrollPane.getVerticalScrollBar();
+        vertical.setValue(vertical.getMaximum());
+    }
+    
+    protected void do_btnAddCompound_actionPerformed(ActionEvent arg0) {
+        //ADD COMPOUND:
+        PDCompound co = new PDCompound("NEW COMPOUND");
+        co.setDefParams();
+        PDDatabase.addCompoundDB(co);
+        //select the compound
+        this.updateListAllCompounds();
+        PDDatabase.setDBmodified(true);
+        listCompounds.setSelectedIndex(listCompounds.getModel().getSize()-1);
+        this.scrollPane.validate();
+        JScrollBar vertical = this.scrollPane.getVerticalScrollBar();
+        vertical.setValue(vertical.getMaximum());
+    }
+    
+    protected void do_btnRemove_actionPerformed(ActionEvent e) {
+        boolean remove = FileUtils.YesNoDialog(this, "Remove selected Compound?");
+        if (remove) PDDatabase.getDBCompList().remove(this.getCurrentCompound());
+        this.updateListAllCompounds();
+        PDDatabase.setDBmodified(true);
+    }
+    
+    private boolean updateCompoundFromFields(PDCompound comp, boolean warningSave) {
+        
+        String cell = txtCellParameters.getText().trim();
+        String[] cellp = cell.split("\\s+");
+        float a,b,c,alfa,beta,gamma;
+        try{
+            a = Float.parseFloat(cellp[0]);
+            b = Float.parseFloat(cellp[1]);
+            c = Float.parseFloat(cellp[2]);
+            alfa = Float.parseFloat(cellp[3]);
+            beta = Float.parseFloat(cellp[4]);
+            gamma = Float.parseFloat(cellp[5]);
+        }catch(Exception e){
+            if (D2Dplot_global.isDebug())e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error parsing cell parameters, should be: a b c alpha beta gamma");
+            return false;
+        }
+        if (txtName.getText().isEmpty()){
+            JOptionPane.showMessageDialog(this, "Please give the compound name");
+            return false;
+        }
+        
+        String[] hkl_lines = textAreaDsp.getText().trim().split("\\n");
+        log.debug(Arrays.toString(hkl_lines));
+        ArrayList<PDReflection> pdref = new ArrayList<PDReflection>();
+        //CHECK CONSISTENCY HKL
+        for (int i=0;i<hkl_lines.length;i++){
+            String[] line = hkl_lines[i].trim().split("\\s+");
+            if (line.length<5){
+                JOptionPane.showMessageDialog(this, "Error in hkl lines, should be: h k l dspacing Intensity");
+                return false;
+            }else{
+                try{
+                    log.debug(Arrays.toString(line));
+                    int h = Integer.parseInt(line[0]);
+                    int k = Integer.parseInt(line[1]);
+                    int l = Integer.parseInt(line[2]);
+                    float dsp = Float.parseFloat(line[3]);
+                    float inten = 0.0f;
+                    try {
+                        inten = Float.parseFloat(line[4]);    
+                    }catch(Exception e2) {
+                        log.debug("no intensity for reflection");
+                    }
+                    PDReflection refl = new PDReflection(h,k,l,dsp,inten);
+                    pdref.add(refl);
+                }catch(Exception e){
+                    JOptionPane.showMessageDialog(this, "Error in parsing hkl lines, e.g: 1 0 0 12.5 100.0");
+                    return false;
+                }
+            }
+        }
+        
+        //now we put the info into COMP
+        comp.getCompName().clear();
+        comp.addCompoundName(txtName.getText().trim());
+        comp.addCompoundName(txtNamealt.getText().trim());
+        comp.setFormula(txtFormula.getText().trim());
+        comp.setA(a);
+        comp.setB(b);
+        comp.setC(c);
+        comp.setAlfa(alfa);
+        comp.setBeta(beta);
+        comp.setGamma(gamma);
+        comp.setSpaceGroup(txtSpaceGroup.getText().trim());
+        comp.setReference(txtReference.getText().trim());
+        comp.getComment().clear();
+        comp.addComent(txtComment.getText().trim());
+        //dsp + intensities
+        comp.getPeaks().clear();
+        comp.setPeaks(pdref);
+        
+        //don't forget to save the DB file to keep changes for future openings.
+        if(warningSave)JOptionPane.showMessageDialog(this, "Do not forget to save the DB into a file \n(otherwise changes will be lost on close)");
+        
+//        this.updateListAllCompounds();
+        return true;
+    }
+    
+    protected void do_btnImportHkl_actionPerformed(ActionEvent e) {
+        //lines like this:
+        //0  -1  -1  26042. 547.139   1
+        FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("HKL file", "hkl", "HKL")};
+        File hklfile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+        if(hklfile==null)return;
+        D2Dplot_global.setWorkdir(hklfile);
+        
+        String cell = txtCellParameters.getText().trim();
+        String[] cellp = cell.split("\\s+");
+        float a,b,c,alfa,beta,gamma;
+        try{
+            a = Float.parseFloat(cellp[0]);
+            b = Float.parseFloat(cellp[1]);
+            c = Float.parseFloat(cellp[2]);
+            alfa = Float.parseFloat(cellp[3]);
+            beta = Float.parseFloat(cellp[4]);
+            gamma = Float.parseFloat(cellp[5]);
+        }catch(Exception ex){
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Cell parameters needed (a b c alpha beta gamma) to parse hkl file");
+            return;
+        }
+        
+        Scanner shkl;
+        ArrayList<PDReflection> refs = new ArrayList<PDReflection>();
+        try {
+            shkl = new Scanner(hklfile);
+            while (shkl.hasNextLine()){
+                String line = shkl.nextLine();
+                String[] values = line.split("\\s+");
+                try{
+                    int h = Integer.parseInt(values[0]);
+                    int k = Integer.parseInt(values[1]);
+                    int l = Integer.parseInt(values[2]);
+                    float inten = Integer.parseInt(values[3]);
+                    refs.add(new PDReflection(h,k,l,-1,inten));
+                }catch(Exception ex2){
+                    if (D2Dplot_global.isDebug())ex2.printStackTrace();
+                    log.warning("error parsing values");
+                }
+            }
+            ImgOps.getDspacingFromHKL(refs, a, b, c, alfa, beta, gamma);
+            shkl.close();
+        } catch (Exception ex) {
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            log.warning("error reading file");
+        }
+        
+        if (refs.size()==0){
+            log.warning("no reflections found");
+            return;
+        }
+        
+        //calculem el factor de normalitzacio de les intensitats a 100
+        Iterator<PDReflection> itrr = refs.iterator();
+        float maxInten = -1;
+        while (itrr.hasNext()){
+            PDReflection p = itrr.next();
+            Float pinten = p.getInten();
+            if(pinten>maxInten){
+                maxInten = pinten;
+            }
+        }
+        float factor = 100/maxInten;
+        
+        //Ara ja escribim al textarea
+        textAreaDsp.setText("");
+        itrr = refs.iterator();
+        while (itrr.hasNext()){
+            PDReflection p = itrr.next();
+            textAreaDsp.append(String.format("%4d %4d %4d %8.4f %8.2f\n", p.getH(),p.getK(),p.getL(),p.getDsp(),p.getInten()*factor));
+        }
+    }
+    
+    protected void do_btnImportCif_actionPerformed(ActionEvent e) {
+        FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("CIF file", "cif", "CIF")};
+        File ciffile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+        if(ciffile==null)return;
+        D2Dplot_global.setWorkdir(ciffile);
+        Cif_file cf = new Cif_file(ciffile,true);
+        
+        //show a dialog with the important fields, to check and correct them if necessary  -- MOGUT a CIFFILE
+//        ImportCIFdialog cifdiag = new ImportCIFdialog(cf);
+//        cifdiag.setVisible(true);
+//        cifdiag.setAlwaysOnTop(true);
+//        double a = cifdiag.getA();
+//        log.writeNameNumPairs("config", true, "a", a);
+        
+        //populate fields
+        txtName.setText(cf.getNom());
+        txtNamealt.setText("");
+        txtFormula.setText("");
+        txtCellParameters.setText(cf.getCellParametersAsString());
+        txtSpaceGroup.setText(cf.getSgString());
+        txtReference.setText("");
+        txtComment.setText("");
+        if (cf.getSgNum()==0) return;
+        //else calculem reflexions, utilitzem directament cf que ha estat corregit si era necessari
+        Cell cel = new Cell(cf);
+        cel.latgen(1.05f);
+        cel.calcInten(true);
+        cel.normIntensities(100);
+        this.textAreaDsp.setText("");
+        this.textAreaDsp.setText(cel.getListAsString_HKLMerged_dsp_Fc2());
+    }
+    
+    protected void do_btnCalcRefl_actionPerformed(ActionEvent e) {
+        SpaceGroup sg = new SpaceGroup(txtSpaceGroup.getText().trim());
+        if (sg.getSGnum()<=0) {
+//            FileUtils.InfoDialog(this, "SG not found, calculation of reflections not possible", "SG not found");
+            return; //el info dialog esta dins de SpaceGroup
+        }
+        String cell = txtCellParameters.getText().trim();
+        String[] cellp = cell.split("\\s+");
+        float a,b,c,alfa,beta,gamma;
+        try{
+            a = Float.parseFloat(cellp[0]);
+            b = Float.parseFloat(cellp[1]);
+            c = Float.parseFloat(cellp[2]);
+            alfa = Float.parseFloat(cellp[3]);
+            beta = Float.parseFloat(cellp[4]);
+            gamma = Float.parseFloat(cellp[5]);
+        }catch(Exception ex){
+            if (D2Dplot_global.isDebug())ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Cell parameters needed (a b c alpha beta gamma) to parse hkl file");
+            return;
+        }
+        Cell cel = new Cell(a,b,c,alfa,beta,gamma,sg.getSGnum());
+        cel.latgen(1.0f);
+        
+        this.textAreaDsp.setText("");
+        this.textAreaDsp.setText(cel.getListAsString_HKLMerged_dsp_Fc2());
+    }
+    
+    
+    protected void do_this_windowClosing(WindowEvent e) {
+        //SECOND SAVE DB FILE IF MODIFIED
+//        log.debug("window closing event entered");
+        checkSaveAndDispose();
+    }
+    
+    private void checkSaveAndDispose() {
+        if(PDDatabase.isDBmodified()){
+            //prompt and save QL file if necessary
+            int save = FileUtils.YesNoCancelDialog(this, "Database has changed, Do you want to save it?");
+            if (save==1) {
+                this.do_btnSaveDb_actionPerformed(null);
+            }
+            if (save==-1) {
+                return; //not save nor exit
+            }
+        }
+        this.dispose();
     }
 }

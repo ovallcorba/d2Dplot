@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -20,9 +20,8 @@ import javax.swing.SwingWorker;
 
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.MainFrame;
-
+import com.vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.MainFrame;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
@@ -32,13 +31,16 @@ public final class PDDatabase {
     //Full DB
     private static int nCompounds = 0;  //number of compounds in the DB
     private static String localDB = System.getProperty("user.dir") + D2Dplot_global.separator + "default.db";  // local DB default file
+    private static String currentDB;
     private static ArrayList<PDCompound> DBcompList = new ArrayList<PDCompound>();  
     private static ArrayList<PDSearchResult> DBsearchresults = new ArrayList<PDSearchResult>();
     
     //quicklist
     private static String localQL = System.getProperty("user.dir") + D2Dplot_global.separator + "quicklist.db";  // local DB default file
+    private static String currentQL;
     private static ArrayList<PDCompound> QLcompList = new ArrayList<PDCompound>();  
     private static boolean QLmodified = false;
+    private static boolean DBmodified = false;
     
     private static VavaLogger log = D2Dplot_global.getVavaLogger(PDDatabase.class.getName());
     
@@ -49,7 +51,6 @@ public final class PDDatabase {
     
     public static void resetQL(boolean updateComboMF){
         QLcompList.clear();
-        //TODO:ACTUALIZAR COMBO_LAT AQUI??
         if (updateComboMF){
             MainFrame.updateQuickList();
         }
@@ -63,7 +64,6 @@ public final class PDDatabase {
     
     public static void addCompoundQL(PDCompound c, boolean updateComboMF){
         QLcompList.add(c);
-        //TODO:ACTUALIZAR COMBO_LAT???
         if (updateComboMF){
             MainFrame.updateQuickList();
         }
@@ -239,6 +239,10 @@ public final class PDDatabase {
     public static boolean isQLmodified() {
         return QLmodified;
     }
+    
+    public static boolean isDBmodified() {
+        return DBmodified;
+    }
 
     public static String getLocalDB() {
         return localDB;
@@ -258,6 +262,25 @@ public final class PDDatabase {
 
     public static void setQLmodified(boolean qLmodified) {
         QLmodified = qLmodified;
+    }
+    public static void setDBmodified(boolean dBmodified) {
+        DBmodified = dBmodified;
+    }
+
+    public static String getCurrentDB() {
+        return currentDB;
+    }
+
+    public static void setCurrentDB(String currentDB) {
+        PDDatabase.currentDB = currentDB;
+    }
+
+    public static String getCurrentQL() {
+        return currentQL;
+    }
+
+    public static void setCurrentQL(String currentQL) {
+        PDDatabase.currentQL = currentQL;
     }
 
     //Aixo llegira el fitxer per omplir la base de dades o la quicklist
@@ -450,10 +473,9 @@ public final class PDDatabase {
                         }else{
                             addCompoundDB(comp);    
                         }
-                        
                     }
-                    
                 }
+                scDBfile.close();
             }catch(Exception e){
                 if(D2Dplot_global.isDebug())e.printStackTrace();
                 log.warning("error reading DB file");
@@ -461,6 +483,11 @@ public final class PDDatabase {
                 return 1;
             }
             setProgress(100);
+            if (toQuickList) {
+                setCurrentQL(dbfile.toString());
+            }else {
+                setCurrentDB(dbfile.toString());    
+            }
             return 0;
         }
         
@@ -482,7 +509,7 @@ public final class PDDatabase {
         private boolean toQuickList;
         
         public saveDBfileWorker(File datafile, boolean useQuickList) {
-            this.dbfile = datafile;
+            this.dbfile = FileUtils.canviExtensio(datafile,"db");
             this.stop = false;
             this.toQuickList=useQuickList;
         }
@@ -575,6 +602,11 @@ public final class PDDatabase {
                 return 1;
             }
             setProgress(100);
+            if (toQuickList) {
+                setCurrentQL(dbfile.toString());
+            }else {
+                setCurrentDB(dbfile.toString());    
+            }
             return 0;
         }
         
