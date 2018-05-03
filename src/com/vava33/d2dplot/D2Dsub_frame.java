@@ -84,7 +84,7 @@ public class D2Dsub_frame extends JFrame {
     private Thread runBkg;
     private File glassD2File;
     private Pattern2D pattBef, pattAft, pattBkg;
-    private JComboBox comboBox;
+    private JComboBox<String> comboBox;
     private JTextField txtAmplada;
     private JTextField txtAngle;
     private JLabel lblAwidth;
@@ -128,7 +128,7 @@ public class D2Dsub_frame extends JFrame {
     /**
      * Create the dialog.
      */
-    public D2Dsub_frame(Pattern2D patt, MainFrame m) {
+    public D2Dsub_frame(MainFrame m) {
     	addWindowListener(new WindowAdapter() {
     		@Override
     		public void windowClosing(WindowEvent arg0) {
@@ -201,7 +201,7 @@ public class D2Dsub_frame extends JFrame {
         this.panelBkg.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Background estimation & subtraction", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         this.panel_top.add(this.panelBkg, "cell 0 1,grow");
         {
-            this.comboBox = new JComboBox();
+            this.comboBox = new JComboBox<String>();
             this.comboBox.addItemListener(new ItemListener() {
                 public void itemStateChanged(ItemEvent arg0) {
                     do_comboBox_itemStateChanged(arg0);
@@ -221,7 +221,7 @@ public class D2Dsub_frame extends JFrame {
             	lblMehod = new JLabel("Mehod");
             	panelBkg.add(lblMehod, "cell 2 0,alignx right,aligny center");
             }
-            this.comboBox.setModel(new DefaultComboBoxModel(new String[] {"avsq", "avarc", "avcirc", "minsq", "minarc"}));
+            this.comboBox.setModel(new DefaultComboBoxModel<String>(new String[] {"avsq", "avarc", "avcirc", "minsq", "minarc"}));
             this.panelBkg.add(this.comboBox, "cell 3 0,growx,aligny center");
         }
         {
@@ -498,13 +498,7 @@ public class D2Dsub_frame extends JFrame {
             okButton.setActionCommand("OK");
             getRootPane().setDefaultButton(okButton);
         }
-        setMf(m);
-        setInitialPattern(patt);
-        this.userInit();
-        this.activeOptions();
-    }
 
-    private void userInit(){
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         this.setBounds(0, 0, 1000, 600);
         int width = this.getWidth();
@@ -513,10 +507,19 @@ public class D2Dsub_frame extends JFrame {
         int y = (screen.height - height) / 2;
         this.setBounds(x, y, width, height);
         
-        //Diagrama inicial
-        setPattBef(this.getInitialPattern());
-		txtPathBefore.setText(getPattBef().getImgfile().toString());
+        setMf(m);        
         
+        this.userInit();
+        this.activeOptions();
+    }
+
+    public void userInit(){
+        setInitialPattern(mf.getPatt2D());
+        //Diagrama inicial
+        if (getPattBef()==null) {
+            setPattBef(this.getInitialPattern());
+            txtPathBefore.setText(getPattBef().getImgfile().toString());
+        }
         //mostrem titol i versio D2Dsub
         tAOut.ln("** Background estimation/subtraction & LP correction **");
         tAOut.ln("Initial file= " + getPattBef().getImgfile().toString());

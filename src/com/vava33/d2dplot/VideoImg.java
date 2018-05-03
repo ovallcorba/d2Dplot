@@ -1,7 +1,5 @@
 package com.vava33.d2dplot;
 
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
 import java.awt.Toolkit;
 
 import javax.swing.JDialog;
@@ -13,10 +11,9 @@ import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JButton;
 
-import com.vava33.d2dplot.auxi.ImageTiltRot_diag;
+import com.vava33.d2dplot.auxi.ImgFileUtils;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.SystemInfo;
 import com.vava33.jutils.VavaLogger;
 
 import java.awt.event.ActionListener;
@@ -36,9 +33,12 @@ import java.util.TimerTask;
 
 import javax.swing.JSlider;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.event.ChangeEvent;
 
 public class VideoImg extends JDialog {
+
+    private static final long serialVersionUID = 1L;
     private static VavaLogger log = D2Dplot_global.getVavaLogger(VideoImg.class.getName());
     private JPanel contentPane;
 //    ArrayList<Pattern2D> patts = new ArrayList<Pattern2D>();
@@ -49,21 +49,6 @@ public class VideoImg extends JDialog {
     private JButton button;
     private Timer timer;
     private JButton btnStop;
-    /**
-     * Launch the application.
-     */
-//    public static void main(String[] args) {
-//        EventQueue.invokeLater(new Runnable() {
-//            public void run() {
-//                try {
-//                    VideoImg frame = new VideoImg();
-//                    frame.setVisible(true);
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-//    }
 
     /**
      * Create the frame.
@@ -125,39 +110,27 @@ public class VideoImg extends JDialog {
         }
         super.dispose();
     }
+    
+    public void showOpenImgsDialog() {
+        this.do_btnOpenImgs_actionPerformed(null);
+    }
 
     protected void do_btnOpenImgs_actionPerformed(ActionEvent arg0) {
-        File[] fs = FileUtils.fchooserMultiple(this, new File(D2Dplot_global.getWorkdir()), null, 0);
+        FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
+        File[] fs = FileUtils.fchooserMultiple(this, new File(D2Dplot_global.getWorkdir()), filt, 0);
         files = new ArrayList<File>(Arrays.asList(fs));
         if (fs.length<=0)return;
         slider.setMinimum(0);
         slider.setMaximum(files.size()-1);
         slider.setValue(0);
-//        this.readImgs(fs);
         loadPattern();
     }
     
-//    private void readImgs(File[] fs){
-//        SystemInfo si = new SystemInfo();
-//        patts = new ArrayList<Pattern2D>();
-//        for (int i=0;i<fs.length;i++){
-//            patts.add(this.fastEdfRead(fs[i]));
-//            log.info(si.MemInfo());
-//        }
-//        
-//        slider.setMinimum(0);
-//        slider.setMaximum(patts.size()-1);
-//        slider.setValue(0);
-//        
-//        loadPattern();
-//    }
     
     private void loadPattern(){
         log.debug("sliderValue="+slider.getValue());
         if (slider.getValue()==currentLoadedImage)return;
         imgpanel.setImagePatt2D(this.fastEdfRead(files.get(slider.getValue())));
-//        imgpanel.setImagePatt2D(patts.get(slider.getValue()));
-//        imgpanel.pintaImatge();
     }
     
     private Pattern2D fastEdfRead(File d2File){
@@ -171,16 +144,16 @@ public class VideoImg extends JDialog {
         int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
         float omeIni = 0, omeFin = 0, acqTime = -1;
         float tilt = 0, rot = 0;
-        boolean fit2d = false;
+
         
         // primer treiem la info de les linies de text
         try {
             Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
-            log.debug(scD2file.toString());
+//            log.debug(scD2file.toString());
             for (int i = 0; i < 50; i++) {
                 if (scD2file.hasNextLine()) {
                     String line = scD2file.nextLine();
-                    log.debug("edf line="+line);
+                    log.fine("edf line="+line);
                     int iigual = line.indexOf("=") + 1;
                     if (FileUtils.containsIgnoreCase(line, "Size =")) {
                         binSize = Integer.parseInt(line.substring(iigual,
@@ -232,12 +205,12 @@ public class VideoImg extends JDialog {
                         rot = Float.parseFloat(line.substring(iigual,
                                 line.trim().length() - 1).trim());
                     }
-                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
-                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
-                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
-                            fit2d = true;
-                        } //else d2dplot convention
-                    }
+//                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
+//                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
+//                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
+//                            fit2d = true;
+//                        } //else d2dplot convention
+//                    }
 
                     try {
                         // scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
@@ -269,11 +242,11 @@ public class VideoImg extends JDialog {
             }
             headerSize = (int) (d2File.length() - binSize);
 
-            log.config("EDF header size (bytes)=" + headerSize);
-            log.writeNameNumPairs("CONFIG", true,
+            log.fine("EDF header size (bytes)=" + headerSize);
+            log.writeNameNumPairs("fine", true,
                     "dimX,dimY,beamCX,beamCY,pixSizeX,distOD,wl", dimX, dimY,
                     beamCX, beamCY, pixSizeX, distOD, wl);
-            log.writeNameNumPairs("CONFIG", true, "binsize,d2fileLength",
+            log.writeNameNumPairs("fine", true, "binsize,d2fileLength",
                     binSize, d2File.length());
             // calculem el pixel central
             // beamCX = beamCX / pixSize;
@@ -324,17 +297,8 @@ public class VideoImg extends JDialog {
 
         // parametres instrumentals
         patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
-        if ((tilt!=0) && (rot!=0)){
-            if (!fit2d){
-                //d2dplot convention, directly the values
-                patt2D.setTiltDeg(tilt);
-                patt2D.setRotDeg(rot);
-            }else{
-                //fit2d convention, convert to d2d
-                patt2D.setRotDeg(ImageTiltRot_diag.f2dRotToD2d(rot));
-                patt2D.setTiltDeg(ImageTiltRot_diag.f2dTiltToD2d(tilt));
-            }
-        }
+        patt2D.setTiltDeg(tilt);
+        patt2D.setRotDeg(rot);
 
         // parametres adquisicio
         patt2D.setScanParameters(omeIni, omeFin, acqTime);
@@ -355,7 +319,6 @@ public class VideoImg extends JDialog {
 
         @Override
         public void run() {
-            // TODO Auto-generated method stub
             log.debug("Timer task started at:"+new Date());
             
             int ini = slider.getValue();

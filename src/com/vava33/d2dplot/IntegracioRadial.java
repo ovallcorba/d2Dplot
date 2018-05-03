@@ -13,9 +13,6 @@ import javax.swing.JLabel;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
-
-import org.apache.commons.math3.util.FastMath;
-
 import com.vava33.d2dplot.auxi.ImgOps;
 import com.vava33.d2dplot.auxi.Pattern1D;
 import com.vava33.d2dplot.auxi.Pattern2D;

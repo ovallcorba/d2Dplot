@@ -64,7 +64,7 @@ public class ExZones_dialog extends JDialog {
     private final JPanel contentPanel = new JPanel();
     private JLabel lblHelp;
     private JLabel lblMargin;
-    private JList listPolZones;
+    private JList<String> listPolZones;
     private JPanel panel_left;
     private JPanel panel_right;
     private JScrollPane scrollPane;
@@ -73,8 +73,8 @@ public class ExZones_dialog extends JDialog {
     private LogJTextArea tAOut;
     private JTextField txtMargin;
     
-    private DefaultListModel lmPoly;
-    private DefaultListModel lmArc;
+    private DefaultListModel<String> lmPoly;
+    private DefaultListModel<String> lmArc;
     private Pattern2D patt2D;
     private JTextField txtThreshold;
     
@@ -97,7 +97,7 @@ public class ExZones_dialog extends JDialog {
     private static VavaLogger log = D2Dplot_global.getVavaLogger(ExZones_dialog.class.getName());
     private JPanel panel_1;
     private JLabel lblArcZones;
-    private JList listArcZones;
+    private JList<String> listArcZones;
     private JScrollPane scrollPane_2;
     private JButton btnAddArc;
     private JButton btnDelArc;
@@ -285,7 +285,7 @@ public class ExZones_dialog extends JDialog {
                             this.scrollPane = new JScrollPane();
                             panel.add(scrollPane, "cell 0 1 5 1,grow");
                             {
-                                this.listPolZones = new JList();
+                                this.listPolZones = new JList<String>();
                                 listPolZones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
                                 listPolZones.addListSelectionListener(new ListSelectionListener() {
                                     public void valueChanged(ListSelectionEvent arg0) {
@@ -335,7 +335,7 @@ public class ExZones_dialog extends JDialog {
                             scrollPane_2 = new JScrollPane();
                             panel_1.add(scrollPane_2, "cell 0 1 4 1,grow");
                             {
-                                listArcZones = new JList();
+                                listArcZones = new JList<String>();
                                 listArcZones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
                                 listArcZones.addListSelectionListener(new ListSelectionListener() {
                                     public void valueChanged(ListSelectionEvent arg0) {
@@ -490,9 +490,9 @@ public class ExZones_dialog extends JDialog {
     
     public void inicia(){
         patt2D = this.getIPanel().getPatt2D();
-        lmPoly = new DefaultListModel();
+        lmPoly = new DefaultListModel<String>();
         listPolZones.setModel(lmPoly);
-        lmArc = new DefaultListModel();
+        lmArc = new DefaultListModel<String>();
         listArcZones.setModel(lmArc);
         this.getIPanel().getMainFrame().setViewExZ(true);
         

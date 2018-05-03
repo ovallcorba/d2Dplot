@@ -464,11 +464,6 @@ public class Calib_dialog extends JDialog {
     protected void do_btnImageParameters_actionPerformed(ActionEvent arg0) {
         if (patt2D != null) {
             this.ip.getMainFrame().do_mntmInstrumentalParameters_actionPerformed(null);
-//            if (paramDialog == null){
-//                paramDialog = new Param_dialog(this.ip,this.patt2D);
-//            }
-//            paramDialog.inicia();;
-//            paramDialog.setVisible(true);
         }
     }
     
@@ -641,14 +636,14 @@ public class Calib_dialog extends JDialog {
                 float factRP0maj = (float) (p0.getRmax()/radiPixP0);
                 float factRP0men = (float) (p0.getRmin()/radiPixP0);
 
-                log.writeNameNumPairs("CONFIG",true,"radiPixP0 factRP0maj factRP0men", radiPixP0,factRP0maj,factRP0men);
+                log.writeNameNumPairs("FINE",true,"radiPixP0 factRP0maj factRP0men", radiPixP0,factRP0maj,factRP0men);
 
                 float r1 = (float) (p0.getRmax()); 
                 float r2 = (float) (p0.getRmin());                
                 float factRmax = factRP0maj;
                 float factRmin = factRP0men;
                 
-                log.writeNameNumPairs("CONFIG",true,"r1 r2 MD1 twoth radipix", r1,r2,estMD*patt2D.getPixSx(),FastMath.toDegrees(twoth),radiPix);
+                log.writeNameNumPairs("FINE",true,"r1 r2 MD1 twoth radipix", r1,r2,estMD*patt2D.getPixSx(),FastMath.toDegrees(twoth),radiPix);
 
                 searchElliLimitFactor = FastMath.max(1.2f, searchElliLimitFactor);
                 
@@ -684,7 +679,7 @@ public class Calib_dialog extends JDialog {
         //Per determinar el num de punts, l'unic parametre es la separacio en pixels entre els punts (arcpix)
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
-        log.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
+        log.writeNameNumPairs("fine", true, "angstep", FastMath.toDegrees(angstep));
         
         for (float a = 0f; a<2*FastMath.PI; a = a + angstep){
             float xmaxI=0;
@@ -734,7 +729,7 @@ public class Calib_dialog extends JDialog {
         //ANGULAR STEP in order to have an arc of aprox 1mm
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
-        log.writeNameNumPairs("config", true, "angstep", FastMath.toDegrees(angstep));
+        log.writeNameNumPairs("fine", true, "angstep", FastMath.toDegrees(angstep));
         System.out.println(FastMath.toDegrees(elli.getAngrot()));
         //debug Posem les max i min elli de la cerca
         ellicerques.add(new EllipsePars((cradi-tol)*facRmax, (cradi-tol)*facRmin, elli.getXcen(),elli.getYcen(),elli.getAngrot()));
@@ -833,7 +828,7 @@ public class Calib_dialog extends JDialog {
 
             //estimate of tilt,distMD 
             double exen = FastMath.sqrt(FastMath.max(0.,1.-((e.getRmin()*e.getRmin())/(e.getRmax()*e.getRmax()))));
-            double tilt = FastMath.asin(exen*FastMath.cos(tth)); //tenia un -1 pero no hi hauria de ser...
+            double tilt = -1*FastMath.asin(exen*FastMath.cos(tth)); //tenia un -1 pero no hi hauria de ser...
             double distMD = (e.getRmin()*e.getRmin())/(tantth*e.getRmax());
             //distance from the ellipse center to the beam center
             double c = e.getRmax()*tantth*FastMath.tan(tilt); 
@@ -850,14 +845,15 @@ public class Calib_dialog extends JDialog {
             
             //tenim la c, que es damunt de Rmaj, seria el modul del vector ElliCen-BeamCen. Cal aplicar-li rot,
             //es a dir, rotacio ACW de ROT per passar de eix horitzontal al real, alerta que les y van negatives!
-            double xmes = c*FastMath.cos(rot-FastMath.PI/2);
-            double ymes = c*FastMath.sin(rot-FastMath.PI/2); 
-            double xmenys = (-c)*FastMath.cos(rot-FastMath.PI/2);
-            double ymenys = (-c)*FastMath.sin(rot-FastMath.PI/2);
+            //en conveni fit2d cal aplicar-lo CW 
+            double xmes = c*FastMath.cos(rot);
+            double ymes = c*(-1)*FastMath.sin(rot); 
+            double xmenys = (-c)*FastMath.cos(rot);
+            double ymenys = (-c)*(-1)*FastMath.sin(rot);
             
             //ara ja tinc en relatiu (centre ellipse) les dues possibles posicions del beam, hem de tornar-ho a pixels absoluts:
             //atencio, es -y perque tenim l'origen a dalt a l'esquerra
-            log.writeNameNumPairs("config", true, "xmes,ymes,xmenys,ymenys,e.getXcen(),e.getYcen()", xmes,ymes,xmenys,ymenys,e.getXcen(),e.getYcen());
+            log.writeNameNumPairs("fine", true, "xmes,ymes,xmenys,ymenys,e.getXcen(),e.getYcen()", xmes,ymes,xmenys,ymenys,e.getXcen(),e.getYcen());
             double centreXmes = e.getXcen()+xmes;
             double centreYmes = e.getYcen()-ymes;
             double centreXmenys = e.getXcen()+xmenys;
@@ -865,9 +861,9 @@ public class Calib_dialog extends JDialog {
             
             //logging debug
             log.config("---- RING nr."+i+" 2theta="+FastMath.toDegrees(tth));
-            log.writeNameNumPairs("CONFIG",true,"angRotDeg,tiltDeg,distMD",FastMath.toDegrees(rot), FastMath.toDegrees(tilt), distMD);
-            log.writeNameNumPairs("CONFIG",true,"c,xmes,ymes,xmenys,ymenys", c,xmes,ymes,xmenys,ymenys);
-            log.writeNameNumPairs("CONFIG",true,"centreX+,centreY+,centreX-,centreY-", centreXmes,centreYmes,centreXmenys,centreYmenys);
+            log.writeNameNumPairs("fine",true,"angRotDeg,tiltDeg,distMD",FastMath.toDegrees(rot), FastMath.toDegrees(tilt), distMD);
+            log.writeNameNumPairs("fine",true,"c,xmes,ymes,xmenys,ymenys", c,xmes,ymes,xmenys,ymenys);
+            log.writeNameNumPairs("fine",true,"centreX+,centreY+,centreX-,centreY-", centreXmes,centreYmes,centreXmenys,centreYmenys);
             
             distsMD.add(distMD*patt2D.getPixSx());
             tilts.add(tilt);
@@ -885,7 +881,7 @@ public class Calib_dialog extends JDialog {
         double meanCYp=0;
         
         for (int i=0;i<distsMD.size();i++){
-            log.writeNameNumPairs("config", true, "MD CXM CYM CXP CXP Tilt", distsMD.get(i),centresMenys.get(i).x,centresMenys.get(i).y,centresMes.get(i).x,centresMes.get(i).y,FastMath.toDegrees(tilts.get(i)));
+            log.writeNameNumPairs("fine", true, "MD CXM CYM CXP CXP Tilt", distsMD.get(i),centresMenys.get(i).x,centresMenys.get(i).y,centresMes.get(i).x,centresMes.get(i).y,FastMath.toDegrees(tilts.get(i)));
             meanMD=meanMD+distsMD.get(i);
             meanTilt=meanTilt+tilts.get(i);
             meanRot=meanRot+rots.get(i);
@@ -938,7 +934,7 @@ public class Calib_dialog extends JDialog {
             @Override
             public double value(double[] array) {
                 double res = CalibOps.minimize2Theta(patt2D, array[0],array[1],array[2],array[3],array[4], solutions);
-                log.writeNameNums("config", true, "array,sum", array[0],array[1],array[2],array[3],array[4],res);
+                log.writeNameNums("fine", true, "array,sum", array[0],array[1],array[2],array[3],array[4],res);
                 return res;
             }
         };
@@ -1099,10 +1095,6 @@ public class Calib_dialog extends JDialog {
     public static void setSearchElliLimitFactor(float searchElliLimitFactor) {
         Calib_dialog.searchElliLimitFactor = searchElliLimitFactor;
     }
-    
-//    protected void do_btnGenlab_actionPerformed(ActionEvent arg0) {
-//        ImgFileUtils.writeEDF(new File(D2Dplot_global.getWorkdir()+D2Dplot_global.separator+"LaB6gen.edf"), CalibOps.createLaB6Img(1024.f, 1024.f, 180.f, 15.f, 0.f, 0.4246f));
-//    }
 
     public ArrayList<EllipsePars> getElliCerques(){
         return ellicerques;

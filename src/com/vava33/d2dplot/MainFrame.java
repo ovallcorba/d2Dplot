@@ -19,19 +19,11 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.Iterator;
 
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.ProgressMonitor;
-import javax.swing.UIManager;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.plaf.metal.DefaultMetalTheme;
+import javax.swing.plaf.metal.MetalLookAndFeel;
+import javax.swing.plaf.metal.OceanTheme;
 
 import com.vava33.d2dplot.auxi.ArgumentLauncher;
 import com.vava33.d2dplot.auxi.ImgFileUtils;
@@ -44,16 +36,7 @@ import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.SystemInfo;
 import com.vava33.jutils.VavaLogger;
 
-import javax.swing.JComboBox;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JSeparator;
-import javax.swing.JMenuBar;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-
 import net.miginfocom.swing.MigLayout;
-
-import javax.swing.KeyStroke;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.InputEvent;
@@ -65,13 +48,18 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 
 import javax.swing.border.LineBorder;
-import javax.swing.ScrollPaneConstants;
+import javax.swing.*;          
+
 
 public class MainFrame extends JFrame {
     private static final long serialVersionUID = 4368250280987133953L;
     
     private static int def_Width=1100;
     private static int def_Height=768;
+//    private static boolean shcuts = true;
+//    private static boolean shpksearch = true;
+//    private static boolean shInco = true;
+//    private static boolean shRadInt = true;
     
     private static VavaLogger log;
     
@@ -89,6 +77,7 @@ public class MainFrame extends JFrame {
     private Pklist_dialog pkListWin;
     private LogJTextArea tAOut;
     private IntegracioRadial irWin;
+    private AzimuthalIntegration iazWin;
     private DB_dialog dbDialog;
     private Dinco_frame dincoFrame;
     private Param_dialog paramDialog;
@@ -115,7 +104,7 @@ public class MainFrame extends JFrame {
     private JButton btnPrev;
     private JPanel panel_2;
     private JCheckBox chckbxShowRings;
-    private static JComboBox combo_LATdata;
+    private static JComboBox<PDCompound> combo_LATdata;
     private JButton btnDbdialog;
     private JPanel panel_3;
     private JButton btnAddLat;
@@ -163,6 +152,7 @@ public class MainFrame extends JFrame {
     private JMenuItem mntmManual;
     private JMenuItem mntmFastopen;
     private JMenuItem mntmScDataTo;
+    private JMenuItem mntmAzimuthalIntegration;
     
     public static String getBinDir() {return D2Dplot_global.binDir;}
     public static String getSeparator() {return D2Dplot_global.separator;}
@@ -185,16 +175,41 @@ public class MainFrame extends JFrame {
     	    	
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            log.debug("L&F="+UIManager.getLookAndFeel().toString());
             if(UIManager.getLookAndFeel().toString().contains("metal")){
+//                UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsClassicLookAndFeel");
                 UIManager.setLookAndFeel("com.sun.java.swing.plaf.gtk.GTKLookAndFeel");    
+//                log.debug("L&F="+UIManager.getLookAndFeel().toString());
+//                UIManager.setLookAndFeel("com.sun.java.swing.plaf.motif.MotifLookAndFeel");
+//                log.debug("L&F="+UIManager.getLookAndFeel().toString());
             }
             // UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName()); //java metal
             
         } catch (Throwable e) {
             if (D2Dplot_global.isDebug())e.printStackTrace();
             log.warning("Error initializing System look and feel");
+//            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         }
+        log.debug("L&F="+UIManager.getLookAndFeel().toString());
 
+        final String THEME = "Ocean";
+         
+        if (UIManager.getLookAndFeel().toString().contains("metal")) {
+            if (THEME.equals("DefaultMetal"))
+               MetalLookAndFeel.setCurrentTheme(new DefaultMetalTheme());
+            else if (THEME.equals("Ocean"))
+               MetalLookAndFeel.setCurrentTheme(new OceanTheme());
+               
+            try {
+                UIManager.setLookAndFeel(new MetalLookAndFeel());
+            } catch (UnsupportedLookAndFeelException e) {
+                // Auto-generated catch block
+                e.printStackTrace();
+            } 
+          }   
+        
+        
+        
         EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -302,7 +317,7 @@ public class MainFrame extends JFrame {
         mnFile.add(mntmSubtractImages);
         mnFile.add(mntmBatchConvert);
         
-        mntmFastopen = new JMenuItem("FastOpen");
+        mntmFastopen = new JMenuItem("Fast Viewer");
         mntmFastopen.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmFastopen_actionPerformed(e);
@@ -380,6 +395,14 @@ public class MainFrame extends JFrame {
                 do_mntmHpTools_actionPerformed(e);
             }
         });
+        
+        mntmAzimuthalIntegration = new JMenuItem("Azimuthal Integration");
+        mntmAzimuthalIntegration.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_mntmAzimuthalIntegration_actionPerformed(arg0);
+            }
+        });
+        mnImageOps.add(mntmAzimuthalIntegration);
         mntmHpTools.setMnemonic('h');
         mnImageOps.add(mntmHpTools);
         
@@ -393,6 +416,15 @@ public class MainFrame extends JFrame {
                 do_mntmDincoSol_actionPerformed(e);
             }
         });
+        
+        mntmFindPeaks = new JMenuItem("Find/Integrate Peaks");
+        mntmFindPeaks.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_mntmFindPeaks_actionPerformed(arg0);
+            }
+        });
+        //        mntmFindPeaks.setEnabled(false);
+                mnGrainAnalysis.add(mntmFindPeaks);
         mnGrainAnalysis.add(mntmDincoSol);
         
         mntmLoadXdsFile = new JMenuItem("Load XDS file");
@@ -402,15 +434,6 @@ public class MainFrame extends JFrame {
             }
         });
         mnGrainAnalysis.add(mntmLoadXdsFile);
-        
-        mntmFindPeaks = new JMenuItem("Find/Integrate Peaks");
-        mntmFindPeaks.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                do_mntmFindPeaks_actionPerformed(arg0);
-            }
-        });
-//        mntmFindPeaks.setEnabled(false);
-        mnGrainAnalysis.add(mntmFindPeaks);
         
         mntmClearAll = new JMenuItem("Clear all");
         mntmClearAll.addActionListener(new ActionListener() {
@@ -679,49 +702,20 @@ public class MainFrame extends JFrame {
         chckbxShowRings = new JCheckBox("Quicklist");
         panel_3.add(chckbxShowRings, "cell 0 2,growx,aligny center");
         
-        combo_LATdata = new JComboBox();
+        combo_LATdata = new JComboBox<PDCompound>();
         combo_LATdata.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent arg0) {
                 do_combo_showRings_itemStateChanged(arg0);
             }
         });
         panel_3.add(combo_LATdata, "cell 0 3,growx,aligny center");
-        combo_LATdata.setModel(new DefaultComboBoxModel(new String[] {}));
+        combo_LATdata.setModel(new DefaultComboBoxModel<PDCompound>(new PDCompound[] {}));
         
         btnAddLat = new JButton("Add to List");
         btnAddLat.setVisible(false);
         btnAddLat.setEnabled(false);
 //        btnAddLat.setPreferredSize(new Dimension(100, 32));
         panel_3.add(btnAddLat, "cell 0 4,growx,aligny center");
-        
-        panel_1 = new JPanel();
-        panel_1.setBorder(new TitledBorder(null, "Shortcuts", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-        panel_controls.add(panel_1, "cell 0 4,grow");
-        panel_1.setLayout(new MigLayout("fill, insets 0", "[grow]", "[5px:20px][5px:20px][5px:20px]"));
-        
-        btnPeakSearchint = new JButton("PK search");
-        btnPeakSearchint.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                do_btnPeakSearchint_actionPerformed(arg0);
-            }
-        });
-        panel_1.add(btnPeakSearchint, "cell 0 0,growx,aligny center");
-        
-        btnTtsdincoSol = new JButton("tts-INCO");
-        btnTtsdincoSol.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                do_btnTtsdincoSol_actionPerformed(e);
-            }
-        });
-        panel_1.add(btnTtsdincoSol, "flowy,cell 0 1,growx,aligny center");
-        
-        btnRadIntegr = new JButton("Rad. Integr");
-        btnRadIntegr.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                do_btnRadIntegr_actionPerformed(e);
-            }
-        });
-        panel_1.add(btnRadIntegr, "cell 0 2,growx,aligny center");
         
         chckbxShowRings.addItemListener(new ItemListener() {
             public void itemStateChanged(ItemEvent arg0) {
@@ -733,6 +727,36 @@ public class MainFrame extends JFrame {
                 do_btnDbdialog_actionPerformed(arg0);
             }
         });
+        
+        panel_1 = new JPanel();
+        panel_1.setBorder(new TitledBorder(null, "Shortcuts", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_controls.add(panel_1, "cell 0 4,grow");
+        panel_1.setLayout(new MigLayout("fill, insets 0", "[grow]", "[5px:20px][5px:20px][5px:20px]"));
+
+        btnPeakSearchint = new JButton("Peak search");
+        btnPeakSearchint.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnPeakSearchint_actionPerformed(arg0);
+            }
+        });
+        panel_1.add(btnPeakSearchint, "cell 0 1,growx,aligny center");
+
+
+        btnTtsdincoSol = new JButton("tts-INCO");
+        btnTtsdincoSol.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnTtsdincoSol_actionPerformed(e);
+            }
+        });
+        panel_1.add(btnTtsdincoSol, "flowy,cell 0 2,growx,aligny center");
+
+        btnRadIntegr = new JButton("Rad. Integr");
+        btnRadIntegr.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnRadIntegr_actionPerformed(e);
+            }
+        });
+        panel_1.add(btnRadIntegr, "cell 0 0,growx,aligny center");
     }
 
     private void inicialitza() {
@@ -753,7 +777,9 @@ public class MainFrame extends JFrame {
         }
         
         tAOut.stat(D2Dplot_global.welcomeMSG);
+//        log.debug(Locale.getDefault().getDisplayLanguage());
         FileUtils.setLocale();
+//        log.debug(Locale.getDefault().getDisplayLanguage());
         
         //inicialitzem l'arraylist a D2Dplot_global --- ja ho fa el metode en questio a global
         //BUSQUEM SI HI HA FITXERS .LAT al directori del programa i els afegim a quicklist (D2Dplot_global)
@@ -773,7 +799,7 @@ public class MainFrame extends JFrame {
         if (ok){
             tAOut.stat(String.format("QuickList DB file: %s",PDDatabase.getLocalQL()));
         }
-        combo_LATdata.setPrototypeDisplayValue("XX"); 
+        combo_LATdata.setPrototypeDisplayValue(new PDCompound("Silicon")); //mida minima
         updateQuickList();
         
         
@@ -821,8 +847,7 @@ public class MainFrame extends JFrame {
     
     private void closePanels(){
         if (this.d2DsubWin != null) {
-            this.d2DsubWin.dispose();
-            this.d2DsubWin = null;
+            this.d2DsubWin.userInit();
         }
         if (this.calibration != null) {
             this.calibration.inicia();;
@@ -844,7 +869,9 @@ public class MainFrame extends JFrame {
         }
         if (this.irWin != null) {
             this.irWin.inicia();;
-            
+        }
+        if (this.iazWin != null) {
+            this.iazWin.inicia();;
         }
         if (this.pkListWin != null) {
             this.pkListWin.loadPeakList();
@@ -897,6 +924,7 @@ public class MainFrame extends JFrame {
           fileOpened = true;
           openedFile = patt2D.getImgfile();
           this.updateIparameters();
+//          this.closePanels();
       } else {
           tAOut.stat("Error reading 2D file");
           tAOut.stat("No file opened");
@@ -1031,7 +1059,7 @@ public class MainFrame extends JFrame {
     protected void do_mntmBackgroundSubtraction_actionPerformed(ActionEvent e) {
         if (patt2D != null) {
             if (d2DsubWin == null) {
-                d2DsubWin = new D2Dsub_frame(patt2D,this);
+                d2DsubWin = new D2Dsub_frame(this);
             }
             d2DsubWin.setVisible(true);
         }else{
@@ -1049,6 +1077,15 @@ public class MainFrame extends JFrame {
             }
             irWin.setVisible(true); 
         }
+    }
+    
+    protected void do_mntmAzimuthalIntegration_actionPerformed(ActionEvent arg0) {
+        if(patt2D != null){
+            if(this.iazWin==null){
+                iazWin = new AzimuthalIntegration(this.getPanelImatge());
+            }
+            iazWin.setVisible(true); 
+        }  
     }
     
 
@@ -1123,16 +1160,58 @@ public class MainFrame extends JFrame {
                 log.debug("fnameExtNew="+fnameExtNew);
             }
         }
-        if (fnameExtNew.isEmpty())return;
-        
+            
         File d2File = new File(fnameExtNew);
         if (d2File.exists()){
             this.reset();
             this.updatePatt2D(d2File);
             this.closePanels();
+            return;
         }else{
             tAOut.stat("No file found with fname "+fnameExtNew);
         }
+
+        //SECOND TEST buscar dXXX_0000.edf (realment podriem mirar la part esquerra del guio per ser mes generals...)
+        
+        //agafem el nom sense el _000X.edf
+        String basFname = fnameCurrent.substring(0, fnameCurrent.length()-5);
+        log.debug("basFname="+basFname);
+        int indexNoDigit=-1;
+        for (int i=1;i<basFname.length()-2;i++){
+            char c = basFname.charAt(basFname.length()-i);
+            if (!Character.isDigit(c)) {
+                indexNoDigit=i;
+                break;
+            }
+        }
+        log.debug("indexNoDigit="+indexNoDigit);
+        if (indexNoDigit>0){
+            String sdom = basFname.substring(basFname.length()-(indexNoDigit-1), basFname.length());
+            log.debug("sdom="+sdom);
+            int ndom = -1;
+            try{
+                ndom = Integer.parseInt(sdom);
+            }catch(Exception ex){
+                log.debug("error parsing domain number");
+            }
+            if (ndom>=0){
+                ndom = ndom + 1;
+                fnameExtNew = basFname.substring(0,basFname.length()-(indexNoDigit-1)).concat(Integer.toString(ndom)).concat("_0000.").concat(fextCurrent);
+                log.debug("fnameExtNew="+fnameExtNew);
+            }
+        }
+        
+        d2File = new File(fnameExtNew);
+        if (d2File.exists()){
+            this.reset();
+            this.updatePatt2D(d2File);
+            this.closePanels();
+            return;
+        }else{
+            tAOut.stat("No file found with fname "+fnameExtNew);
+        }
+        
+        if (fnameExtNew.isEmpty())return;
         
         //prova pksearchframe
         if (pksframe!=null){
@@ -1170,15 +1249,56 @@ public class MainFrame extends JFrame {
                 log.debug("fnameExtNew="+fnameExtNew);
             }
         }
-        if (fnameExtNew.isEmpty())return;
+        
         File d2File = new File(fnameExtNew);
         if (d2File.exists()){
             this.reset();
             this.updatePatt2D(d2File);
             this.closePanels();
+            return;
         }else{
             tAOut.stat("No file found with fname "+fnameExtNew);
         }
+        
+        //agafem el nom sense el _000X.edf
+        String basFname = fnameCurrent.substring(0, fnameCurrent.length()-5);
+        log.debug("basFname="+basFname);
+        int indexNoDigit=-1;
+        for (int i=1;i<basFname.length()-2;i++){
+            char c = basFname.charAt(basFname.length()-i);
+            if (!Character.isDigit(c)) {
+                indexNoDigit=i;
+                break;
+            }
+        }
+        log.debug("indexNoDigit="+indexNoDigit);
+        if (indexNoDigit>0){
+            String sdom = basFname.substring(basFname.length()-(indexNoDigit-1), basFname.length());
+            log.debug("sdom="+sdom);
+            int ndom = -1;
+            try{
+                ndom = Integer.parseInt(sdom);
+            }catch(Exception ex){
+                log.debug("error parsing domain number");
+            }
+            if (ndom>=0){
+                ndom = ndom - 1;
+                fnameExtNew = basFname.substring(0,basFname.length()-(indexNoDigit-1)).concat(Integer.toString(ndom)).concat("_0000.").concat(fextCurrent);
+                log.debug("fnameExtNew="+fnameExtNew);
+            }
+        }
+        
+        d2File = new File(fnameExtNew);
+        if (d2File.exists()){
+            this.reset();
+            this.updatePatt2D(d2File);
+            this.closePanels();
+            return;
+        }else{
+            tAOut.stat("No file found with fname "+fnameExtNew);
+        }
+        
+        if (fnameExtNew.isEmpty())return;
         
         //prova pksearchframe
         if (pksframe!=null){
@@ -1223,6 +1343,27 @@ public class MainFrame extends JFrame {
     }
     
     protected void do_mntmExportAsPng_actionPerformed(ActionEvent e) {
+        
+        if (patt2D == null) {
+            //batch convert
+            FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
+            File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0);
+            if (flist==null) return;
+            D2Dplot_global.setWorkdir(flist[0]);
+            this.reset();
+            
+            for(int i=0;i<flist.length;i++) {
+                //openImage
+                this.updatePatt2D(flist[i]);
+                //change ext
+                File f = FileUtils.canviExtensio(flist[i], "png");
+                log.info(f.toString());
+                ImgFileUtils.exportPNG(f, panelImatge.getImage());
+            }
+            
+            return;
+        }
+        
         File imFile = null;
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setCurrentDirectory(new File(getWorkdir()));
@@ -1252,17 +1393,19 @@ public class MainFrame extends JFrame {
             log.debug(String.format("(rect) w=%d h=%d", w,h));
 
             
+            float factor = (float)patt2D.getDimX()/(float)w;
+            
             String s = (String)JOptionPane.showInputDialog(
                     this,
                     "Current plot size (Width x Heigth) is "+Integer.toString(w)+" x "+Integer.toString(h)+"pixels\n"
-                            + "Scale factor to apply=",
+                            + "Scale factor to apply (-1 for clean image in real size)=",
                     "Apply scale factor",
                     JOptionPane.PLAIN_MESSAGE,
                     null,
                     null,
-                    "1.0");
+                    FileUtils.dfX_2.format(factor));
             
-            float factor = 1.0f;
+//            float factor = 1.0f;
             if ((s != null) && (s.length() > 0)) {
                 try{
                     factor=Float.parseFloat(s);
@@ -1307,8 +1450,12 @@ public class MainFrame extends JFrame {
                 imFile = ImgFileUtils.exportPNG(imFile, img.getSubimage(xnew, ynew, wnew, hnew));
                 
             }else{ //salvem imatge base amb mida ideal
+                if (panelImatge.getSubimage()==null){
+                    imFile = ImgFileUtils.exportPNG(imFile, panelImatge.getImage());
+                }else {
+                    imFile = ImgFileUtils.exportPNG(imFile, panelImatge.getSubimage());    
+                }
                 
-                imFile = ImgFileUtils.exportPNG(imFile, panelImatge.getSubimage());
 
             }
                         
@@ -1466,7 +1613,7 @@ public class MainFrame extends JFrame {
     
     protected void do_mntmSumImages_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, filt.length-1);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0);
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
 
@@ -1516,7 +1663,7 @@ public class MainFrame extends JFrame {
     
     protected void do_mntmBatchConvert_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, filt.length-1);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0);
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         
@@ -1552,7 +1699,7 @@ public class MainFrame extends JFrame {
     
     private void openImgFile(){
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File d2File = FileUtils.fchooser(this,new File(getWorkdir()), filt, filt.length-1, false, false);
+        File d2File = FileUtils.fchooser(this,new File(getWorkdir()), filt, 0, false, false);
         if (d2File == null){
             if (!fileOpened){
                 tAOut.stat("No data file selected");
@@ -1570,7 +1717,7 @@ public class MainFrame extends JFrame {
     private void saveImgFile(){
         if (this.getPatt2D()!=null){
             FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterWrite();
-            File f = FileUtils.fchooser(this,new File(getWorkdir()), filt, filt.length-1, true, true);
+            File f = FileUtils.fchooser(this,new File(getWorkdir()), filt, 0, true, true);
             if (f!=null){
                 D2Dplot_global.setWorkdir(f);
                 File outf = ImgFileUtils.writePatternFile(f,this.getPatt2D());
@@ -1663,6 +1810,7 @@ public class MainFrame extends JFrame {
     protected void do_mntmFastopen_actionPerformed(ActionEvent e) {
         VideoImg viframe = new VideoImg();
         viframe.setVisible(true);
+        viframe.showOpenImgsDialog();
     }
     
     protected void do_mntmScDataTo_actionPerformed(ActionEvent e) {

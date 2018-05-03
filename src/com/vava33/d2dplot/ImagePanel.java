@@ -127,7 +127,7 @@ public class ImagePanel extends JPanel {
     private JTextField txtConminval;
     private JTextField txtConmaxval;
     private JLabel lblContrast;
-    private JComboBox cbox_fun;
+    private JComboBox<String> cbox_fun;
     private JLabel lbldsp;
 
     private JLabel lblCoordY;
@@ -244,7 +244,7 @@ public class ImagePanel extends JPanel {
             });
             txtConminval.setColumns(5);
 
-            cbox_fun = new JComboBox();
+            cbox_fun = new JComboBox<String>();
             cbox_fun.setFont(new Font("Dialog", Font.PLAIN, 12));
             panel.add(cbox_fun, "cell 0 10,growx");
             cbox_fun.addItemListener(new ItemListener() {
@@ -252,7 +252,7 @@ public class ImagePanel extends JPanel {
                     do_cbox_fun_itemStateChanged(e);
                 }
             });
-            cbox_fun.setModel(new DefaultComboBoxModel(new String[] {"linear", "quadr+", "quadr-"}));
+            cbox_fun.setModel(new DefaultComboBoxModel<String>(new String[] {"linear", "quadr+", "quadr-"}));
             cbox_fun.setSelectedIndex(0);
 
             chckbxAuto = new JCheckBox("Auto");
@@ -359,13 +359,13 @@ public class ImagePanel extends JPanel {
             add(txtConmaxval, "cell 3 2,growx,aligny center");
             txtConmaxval.setColumns(5);
 
-            cbox_fun = new JComboBox();
+            cbox_fun = new JComboBox<String>();
             cbox_fun.addItemListener(new ItemListener() {
                 public void itemStateChanged(ItemEvent e) {
                     do_cbox_fun_itemStateChanged(e);
                 }
             });
-            cbox_fun.setModel(new DefaultComboBoxModel(new String[] {"linear", "quadr+", "quadr-"}));
+            cbox_fun.setModel(new DefaultComboBoxModel<String>(new String[] {"linear", "quadr+", "quadr-"}));
             cbox_fun.setSelectedIndex(0);
             add(cbox_fun, "cell 4 2,alignx center,aligny center");
 
@@ -455,9 +455,10 @@ public class ImagePanel extends JPanel {
     // Identificar el bot� i segons quin sigui moure o fer zoom
     protected void do_panelImatge_mousePressed(MouseEvent arg0) {
         this.dragPoint = new Point2D.Float(arg0.getPoint().x, arg0.getPoint().y);
-
+//        log.writeNameNumPairs("config", true, "dragPoint.x,dragPoint.y", dragPoint.x,dragPoint.y);;
         if (arg0.getButton() == MOURE) {
             this.mouseDrag = true;
+            this.zoomPoint = new Point2D.Float(arg0.getPoint().x, arg0.getPoint().y); //faig servir zoomPoint per guardar el punt inicial
         }
         if (arg0.getButton() == ZOOM_BORRAR) {
             this.zoomPoint = new Point2D.Float(arg0.getPoint().x, arg0.getPoint().y);
@@ -590,6 +591,15 @@ public class ImagePanel extends JPanel {
             }
             if (e.getButton() == ZOOM_BORRAR) {
                 this.removePuntCercle(new Point2D.Float(e.getPoint().x, e.getPoint().y));
+            }
+        }
+        //i fem lo del zoom si no s'ha mogut de lloc
+        
+        if (e.getButton() == MOURE) {
+            float tol = 1.f; //si no ens movem del pixel...
+            log.writeNameNumPairs("config", true, "e.getPoint().x,zoomPoint.x,e.getPoint().y,zoomPoint.y", e.getPoint().x,zoomPoint.x,e.getPoint().y,zoomPoint.y);
+            if ((FastMath.abs(e.getPoint().x-zoomPoint.x)<tol)&&(FastMath.abs(e.getPoint().y-zoomPoint.y)<tol)){
+                this.resetView();
             }
         }
         actualitzarVista();
@@ -1719,27 +1729,13 @@ public class ImagePanel extends JPanel {
                 EllipsePars e = pc.getEllipse();
                 Ellipse2D.Float p = pc.getPunt();
                 
-                //debug pintem centre i focci
-                g1.setPaint(Color.RED);
-                Point2D.Float cen = getFramePointFromPixel(new Point2D.Float((float)e.getXcen(),(float)e.getYcen()));
-                g1.drawOval((int)cen.x-2, (int)cen.y-2, 4,4);
-                
-                g1.setPaint(Color.GREEN);
-                Point2D.Float foc = e.getF1(FastMath.toRadians(patt2D.getRotDeg()));
-                foc = getFramePointFromPixel(foc);
-                g1.drawOval((int)foc.x-2, (int)foc.y-2, 4,4);
-                g1.setPaint(Color.GREEN.darker());
-                foc = e.getF2(FastMath.toRadians(patt2D.getRotDeg()));
-                foc = getFramePointFromPixel(foc);
-                g1.drawOval((int)foc.x-2, (int)foc.y-2, 4,4);
-
-                
                 //PRIMER DIBUIXEM L'ELIPSE I DESPRES EL PUNT (el centre de l'elipse no el dibuixem en aquest cas, nomes a la calibracio)
                 // hem de convertir les coordenades de pixels d'imatge de e a coordenades de pantalla (panell)
                 BasicStroke stroke = new BasicStroke(1.0f);
                 g1.setStroke(stroke);
                 g1.setPaint(PuntClick.getColorCercle());
                 ArrayList<Point2D.Float>points =  e.getEllipsePoints(0, 360, 5);
+//                ArrayList<Point2D.Float>points =  e.getEllipsePoints(0, 180, 2);
                 if (points==null)continue;
                 for (int i = 0; i < points.size(); i++){
                     Point2D.Float p1 = getFramePointFromPixel(points.get(i));
@@ -1960,9 +1956,9 @@ public class ImagePanel extends JPanel {
                 }
 
                 //draw beam center
-                g1.setPaint(Color.CYAN);
-                Point2D.Float c = getFramePointFromPixel(new Point2D.Float(patt2D.getCentrX(),patt2D.getCentrY()));
-                g1.drawOval((int)c.x-2, (int)c.y-2, 4, 4);
+//                g1.setPaint(Color.CYAN);
+//                Point2D.Float c = getFramePointFromPixel(new Point2D.Float(patt2D.getCentrX(),patt2D.getCentrY()));
+//                g1.drawOval((int)c.x-2, (int)c.y-2, 4, 4);
                 
                 g1.dispose();
                 g2.dispose();

@@ -95,10 +95,10 @@ public class SimpleImageDialog extends JDialog {
 		this.dispose();
 	}
 	protected void do_btnSaveBin_actionPerformed(ActionEvent e) {
-    	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin)", "bin")};
-    	File fsave = FileUtils.fchooser(this,new File(MainFrame.getWorkdir()), filter, true);
+	    FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterWrite();
+        File fsave = FileUtils.fchooser(this,new File(D2Dplot_global.getWorkdir()), filt, 0, true, true);
     	if (fsave == null)return;
-    	fsave = ImgFileUtils.writeBIN(fsave, this.patt2D);
+    	fsave = ImgFileUtils.writePatternFile(fsave, this.patt2D);
     	this.patt2D.setImgfile(fsave);
     }
 	protected void do_btnResetView_actionPerformed(ActionEvent e) {

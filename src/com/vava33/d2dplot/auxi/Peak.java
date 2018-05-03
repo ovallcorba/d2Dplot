@@ -109,17 +109,17 @@ public class Peak implements Comparable<Peak> {
                 this.fh2 = (float) (inten*lpfac[1]*lpfac[2]);
                 this.sfh2 = esdinten*fh2;                
             }else{
-                esdinten=-1.f;
-                this.fh2 = -1;
-                this.sfh2 = -1;
+                esdinten=0.f;
+                this.fh2 =0;
+                this.sfh2 = 0;
                 this.nearMask=true; //posem flag near mask perque esta en zona lp erronia
             }
             this.p = (float) (FastMath.PI*FastMath.pow(this.getZona().getYmax()/inten,2.d/3.d));
         }else{
-            esdinten=-1.f;
-            this.fh2 = -1;
-            this.sfh2 = -1;
-            this.p=-1.f;
+            esdinten=0.f;
+            this.fh2 =0;
+            this.sfh2 =0;
+            this.p=0.f;
         }
                     
         float vPCx=this.getPixelCentre().x-this.getZona().getPatt2d().getCentrX();//vector centre-pixel

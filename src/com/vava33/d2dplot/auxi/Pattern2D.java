@@ -3,7 +3,6 @@ package com.vava33.d2dplot.auxi;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.io.File;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -178,6 +177,8 @@ public class Pattern2D {
         this.setWavel(in.getWavel());
         this.setCentrX(in.getCentrX());
         this.setCentrY(in.getCentrY());
+        this.setTiltDeg(in.getTiltDeg());
+        this.setRotDeg(in.getRotDeg());
         
     }
     
@@ -892,7 +893,7 @@ public class Pattern2D {
         double t2 = this.calc2T(pixel, false);
         this.addPuntCercle(new PuntClick(pixel,this,(float)t2,inten));
         //DEBUG
-        this.addPuntCercle(new PuntClick(pixel,this,(float)t2,inten));
+//        this.addPuntCercle(new PuntClick(pixel,this,(float)t2,inten));
     }
     
     public void removePuntCercle(PuntClick s){
@@ -929,22 +930,6 @@ public class Pattern2D {
         }
     }
     
-    public double OLDcalc2T(float col_px, float row_py, boolean degrees) {
-        
-        double distMDpix = (this.getDistMD()/this.getPixSx())/this.costilt;
-        float vCPx=col_px-this.getCentrX();
-        float vCPy=this.getCentrY()-row_py;
-        float vCPz=(vCPx*this.sinrot + vCPy*this.cosrot)*(this.sintilt);
-        
-        double t2p = (vCPx*vCPx) + (vCPy*vCPy) - (vCPz*vCPz);
-        t2p = FastMath.sqrt(t2p);
-        t2p = t2p/(distMDpix-vCPz);
-        t2p = FastMath.atan(t2p);
-        if (degrees) {
-            t2p = FastMath.toDegrees(t2p);
-        }        
-        return t2p;
-    }    
     
     public double calc2T(float col_px, float row_py, boolean degrees) {
         
@@ -952,7 +937,8 @@ public class Pattern2D {
         float vCPx=col_px-this.getCentrX();
         float vCPy=this.getCentrY()-row_py;
         
-        float distprima = (-vCPx*this.sinrot + vCPy*this.cosrot)*this.sintilt;
+        double testRot = FastMath.toRadians(this.rotDeg);
+        double distprima = (-vCPx*FastMath.cos(testRot) + vCPy*FastMath.sin(testRot))*this.sintilt;
         double t2p = (vCPx*vCPx) + (vCPy*vCPy) - (distprima*distprima);
         t2p = FastMath.sqrt(t2p);
         t2p = t2p/(distMDpix-distprima);
@@ -964,51 +950,6 @@ public class Pattern2D {
         
     } 
     
-    public double Testcalc2T(float col_px, float row_py, boolean degrees) {
-      double distMDpix = (this.getDistMD()/this.getPixSx())/this.costilt;
-      double vCPx=col_px-this.getCentrX();
-      double vCPy=this.getCentrY()-row_py;
-      double A1 = (vCPx*this.cosrot-vCPy*this.sinrot)*(vCPx*this.cosrot-vCPy*this.sinrot);
-      double A2 = (vCPx*this.sinrot+vCPy*this.cosrot)*(vCPx*this.sinrot+vCPy*this.cosrot)*this.costilt*this.costilt;
-      double A = A1+A2;
-      double B = (distMDpix - (vCPx*this.sinrot+vCPy*this.cosrot)*this.sintilt)*(distMDpix - (vCPx*this.sinrot+vCPy*this.cosrot)*this.sintilt);
-      double t2p = FastMath.atan(FastMath.sqrt(A/B));
-      if (degrees) {
-          t2p = FastMath.toDegrees(t2p);
-      }        
-      return t2p;
-  }
-    
-    public double testCalc2Tb(float col_px, float row_py, boolean degrees) {
-        log.writeNameNumPairs("CONFIG", true, "tilt,rot", this.tiltDeg,this.rotDeg);
-        double distMDpix = (this.getDistMD()/this.getPixSx());
-        double vCPx=col_px-this.getCentrX();
-        double vCPy=this.getCentrY()-row_py;
-        double A1 = (vCPx*this.cosrot-vCPy*this.sinrot)*(vCPx*this.cosrot-vCPy*this.sinrot)*this.costilt*this.costilt;
-        double A2 = (vCPx*this.sinrot+vCPy*this.cosrot)*(vCPx*this.sinrot+vCPy*this.cosrot);
-        double A = A1+A2;
-        double B = (distMDpix + (vCPx*this.cosrot-vCPy*this.sinrot)*this.sintilt)*(distMDpix + (vCPx*this.cosrot-vCPy*this.sinrot)*this.sintilt);
-        double t2p = FastMath.atan(FastMath.sqrt(A/B));
-        if (degrees) {
-            t2p = FastMath.toDegrees(t2p);
-        }        
-        return t2p;
-    }
-    
-    public double CACAcalc2T(float col_px, float row_py, boolean degrees) {
-      double distMDpix = (this.getDistMD()/this.getPixSx());
-      double vCPx=col_px-this.getCentrX();
-      double vCPy=this.getCentrY()-row_py;
-      double tiltRad = FastMath.toRadians(this.tiltDeg);
-      double rotRad = FastMath.toRadians(this.rotDeg);
-      double term1 = (vCPx * FastMath.sin(-rotRad)+vCPy*FastMath.cos(-rotRad));
-      double yprim = term1*FastMath.sin(tiltRad)*FastMath.sin(-tiltRad)+term1*FastMath.cos(tiltRad)*FastMath.cos(-tiltRad);
-      double t2p = FastMath.atan(yprim/distMDpix);
-      if (degrees) {
-          t2p = FastMath.toDegrees(t2p);
-      }        
-      return t2p;
-  }
     
     public double calc2T(Point2D.Float pixel, boolean degrees) {
         return this.calc2T(pixel.x,pixel.y, degrees);

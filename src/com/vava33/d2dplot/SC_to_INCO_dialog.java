@@ -25,16 +25,12 @@ import javax.swing.JScrollPane;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.ProgressMonitor;
-
-import org.apache.commons.math3.util.FastMath;
-
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
+import javax.swing.JCheckBox;
 
 public class SC_to_INCO_dialog extends JDialog {
 
@@ -56,7 +52,14 @@ public class SC_to_INCO_dialog extends JDialog {
     private File[] infiles; 
     private JList<File> list;
     
+    ProgressMonitor pm;
+    ImgOps.sumImagesIncoFileWorker sumwk;
+    private JCheckBox chckbxBackgroundSubtraction;
+    private JTextField txtBkgFile;
+    
     private MainFrame mf;
+    private JTextField txtBkgScale;
+    private JCheckBox chckbxBkgScaleAuto;
     
     /**
      * Create the dialog.
@@ -69,7 +72,7 @@ public class SC_to_INCO_dialog extends JDialog {
         getContentPane().setLayout(new BorderLayout());
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         getContentPane().add(contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("", "[grow][grow]", "[grow]"));
+        contentPanel.setLayout(new MigLayout("", "[grow][]", "[grow]"));
         {
             JPanel panel = new JPanel();
             panel.setBorder(new TitledBorder(null, "Input data", TitledBorder.LEADING, TitledBorder.TOP, null, null));
@@ -93,32 +96,32 @@ public class SC_to_INCO_dialog extends JDialog {
                 }
             }
             {
-                JLabel lblInitialAngle = new JLabel("Initial angle=");
+                JLabel lblInitialAngle = new JLabel("Initial phi (º)");
                 panel.add(lblInitialAngle, "cell 0 2,alignx trailing");
             }
             {
                 txtIniangle = new JTextField();
-                txtIniangle.setText("IniAngle");
+                txtIniangle.setText("-30");
                 panel.add(txtIniangle, "cell 1 2,growx");
                 txtIniangle.setColumns(10);
             }
             {
-                JLabel lblStep = new JLabel("Step=");
+                JLabel lblStep = new JLabel("Phi step (º)");
                 panel.add(lblStep, "cell 0 3,alignx trailing");
             }
             {
                 txtStep = new JTextField();
-                txtStep.setText("step");
+                txtStep.setText("0.25");
                 panel.add(txtStep, "cell 1 3,growx");
                 txtStep.setColumns(10);
             }
             {
-                JLabel lblFinalAngle = new JLabel("Final angle=");
+                JLabel lblFinalAngle = new JLabel("Final Phi (º)");
                 panel.add(lblFinalAngle, "cell 0 4,alignx trailing");
             }
             {
                 txtFinalangle = new JTextField();
-                txtFinalangle.setText("finalAngle");
+                txtFinalangle.setText("30");
                 panel.add(txtFinalangle, "cell 1 4,growx");
                 txtFinalangle.setColumns(10);
             }
@@ -127,9 +130,9 @@ public class SC_to_INCO_dialog extends JDialog {
             JPanel panel = new JPanel();
             panel.setBorder(new TitledBorder(null, "Output data", TitledBorder.LEADING, TitledBorder.TOP, null, null));
             contentPanel.add(panel, "cell 1 0,grow");
-            panel.setLayout(new MigLayout("", "[][grow]", "[][][][][][][]"));
+            panel.setLayout(new MigLayout("", "[][]", "[][][][][][grow][]"));
             {
-                JLabel lblInitialAngle_1 = new JLabel("Initial Angle=");
+                JLabel lblInitialAngle_1 = new JLabel("Initial Phi (º)");
                 panel.add(lblInitialAngle_1, "cell 0 0,alignx trailing");
             }
             {
@@ -139,7 +142,7 @@ public class SC_to_INCO_dialog extends JDialog {
                 txtOutiniangle.setColumns(10);
             }
             {
-                JLabel lblFinalAngle_1 = new JLabel("Final Angle=");
+                JLabel lblFinalAngle_1 = new JLabel("Final Phi (º)");
                 panel.add(lblFinalAngle_1, "cell 0 1,alignx trailing");
             }
             {
@@ -149,7 +152,7 @@ public class SC_to_INCO_dialog extends JDialog {
                 txtOutfinalangle.setColumns(10);
             }
             {
-                JLabel lblOmegaStep = new JLabel("Omega Aqu. Step=");
+                JLabel lblOmegaStep = new JLabel("Phi Acquisition Step (º)");
                 lblOmegaStep.setToolTipText("Scan of the Image");
                 panel.add(lblOmegaStep, "cell 0 2,alignx trailing");
             }
@@ -160,7 +163,7 @@ public class SC_to_INCO_dialog extends JDialog {
                 txtOutomegaacq.setColumns(10);
             }
             {
-                JLabel lblOmegaIncrement = new JLabel("Omega Increment=");
+                JLabel lblOmegaIncrement = new JLabel("Phi Increment (º)");
                 lblOmegaIncrement.setToolTipText("Increment between images");
                 panel.add(lblOmegaIncrement, "cell 0 3,alignx trailing");
             }
@@ -176,7 +179,7 @@ public class SC_to_INCO_dialog extends JDialog {
             }
             {
                 txtOutfname = new JTextField();
-                txtOutfname.setText("test_inco_conv");
+                txtOutfname.setText("inco_conv");
                 panel.add(txtOutfname, "cell 1 4,growx");
                 txtOutfname.setColumns(10);
             }
@@ -187,7 +190,48 @@ public class SC_to_INCO_dialog extends JDialog {
                         do_btnWriteFiles_actionPerformed(e);
                     }
                 });
-                panel.add(btnWriteFiles, "cell 0 6");
+                {
+                    JPanel panel_1 = new JPanel();
+                    panel_1.setBorder(new TitledBorder(null, "Background subtraction", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+                    panel.add(panel_1, "cell 0 5 2 1,grow");
+                    panel_1.setLayout(new MigLayout("", "[][][][]", "[][][]"));
+                    {
+                        chckbxBackgroundSubtraction = new JCheckBox("Enabled");
+                        panel_1.add(chckbxBackgroundSubtraction, "cell 0 0");
+                    }
+                    {
+                        JButton btnSelectFile = new JButton("Select File");
+                        panel_1.add(btnSelectFile, "cell 0 1");
+                        btnSelectFile.addActionListener(new ActionListener() {
+                            public void actionPerformed(ActionEvent e) {
+                                do_btnSelectFile_actionPerformed(e);
+                            }
+                        });
+                        {
+                            JLabel lblScaleFactor = new JLabel("Scale Factor");
+                            panel_1.add(lblScaleFactor, "cell 1 1,alignx trailing");
+                        }
+                        {
+                            txtBkgScale = new JTextField();
+                            txtBkgScale.setText("1.0");
+                            panel_1.add(txtBkgScale, "cell 2 1,growx");
+                            txtBkgScale.setColumns(5);
+                        }
+                    }
+                    {
+                        chckbxBkgScaleAuto = new JCheckBox("auto");
+                        chckbxBkgScaleAuto.setSelected(true);
+                        panel_1.add(chckbxBkgScaleAuto, "cell 3 1");
+                    }
+                    {
+                        txtBkgFile = new JTextField();
+                        panel_1.add(txtBkgFile, "cell 0 2 4 1,growx");
+                        txtBkgFile.setText("(no bkg file)");
+                        txtBkgFile.setEditable(false);
+                        txtBkgFile.setColumns(10);
+                    }
+                }
+                panel.add(btnWriteFiles, "cell 0 6 2 1,alignx center");
             }
         }
         {
@@ -196,6 +240,11 @@ public class SC_to_INCO_dialog extends JDialog {
             getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 JButton cancelButton = new JButton("Close");
+                cancelButton.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        do_cancelButton_actionPerformed(e);
+                    }
+                });
                 cancelButton.setActionCommand("Cancel");
                 buttonPane.add(cancelButton);
             }
@@ -203,7 +252,7 @@ public class SC_to_INCO_dialog extends JDialog {
     }
 
     protected void do_btnLoadFiles_actionPerformed(ActionEvent e) {
-        infiles = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), ImgFileUtils.getExtensionFilterRead(), ImgFileUtils.getExtensionFilterRead().length-1);
+        infiles = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), ImgFileUtils.getExtensionFilterRead(), 0);
         if (infiles==null){
             log.info("no files selected");
             return;
@@ -217,9 +266,12 @@ public class SC_to_INCO_dialog extends JDialog {
         log.info("trying to guess parameters");
         Pattern2D img = ImgFileUtils.readEDFheaderOnly(infiles[0]);
         txtIniangle.setText(String.format("%.3f", img.getOmeIni()));
+        txtOutiniangle.setText(String.format("%.3f", img.getOmeIni()));
         txtStep.setText(String.format("%.3f", img.getOmeFin()-img.getOmeIni()));
         img = ImgFileUtils.readEDFheaderOnly(infiles[infiles.length-1]);
         txtFinalangle.setText(String.format("%.3f", img.getOmeFin()));
+        txtOutfinalangle.setText(String.format("%.3f", img.getOmeFin()));
+        
     }
     
     private void updateList(){
@@ -231,44 +283,66 @@ public class SC_to_INCO_dialog extends JDialog {
         }
         list.setModel(lm);
     }
-    
-    
-//    ProgressMonitor pm;
-//    ImgOps.sumImagesFileWorker sumwk;
-    
-    private void generatePattern(final float aini, final float afin, final File outfile){
 
-        //aqui cal agafar els SC i sumarlos
+    
+    
+    protected void do_btnWriteFiles_actionPerformed(ActionEvent e) {
         
-        float inAini = Float.parseFloat(txtIniangle.getText());
-        float inStep = Float.parseFloat(txtStep.getText());
+        File dir = FileUtils.fchooserOpenDir(this, D2Dplot_global.getWorkdirFile(), "folder to save INCO-ready image files");
+        log.info("outdir="+dir.getAbsolutePath());
+        String baseFname = txtOutfname.getText().trim();
         
-        int n = FastMath.round((aini -inAini)/inStep);
-        int nfin = FastMath.round((afin -inAini)/inStep)-1;
-        log.info(String.format("images from %d to %d comprises angles %.3f to %.3f",n,nfin,aini,afin));
+        //TODO preguntar format??
         
-        //ara hem de treure el fons a cada imatge individualment i sumar-les
+        //ara cal guardar 1 2 3 4 5...
         
-        Pattern2D fons = new Pattern2D(ImgFileUtils.readPatternFile(infiles[n],false),true);
+        float scAini,scStep,outIni,outFin,outomegaacq,outomegaInc;
         
-        //estimem el fons
-        for (int i=n+1; i<nfin;i++){
-            Pattern2D p = ImgFileUtils.readPatternFile(infiles[i],false);
-            for (int k = 0; k < p.getDimY(); k++) { // per cada fila (Y)
-                for (int j = 0; j < p.getDimX(); j++) { // per cada columna (X)
-                    if (p.getInten(j, k)<fons.getInten(j, k))fons.setInten(j, k, p.getInten(j, k));
-                }
-            }
+        try{
+            scAini = Float.parseFloat(txtIniangle.getText());
+            scStep = Float.parseFloat(txtStep.getText());
+            outIni = Float.parseFloat(txtOutiniangle.getText());
+            outFin = Float.parseFloat(txtOutfinalangle.getText());
+            outomegaacq = Float.parseFloat(txtOutomegaacq.getText());
+            outomegaInc = Float.parseFloat(txtOutomegainc.getText());
+        }catch(Exception ex) {
+            log.info("error reading parameters, please check");
+            return;
+        }
+        if (outFin<outIni) {
+            FileUtils.InfoDialog(this, "Please, final angle must be bigger than initial angle", "");
+            return;
+        }
+        if (outomegaacq<=0) {
+            FileUtils.InfoDialog(this, "Please, acquisition angle must be positive", "");
+            return;
+        }
+        if (outomegaInc<=0) {
+            FileUtils.InfoDialog(this, "Please, increment angle must be positive", "");
+            return;
+        }
+
+        File bkgfile = new File(txtBkgFile.getText());
+        float bkgscale = 1.0f;
+        try {
+            bkgscale = Float.parseFloat(txtBkgScale.getText());    
+        }catch(Exception ex) {
+            log.debug("error reading background scale, set to 1.0");
+        }
+        if (chckbxBkgScaleAuto.isSelected()) {
+            bkgscale = -1.0f; //aixo vol dir auto calcular
         }
         
-        File[] flist = Arrays.copyOfRange(infiles, n, nfin);
+        if (!bkgfile.exists()) {
+            bkgfile = null;
+        }
         
-        //ara ja tenim el fons estimat al rang
-        final ProgressMonitor pm = new ProgressMonitor(null,
+        sumwk = new ImgOps.sumImagesIncoFileWorker(infiles, bkgfile, bkgscale, scAini, scStep, outIni, outFin, outomegaacq, outomegaInc, chckbxBackgroundSubtraction.isSelected(), baseFname, dir, mf.gettAOut());
+        
+        pm = new ProgressMonitor(null,
                 "Summing Images...",
                 "", 0, 100);
         pm.setProgress(0);
-        final ImgOps.sumImagesFileWorker sumwk = new ImgOps.sumImagesFileWorker(flist,mf.gettAOut());
         sumwk.addPropertyChangeListener(new PropertyChangeListener() {
 
             @Override
@@ -284,70 +358,36 @@ public class SC_to_INCO_dialog extends JDialog {
                         Toolkit.getDefaultToolkit().beep();
                         if (pm.isCanceled()) {
                             sumwk.cancel(true);
-                            log.debug("sumwk canceled");
+                            log.info("sumwk canceled");
                         } else {
-                            log.debug("sumwk finished!!");
+                            log.info("sumwk finished!!");
                         }
                         pm.close();
                     }
                 }
                 if (sumwk.isDone()){
-                    log.fine("hi from outside if progress");
-                    Pattern2D suma = sumwk.getpattSum();
-                    if (suma==null){
-                        mf.gettAOut().stat("Error summing files");
-                        return;
-                    }else{
-                        log.info("finished summing");
-                        mf.updatePatt2D(suma,false);
-                        suma.setScanParameters(aini, afin, 0);
-                        writePattern(suma,outfile);
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
+                    log.info("finished summing");
                 }
             }
         });
         sumwk.execute();
-        while(!sumwk.isDone()){
-            
-        }
+       
     }
     
-    private void writePattern(Pattern2D p, File outf){
-//        ImgFileUtils.writePatternFile(outf, p);
-        ImgFileUtils.writeEDF(outf, p);
+    protected void do_cancelButton_actionPerformed(ActionEvent e) {
+        this.dispose();
     }
-    
-    
-    protected void do_btnWriteFiles_actionPerformed(ActionEvent e) {
-        File dir = FileUtils.fchooserOpenDir(this, D2Dplot_global.getWorkdirFile(), "folder to save INCO-ready image files");
-        log.info("outdir="+dir.getAbsolutePath());
-        String baseFname = txtOutfname.getText().trim();
-        
-        //TODO preguntar format??
-        
-        //ara cal guardar 1 2 3 4 5...
-        
-        float outIni = Float.parseFloat(txtOutiniangle.getText());
-        float outFin = Float.parseFloat(txtOutfinalangle.getText());
-        float outomegaacq = Float.parseFloat(txtOutomegaacq.getText());
-        float outomegaInc = Float.parseFloat(txtOutomegainc.getText());
 
-        float currOme = outIni;
-        
-        int index = 0;
-        
-        while((currOme+outomegaacq)<=outFin){
-            String outfname = dir.getAbsolutePath()+D2Dplot_global.separator+baseFname+"_";
-            //ara el numero
-            outfname = String.format("%s%04d", outfname,index);
-            log.info("outfname="+outfname+".edf");
-            log.info("currome="+currOme+" outomegaacq="+outomegaacq+" outomegaInc="+outomegaInc+" outFin="+outFin);
-            generatePattern(currOme, currOme+outomegaacq, new File(outfname));
-            currOme = currOme+outomegaInc;
-            index=index+1;
+    protected void do_btnSelectFile_actionPerformed(ActionEvent e) {
+        FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
+        File f = FileUtils.fchooserOpen(this, D2Dplot_global.getWorkdirFile(), filt, 0);
+        if (f!=null) {
+            txtBkgFile.setText(f.getAbsolutePath());
         }
-        
-        
-        
     }
 }

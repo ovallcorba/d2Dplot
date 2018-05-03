@@ -17,6 +17,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -127,6 +128,8 @@ public class PlotPanel extends JPanel {
     private JButton btnResetView;
     private JLabel lblDsp;
 
+    //especific d1Dplot azimuthal integration (label)
+    boolean azIntegration = false;
     
     /**
      * Create the panel.
@@ -199,6 +202,19 @@ public class PlotPanel extends JPanel {
         div_startValX = 0;
         div_startValY = 0;
                 
+    }
+    
+    public void setAzIntegrationLabel(boolean azi) {
+        this.azIntegration=azi;
+        if (azi == true) {
+            xlabel = "Azimuthal Angle (º)";
+        }else {
+            xlabel = "2"+D2Dplot_global.theta+" (º)";
+        }
+    }
+    
+    public boolean getAzIntegrationLabel() {
+        return this.azIntegration;
     }
     
     protected void do_graphPanel_mouseDragged(MouseEvent e) {
@@ -308,16 +324,22 @@ public class PlotPanel extends JPanel {
                 
                 
                 double dtth = dp.getX();
-                lblTthInten.setText(String.format(" %s%.4f%s %s%.1f%s", Xpref,dtth,Xunit,Ypref,dp.getY(),Yunit));
                 double wl = ds.getWavelength();
-                if((wl>0)&&(ds.getxUnits()==DataSerie.xunits.tth)){
-                    //mirem si hi ha wavelength i les unitats del primer son tth
-                    double dsp = wl/(2*FastMath.sin(FastMath.toRadians(dtth/2.)));
-                    lblDsp.setText(String.format(" [dsp=%.4f"+D2Dplot_global.angstrom+"]", dsp));
-                }else{
-                    lblDsp.setText("");
+
+                if (this.getAzIntegrationLabel()) {
+                    Xpref = "X(Az)=";
+                    Xunit = "º";
+                    lblTthInten.setText(String.format(" %s%.4f%s %s%.1f%s", Xpref,dtth,Xunit,Ypref,dp.getY(),Yunit));
+                }else {//normal
+                    lblTthInten.setText(String.format(" %s%.4f%s %s%.1f%s", Xpref,dtth,Xunit,Ypref,dp.getY(),Yunit));
+                    if((wl>0)&&(ds.getxUnits()==DataSerie.xunits.tth)){
+                        //mirem si hi ha wavelength i les unitats del primer son tth
+                        double dsp = wl/(2*FastMath.sin(FastMath.toRadians(dtth/2.)));
+                        lblDsp.setText(String.format(" [dsp=%.4f"+D2Dplot_global.angstrom+"]", dsp));
+                    }else{
+                        lblDsp.setText("");
+                    }
                 }
-                
             }
         }else{
             lblTthInten.setText("");
@@ -1089,11 +1111,6 @@ public class PlotPanel extends JPanel {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
 
-            g2 = (Graphics2D) g;
-
-            g2.addRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON)); // perque es vegin mes suaus...
-
             if (lightTheme){
                 this.setBackground(Light_bkg);
             }else{
@@ -1106,6 +1123,13 @@ public class PlotPanel extends JPanel {
                 panelW = this.getWidth();
                 panelH = this.getHeight();
 
+                BufferedImage off_Image = null;
+                off_Image = new BufferedImage(panelW, panelH, BufferedImage.TYPE_INT_ARGB);
+                g2 = (Graphics2D) g;
+                g2 = off_Image.createGraphics();
+                g2.addRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON)); // perque es vegin mes suaus...
+                
                 //primer caculem els limits -- ho trec, no crec que faci falta...
                 if (getScalefitY()<0){
                     calcScaleFitY();    
@@ -1141,6 +1165,8 @@ public class PlotPanel extends JPanel {
                     g2.setColor(gristransp);
                     g2.fill(zoomRect);
                 }
+                
+                g.drawImage(off_Image, 0, 0, null);
                 
             }
         }

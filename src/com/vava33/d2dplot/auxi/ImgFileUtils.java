@@ -28,8 +28,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -57,21 +57,22 @@ public final class ImgFileUtils {
     }
 
     public static enum SupportedWriteExtensions {
-        BIN, IMG, EDF, D2D;
+        D2D, EDF, IMG, BIN;
     }
 
-    public static final Map<String, String> formatInfo;
+    //canvi HashMap per LinkedHashMap per tal de mantenir l'ordre d'inserció (sino era depenent del hash")
+    public static final Map<String, String> formatInfo; 
     static {
-        formatInfo = new HashMap<String, String>(); // ext, description
+        formatInfo = new LinkedHashMap<String, String>(); // ext, description
         formatInfo.put("d2d", "D2Dplot D2D Data file (*.d2d)");
-        formatInfo.put("bin", "D2Dplot BIN Data file (*.bin)");
         formatInfo.put("edf", "EDF Data file (*.edf)");
         formatInfo.put("img", "IMG Data file (*.img)");
+        formatInfo.put("tif", "TIFF image format (*.tif)");
+        formatInfo.put("bin", "D2Dplot BIN Data file (*.bin)");
         formatInfo.put("spr", "Spreadsheet (ascii) data file (*.spr)");
         formatInfo.put("gfrm", "Bruker (GADDS) data file (*.gfrm)");
-        formatInfo.put("tif", "TIFF image format (*.tif)");
         formatInfo.put("cbf", "Dectris Pilatus image format (*.cbf)");
-    }
+   }
 
     public static FileNameExtensionFilter[] getExtensionFilterWrite() {
         // mirem quins formats som capaços de salvar segons ImgFileUtils
@@ -103,7 +104,7 @@ public final class ImgFileUtils {
                 .values().length + 1]; // +1 for all image formats
         String[] frmStrings = new String[ImgFileUtils.SupportedReadExtensions
                 .values().length];
-        int nfiltre = 0;
+        int nfiltre = 1; //comença a 1 perque el zero el reservem per tots els formats
         while (itrformats.hasNext()) {
             String frm = itrformats.next();
             // this line returns the FORMAT in the ENUM or NULL
@@ -113,12 +114,12 @@ public final class ImgFileUtils {
                 // afegim filtre
                 filter[nfiltre] = new FileNameExtensionFilter(
                         ImgFileUtils.formatInfo.get(frm), frm);
-                frmStrings[nfiltre] = frm;
+                frmStrings[nfiltre-1] = frm; //-1 perque he començat a 1
                 nfiltre = nfiltre + 1;
             }
         }
-        // afegim filtre de tots els formats
-        filter[nfiltre] = new FileNameExtensionFilter(
+        // afegim filtre de tots els formats com a primera opció
+        filter[0] = new FileNameExtensionFilter(
                 "All 2D-XRD supported formats", frmStrings);
         return filter;
     }
@@ -502,6 +503,7 @@ public final class ImgFileUtils {
                 JOptionPane.showMessageDialog(null,
                         "format not supported (more than 2byte per pixel)",
                         "GFRM file error", JOptionPane.ERROR_MESSAGE);
+                scD2file.close();
                 return null;
             }
 
@@ -597,7 +599,7 @@ public final class ImgFileUtils {
             long end = System.nanoTime();
             patt2D.setMillis((float) ((end - start) / 1000000d));
             patt2D.setPixCount(count);
-
+            scD2file.close();
         } catch (Exception e) {
             if (D2Dplot_global.isDebug()) e.printStackTrace();
             log.warning("error reading GFRM");
@@ -739,14 +741,14 @@ public final class ImgFileUtils {
     
     public static Pattern2D readEDFheaderOnly(File d2File) {
         Pattern2D patt2D = null;
-        int binSize = 0;
+//        int binSize = 0;
         float pixSizeX = 0, pixSizeY = 0;
         float distOD = 0;
         float beamCX = 0, beamCY = 0, wl = 0;
         int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
         float omeIni = 0, omeFin = 0, acqTime = -1;
         float tilt = 0, rot = 0;
-        boolean fit2d = false;
+//        boolean fit2d = false;
         
         // primer treiem la info de les linies de text
         try {
@@ -757,10 +759,10 @@ public final class ImgFileUtils {
                     String line = scD2file.nextLine();
                     log.debug("edf line="+line);
                     int iigual = line.indexOf("=") + 1;
-                    if (FileUtils.containsIgnoreCase(line, "Size =")) {
-                        binSize = Integer.parseInt(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
+//                    if (FileUtils.containsIgnoreCase(line, "Size =")) {
+//                        binSize = Integer.parseInt(line.substring(iigual,
+//                                line.trim().length() - 1).trim());
+//                    }
                     if (FileUtils.containsIgnoreCase(line, "Dim_1")) {
                         dimX = Integer.parseInt(line.substring(iigual,
                                 line.trim().length() - 1).trim());
@@ -807,12 +809,12 @@ public final class ImgFileUtils {
                         rot = Float.parseFloat(line.substring(iigual,
                                 line.trim().length() - 1).trim());
                     }
-                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
-                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
-                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
-                            fit2d = true;
-                        } //else d2dplot convention
-                    }
+//                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
+//                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
+//                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
+//                            fit2d = true;
+//                        } //else d2dplot convention
+//                    }
 
                     try {
                         // scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
@@ -842,6 +844,7 @@ public final class ImgFileUtils {
 
                 }
             }
+            scD2file.close();
         } catch (Exception e) {
             if (D2Dplot_global.isDebug()) e.printStackTrace();
             log.warning("error reading EDF header");
@@ -850,17 +853,8 @@ public final class ImgFileUtils {
         patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,
                 -1.0f, true);
         patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
-        if ((tilt!=0) && (rot!=0)){
-            if (!fit2d){
-                //d2dplot convention, directly the values
-                patt2D.setTiltDeg(tilt);
-                patt2D.setRotDeg(rot);
-            }else{
-                //fit2d convention, convert to d2d
-                patt2D.setRotDeg(ImageTiltRot_diag.f2dRotToD2d(rot));
-                patt2D.setTiltDeg(ImageTiltRot_diag.f2dTiltToD2d(tilt));
-            }
-        }
+        patt2D.setTiltDeg(tilt);
+        patt2D.setRotDeg(rot);
 
         // parametres adquisicio
         patt2D.setScanParameters(omeIni, omeFin, acqTime);
@@ -880,7 +874,6 @@ public final class ImgFileUtils {
         int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
         float omeIni = 0, omeFin = 0, acqTime = -1;
         float tilt = 0, rot = 0;
-        boolean fit2d = false;
         
         // primer treiem la info de les linies de text
         try {
@@ -940,12 +933,6 @@ public final class ImgFileUtils {
                     if (FileUtils.containsIgnoreCase(line, "ref_rot")) {
                         rot = Float.parseFloat(line.substring(iigual,
                                 line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
-                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
-                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
-                            fit2d = true;
-                        } //else d2dplot convention
                     }
 
                     try {
@@ -1059,17 +1046,19 @@ public final class ImgFileUtils {
 
         // parametres instrumentals
         patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
-        if ((tilt!=0) && (rot!=0)){
-            if (!fit2d){
-                //d2dplot convention, directly the values
-                patt2D.setTiltDeg(tilt);
-                patt2D.setRotDeg(rot);
-            }else{
-                //fit2d convention, convert to d2d
-                patt2D.setRotDeg(ImageTiltRot_diag.f2dRotToD2d(rot));
-                patt2D.setTiltDeg(ImageTiltRot_diag.f2dTiltToD2d(tilt));
-            }
-        }
+        patt2D.setTiltDeg(tilt);
+        patt2D.setRotDeg(rot);
+//        if ((tilt!=0) && (rot!=0)){
+//            if (!fit2d){
+//                //d2dplot convention, directly the values
+//                patt2D.setTiltDeg(tilt);
+//                patt2D.setRotDeg(rot);
+//            }else{
+//                //fit2d convention, convert to d2d
+//                patt2D.setRotDeg(ImageTiltRot_diag.f2dRotToD2d(rot));
+//                patt2D.setTiltDeg(ImageTiltRot_diag.f2dTiltToD2d(tilt));
+//            }
+//        }
 
         // parametres adquisicio
         patt2D.setScanParameters(omeIni, omeFin, acqTime);
@@ -1653,7 +1642,7 @@ public final class ImgFileUtils {
         try {
             long start = System.nanoTime();
             Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
-            // 1a linia NCOL NFILES ...
+            // 1a linia NCOL NFILES ... 
             dimX = Integer.parseInt(scD2file.next().trim()); // num columnes
             dimY = Integer.parseInt(scD2file.next().trim()); // num files
             scD2file.nextLine();
@@ -1688,7 +1677,8 @@ public final class ImgFileUtils {
             // calculem el factor d'escala
             patt2D.setScale(FastMath.max(patt2D.getMaxI()
                     / (float) D2Dplot_global.satur65, 1.000f));
-
+            scD2file.close();
+            
             scD2file = new Scanner(d2File);
             scD2file.next();// x
             scD2file.next();// y
@@ -1905,16 +1895,17 @@ public final class ImgFileUtils {
             float omeIni = patt2D.getOmeIni();
             float omeFin = patt2D.getOmeFin();
             float acqTime = patt2D.getAcqTime();
-            if ((omeIni != 0) && (omeFin != 0)) {
+            
+            if ((FastMath.round(omeIni*100) == 0) && (FastMath.round(omeFin*100) == 0)) {
+                // marct
+                output.println("scan_type = mar_ct ("
+                        + FileUtils.dfX_1.format(acqTime) + ",) ;");
+            }else {
                 // marScan
                 output.println("scan_type = mar_scan ('hp_som', "
                         + FileUtils.dfX_1.format(omeIni) + ", "
                         + FileUtils.dfX_1.format(omeFin) + ", "
                         + FileUtils.dfX_1.format(acqTime) + ") ;");
-            } else {
-                // marct
-                output.println("scan_type = mar_ct ("
-                        + FileUtils.dfX_1.format(acqTime) + ",) ;");
             }
             output.println("}");
             output.close();

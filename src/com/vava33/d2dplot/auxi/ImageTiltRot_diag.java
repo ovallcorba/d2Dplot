@@ -16,132 +16,162 @@ import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JTextField;
 
-import com.vava33.d2dplot.Param_dialog;
-
-import java.awt.Font;
+import com.vava33.d2dplot.MainFrame;
+import javax.swing.border.TitledBorder;
+import javax.swing.border.LineBorder;
+import java.awt.Color;
 
 public class ImageTiltRot_diag extends JDialog {
 
     private static final long serialVersionUID = -4616295467870001148L;
     private final JPanel contentPanel = new JPanel();
+    private JTextField txtCenterx;
+    private JTextField txtCentery;
+    private JTextField txtDist;
     private JTextField txtRot;
     private JTextField txtTilt;
-    private JLabel lblRot_1;
-    private JLabel lblTilt;
-    Param_dialog par;
-    float rot = 0;
-    float tilt = 0;
+    private JTextField txtWave;
+    private JTextField txtPixsize;
+    MainFrame mf;
+    Pattern2D lab6;
     
     /**
      * Create the dialog.
      */
-    public ImageTiltRot_diag(Param_dialog p) {
-        this.par=p;
+    public ImageTiltRot_diag(MainFrame mf) {
+        this.mf = mf;
         setTitle("Tilt/Rot Convention");
         setModal(true);
-        setBounds(100, 100, 505, 607);
+        setBounds(100, 100, 684, 494);
         getContentPane().setLayout(new BorderLayout());
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         getContentPane().add(contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("", "[][][][grow]", "[grow][][][][][]"));
+        contentPanel.setLayout(new MigLayout("", "[][grow]", "[grow]"));
         {
             JLabel lblImatge = new JLabel("");
-            lblImatge.setIcon(new ImageIcon(ImageTiltRot_diag.class.getResource("/img/tilt_rot_drawing2.png")));
-            contentPanel.add(lblImatge, "cell 0 0 4 1,alignx left,aligny top");
+            lblImatge.setIcon(new ImageIcon(ImageTiltRot_diag.class.getResource("/img/tilt_rot_new.png")));
+            contentPanel.add(lblImatge, "cell 0 0,alignx left,aligny top");
         }
         {
-            JLabel lblFitdToDdplot = new JLabel("fit2D to d2Dplot conversion:");
-            contentPanel.add(lblFitdToDdplot, "cell 0 1 2 1");
+            JPanel panel = new JPanel();
+            panel.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "Simulate LaB6 2D-XRPD (2048x2048)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
+            contentPanel.add(panel, "cell 1 0,grow");
+            panel.setLayout(new MigLayout("", "[][grow]", "[][][][][][][][][grow]"));
+            {
+                JLabel lblBeamCenterX = new JLabel("Beam Center X (pix)");
+                panel.add(lblBeamCenterX, "cell 0 0,alignx trailing");
+            }
+            {
+                txtCenterx = new JTextField();
+                txtCenterx.setText("1024");
+                panel.add(txtCenterx, "cell 1 0,growx");
+                txtCenterx.setColumns(10);
+            }
+            {
+                JLabel lblBeamCenterY = new JLabel("Beam Center Y (pix)");
+                panel.add(lblBeamCenterY, "cell 0 1,alignx trailing");
+            }
+            {
+                txtCentery = new JTextField();
+                txtCentery.setText("1024");
+                panel.add(txtCentery, "cell 1 1,growx");
+                txtCentery.setColumns(10);
+            }
+            {
+                JLabel lblDeteTorDistance = new JLabel("Detector Distance (mm)");
+                panel.add(lblDeteTorDistance, "cell 0 2,alignx trailing");
+            }
+            {
+                txtDist = new JTextField();
+                txtDist.setText("180");
+                panel.add(txtDist, "cell 1 2,growx");
+                txtDist.setColumns(10);
+            }
+            {
+                JLabel lblDetectorRot = new JLabel("Detector ROT (º)");
+                panel.add(lblDetectorRot, "cell 0 3,alignx trailing");
+            }
+            {
+                txtRot = new JTextField();
+                txtRot.setText("0");
+                panel.add(txtRot, "cell 1 3,growx");
+                txtRot.setColumns(10);
+            }
+            {
+                JLabel lblDetectorTilt = new JLabel("Detector TILT (º)");
+                panel.add(lblDetectorTilt, "cell 0 4,alignx trailing");
+            }
+            {
+                txtTilt = new JTextField();
+                txtTilt.setText("0");
+                panel.add(txtTilt, "cell 1 4,growx");
+                txtTilt.setColumns(10);
+            }
+            {
+                JLabel lblWavelengtha = new JLabel("Wavelength (A)");
+                panel.add(lblWavelengtha, "cell 0 5,alignx trailing");
+            }
+            {
+                txtWave = new JTextField();
+                txtWave.setText("0.4246");
+                panel.add(txtWave, "cell 1 5,growx");
+                txtWave.setColumns(10);
+            }
+            {
+                JLabel lblPixelSizemicron = new JLabel("Pixel Size (mm)");
+                panel.add(lblPixelSizemicron, "cell 0 6,alignx trailing");
+            }
+            {
+                txtPixsize = new JTextField();
+                txtPixsize.setText("0.079");
+                panel.add(txtPixsize, "cell 1 6,growx");
+                txtPixsize.setColumns(10);
+            }
+            {
+                JButton btnGenerateFrame = new JButton("Generate Frame");
+                btnGenerateFrame.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        do_btnGenerateFrame_actionPerformed(e);
+                    }
+                });
+                panel.add(btnGenerateFrame, "cell 0 7 2 1,growx");
+            }
+            {
+                JButton btnClose = new JButton("Close");
+                btnClose.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        do_btnClose_actionPerformed(e);
+                    }
+                });
+                panel.add(btnClose, "cell 1 8,alignx right,aligny bottom");
+            }
         }
-        {
-            JLabel lblRot = new JLabel("tilt rotation=");
-            contentPanel.add(lblRot, "cell 0 2,alignx trailing");
-        }
-        {
-            txtRot = new JTextField();
-            contentPanel.add(txtRot, "cell 1 2,growx");
-            txtRot.setColumns(10);
-        }
-        {
-            JButton btnConvert = new JButton("convert");
-            btnConvert.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent arg0) {
-                    do_btnConvert_actionPerformed(arg0);
-                }
-            });
-            contentPanel.add(btnConvert, "cell 2 2 1 2");
-        }
-        {
-            lblRot_1 = new JLabel("rot=");
-            contentPanel.add(lblRot_1, "cell 3 2");
-        }
-        {
-            JLabel lblAngleTilt = new JLabel("angle tilt=");
-            contentPanel.add(lblAngleTilt, "cell 0 3,alignx trailing");
-        }
-        {
-            txtTilt = new JTextField();
-            contentPanel.add(txtTilt, "cell 1 3,growx");
-            txtTilt.setColumns(10);
-        }
-        {
-            lblTilt = new JLabel("tilt=");
-            contentPanel.add(lblTilt, "cell 3 3");
-        }
-        {
-            JLabel lblUseWithCaution = new JLabel("Use with caution, maybe you will need to invert tilt sign");
-            lblUseWithCaution.setFont(new Font("Dialog", Font.PLAIN, 10));
-            contentPanel.add(lblUseWithCaution, "cell 0 4 3 1,alignx center");
-        }
-        {
-            JButton btnSet = new JButton("set as values");
-            btnSet.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent arg0) {
-                    do_btnSet_actionPerformed(arg0);
-                }
-            });
-            contentPanel.add(btnSet, "cell 3 4,growx");
-        }
-        {
-            JLabel lblNewLabel = new JLabel("<html>Fit2D calibration reference: AP Hammersley, SO Svensson & A Thompson, <i>Calibration and correction of spatial distortions in 2D detector systems</i>, Nucl. Instr. Meth., A346, 312-321, (1994) </html>");
-            lblNewLabel.setFont(new Font("Dialog", Font.PLAIN, 10));
-            contentPanel.add(lblNewLabel, "cell 0 5 4 1");
-        }
+        inicia();
     }
-    protected void do_btnConvert_actionPerformed(ActionEvent arg0) {
-        try{
-            this.rot = Float.parseFloat(txtRot.getText());
-            this.tilt = Float.parseFloat(txtTilt.getText());
-            
-//            this.rot = (-1)*this.rot -90;
-//            this.rot = -this.rot;
-//            this.tilt = -this.tilt;
+    
+    private void inicia(){
+        txtCenterx.setText("1024");
+        txtCentery.setText("1024");
+        txtDist.setText("180");
+        txtTilt.setText("0");
+        txtRot.setText("0");
+        txtWave.setText("0.4246");
+        txtPixsize.setText("0.079");
+    }
 
-            this.rot = f2dRotToD2d(this.rot);
-            this.tilt = f2dTiltToD2d(this.tilt);
-            
-            lblRot_1.setText(String.format("rot= %.3f",this.rot));
-            lblTilt.setText(String.format("tilt= %.3f",this.tilt));
-            
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-    }
-    
-    public static float f2dRotToD2d(float rotf2d){
-//        float rot = (-1)*rotf2d -90;
-        float rot = rotf2d + 90;
-        if (rot >= 120){
-            rot = rotf2d%(-180);
-        }
-        return rot;
-    }
-    public static float f2dTiltToD2d(float tiltf2d){
-        return -tiltf2d;
-    }
-    
-    protected void do_btnSet_actionPerformed(ActionEvent arg0) {
-        this.par.setTiltRotFields(this.tilt, this.rot);
+    protected void do_btnClose_actionPerformed(ActionEvent e) {
         this.dispose();
+    }
+    protected void do_btnGenerateFrame_actionPerformed(ActionEvent e) {
+        float cenx = Float.parseFloat(txtCenterx.getText());
+        float ceny = Float.parseFloat(txtCentery.getText());
+        float dist = Float.parseFloat(txtDist.getText());
+        float tiltd = Float.parseFloat(txtTilt.getText());
+        float rotd = Float.parseFloat(txtRot.getText());
+        float wavea = Float.parseFloat(txtWave.getText());
+        float pixszMM = Float.parseFloat(txtPixsize.getText());
+        
+        lab6 = CalibOps.createLaB6Img(cenx, ceny, dist, tiltd, rotd, wavea,pixszMM);
+        mf.updatePatt2D(lab6,true);
     }
 }

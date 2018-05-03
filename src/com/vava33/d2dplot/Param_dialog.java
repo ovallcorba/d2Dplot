@@ -328,7 +328,7 @@ public class Param_dialog extends JDialog {
         this.dispose();
     }
     protected void do_label_actionPerformed(ActionEvent e) {
-        ImageTiltRot_diag id = new ImageTiltRot_diag(this);
+        ImageTiltRot_diag id = new ImageTiltRot_diag(this.ip.getMainFrame());
         id.setVisible(true);
     }
     

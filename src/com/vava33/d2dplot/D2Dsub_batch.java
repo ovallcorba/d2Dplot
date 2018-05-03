@@ -80,7 +80,7 @@ public class D2Dsub_batch extends JFrame {
     private LogJTextArea tAOut;
     
     private File glassD2File;
-    private JComboBox comboBox;
+    private JComboBox<String> comboBox;
     private JTextField txtAmplada;
     private JTextField txtAngle;
     private JLabel lblAwidth;
@@ -112,7 +112,7 @@ public class D2Dsub_batch extends JFrame {
     private JPanel panel_runcontrols;
     private JPanel panel_1;
     private JButton btnSelectFiles;
-    private JList listfiles;
+    private JList<File> listfiles;
     private JButton btnClear;
     private JScrollPane scrollPane;
     private static VavaLogger log = D2Dplot_global.getVavaLogger(D2Dsub_batch.class.getName());
@@ -163,7 +163,7 @@ public class D2Dsub_batch extends JFrame {
         		scrollPane = new JScrollPane();
         		panel_1.add(scrollPane, "cell 0 1 2 1,grow");
         		{
-        			listfiles = new JList();
+        			listfiles = new JList<File>();
         			scrollPane.setViewportView(listfiles);
         		}
         	}
@@ -219,7 +219,7 @@ public class D2Dsub_batch extends JFrame {
         this.panelBkg.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Background estimation & subtraction", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         this.panel_top.add(this.panelBkg, "cell 1 1,grow");
         {
-            this.comboBox = new JComboBox();
+            this.comboBox = new JComboBox<String>();
             this.comboBox.addItemListener(new ItemListener() {
                 public void itemStateChanged(ItemEvent arg0) {
                     do_comboBox_itemStateChanged(arg0);
@@ -239,7 +239,7 @@ public class D2Dsub_batch extends JFrame {
             	lblMehod = new JLabel("Mehod");
             	panelBkg.add(lblMehod, "cell 2 0,alignx right,aligny center");
             }
-            this.comboBox.setModel(new DefaultComboBoxModel(new String[] {"avsq", "avarc", "avcirc", "minsq", "minarc"}));
+            this.comboBox.setModel(new DefaultComboBoxModel<String>(new String[] {"avsq", "avarc", "avcirc", "minsq", "minarc"}));
             this.panelBkg.add(this.comboBox, "cell 3 0,growx,aligny center");
         }
         {
@@ -1009,7 +1009,7 @@ public class D2Dsub_batch extends JFrame {
         }
         
         //poblem la llista
-        DefaultListModel lm = new DefaultListModel();
+        DefaultListModel<File> lm = new DefaultListModel<File>();
         for(int i=0; i<flist.length; i++){
         	lm.addElement(flist[i]);	
         }
@@ -1018,7 +1018,7 @@ public class D2Dsub_batch extends JFrame {
 	}
 	protected void do_btnClear_actionPerformed(ActionEvent arg0) {
 		try{
-			((DefaultListModel)listfiles.getModel()).clear();
+			((DefaultListModel<File>)listfiles.getModel()).clear();
 		}catch(Exception e){
 		    if (D2Dplot_global.isDebug())e.printStackTrace();
 		    log.warning("Error clearing list");

@@ -619,6 +619,7 @@ public final class ImgOps {
             rloren=0;
             if (arg>0){
                 rloren = 2 * FastMath.sin(t2/2.0) * FastMath.sqrt(arg);    
+                log.debug("hello");
             }
             
         }
@@ -2155,96 +2156,32 @@ public final class ImgOps {
         return getElliPars(patt2D,twothRad);
     }
     
-    //from pixel or twoteta calculate the ellipse considering pattern calibratino
-//    public static EllipsePars TestgetElliPars(Pattern2D patt2D, Point2D.Float pixel){
-//        double twothRad = patt2D.testCalc2T(pixel, false);
-//        log.fine(String.format("TWO THETA CLICK = %f",FastMath.toDegrees(twothRad)));
-//        return TestgetElliPars(patt2D,twothRad);
-//    }
-    
-    //from pixel or twoteta calculate the ellipse considering pattern calibratino
-    public static EllipsePars OLDgetElliPars(Pattern2D patt2D, double twothRad){
-
-        double rotRad = FastMath.toRadians(patt2D.getRotDeg());
-        double sintth = FastMath.sin(twothRad);
-        double tiltrad = FastMath.toRadians(patt2D.getTiltDeg());
-        double tanTilt = FastMath.tan(tiltrad);
-        double cosTilt = FastMath.cos(tiltrad);
-        double tantth = FastMath.tan(twothRad);
-        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
-        double tmes = FastMath.tan((twothRad+tiltrad)/2);
-        double distPix = patt2D.getDistMD()/patt2D.getPixSx();
-
-        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
-        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
-
-        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
-        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
-
-        double rMaj = (vmes+vmenys)/2;
-        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
-        double zdis = (fmes-fmenys)/2;
-
-        double ellicentX = patt2D.getCentrX()+zdis * FastMath.sin(rotRad);
-        double ellicentY = patt2D.getCentrY()+zdis * FastMath.cos(rotRad); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
-
-        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
-    }
     
     public static EllipsePars getElliPars(Pattern2D patt2D, double twothRad){
 
-        double rotRad = -FastMath.toRadians(patt2D.getRotDeg()); //amb negativa funcionava
-        double sintth = FastMath.sin(twothRad);
-        double tiltrad = FastMath.toRadians(patt2D.getTiltDeg());
-        double tanTilt = FastMath.tan(tiltrad);
-        double cosTilt = FastMath.cos(tiltrad);
-        double tantth = FastMath.tan(twothRad);
-        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
-        double tmes = FastMath.tan((twothRad+tiltrad)/2);
-        double distPix = patt2D.getDistMD()/patt2D.getPixSx();
-
-        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
-        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
-
-        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
-        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
-
-        double rMaj = (vmes+vmenys)/2;
-        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
-        double zdis = (fmes-fmenys)/2;
-
-        double ellicentX = patt2D.getCentrX()+zdis * FastMath.cos(rotRad-FastMath.PI/2);
-        double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad-FastMath.PI/2); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
-
-        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
-    }
-    
-    public static EllipsePars NOVAgetElliPars(Pattern2D patt2D, double twothRad){
-
-        double rotRad = -FastMath.toRadians(patt2D.getRotDeg());
+        double rotRad = FastMath.toRadians(patt2D.getRotDeg()); //amb negativa funcionava
         double sintth = FastMath.sin(twothRad);
         double tiltrad = -FastMath.toRadians(patt2D.getTiltDeg());
         double tanTilt = FastMath.tan(tiltrad);
         double cosTilt = FastMath.cos(tiltrad);
-        double sinTilt = FastMath.sin(tiltrad);
-        double tantth = FastMath.tan(twothRad);
-        double distPix = (patt2D.getDistMD()/patt2D.getPixSx())/patt2D.costilt;
+        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
+        double tmes = FastMath.tan((twothRad+tiltrad)/2);
+        double distPix = patt2D.getDistMD()/patt2D.getPixSx();
 
-        double dtantth = distPix * tantth;
-        double ga = cosTilt/(cosTilt*cosTilt-tantth*tantth*sinTilt*sinTilt);
-        double gb = 1/FastMath.sqrt(1-tantth*tantth*sinTilt*sinTilt);
-        double gc = tantth*sinTilt/(cosTilt*cosTilt-tantth*tantth*sinTilt*sinTilt);
-        double a = ga*dtantth;
-        double b = gb*dtantth;
-        double c = gc*dtantth; 
-        System.out.println(FastMath.toDegrees(rotRad));
-        //el centre es mou per l'eix llarg, que es en el que la ellipse no es "constant", és a dir, girat 90º de l'eix de gir (que està sobre Rmin)
-        double ellicentX = patt2D.getCentrX()+c * FastMath.cos(rotRad-FastMath.PI/2); 
-        double ellicentY = patt2D.getCentrY()+c * FastMath.sin(rotRad-FastMath.PI/2); 
-        
-        log.writeNameNumPairs("INFO", true, "a,b,c", a,b,c);
-        
-        return new EllipsePars(a, b, ellicentX, ellicentY,rotRad);
+        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
+        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
+
+        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
+        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
+
+        double rMaj = (vmes+vmenys)/2;
+        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
+        double zdis = (fmes-fmenys)/2;
+
+        double ellicentX = patt2D.getCentrX()+zdis * FastMath.cos(rotRad);
+        double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
+
+        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
     }
     
     public static class sumImagesFileWorker extends SwingWorker<Integer,Integer> {
@@ -2255,11 +2192,21 @@ public final class ImgOps {
         LogJTextArea taOut;
         boolean doSubtract = false;
         Pattern2D pattFons;
+        float aini,afin,ctime;
 
         public sumImagesFileWorker(File[] files, LogJTextArea textAreaOut){//, Pattern2D patt) {
             this.files = files;
             this.stop = false;
             this.taOut = textAreaOut;
+            this.aini=0;
+            this.afin=0;
+            this.ctime=0;
+        }
+        public sumImagesFileWorker(File[] files, LogJTextArea textAreaOut,float ain, float afi, float ctim){//, Pattern2D patt) {
+            this(files,textAreaOut);
+            this.aini=ain;
+            this.afin=afi;
+            this.ctime=ctim;
         }
 
         public Pattern2D getpattSum(){
@@ -2320,7 +2267,7 @@ public final class ImgOps {
                 }
                 float percent = ((float)k/(float)totalfiles)*100.f;
                 setProgress((int) percent);
-                log.debug(String.valueOf(percent));
+                log.fine(String.valueOf(percent));
                 if (taOut!=null)taOut.stat("File added: "+files[k].getName());
                 if (stop) break;
             }
@@ -2347,6 +2294,8 @@ public final class ImgOps {
             }
             this.setProgress(100);
             pattsum.setScale(fscale);
+            log.writeNameNumPairs("info", true, "aini(swk), afin(swk)", aini,afin);
+            pattsum.setScanParameters(this.aini, this.afin, this.ctime);
             return 0;            
 
         }
@@ -2640,6 +2589,156 @@ public final class ImgOps {
             }
             log.printmsg("INFO", String.format("OUT file written! [%s]",fout.toString()));
             taOut.stat(String.format("OUT file written! [%s]",fout.toString()));
+            this.setProgress(100);
+            return 0;
+        }
+    }
+    
+    
+    public static class sumImagesIncoFileWorker extends SwingWorker<Integer,Integer> {
+
+        private File[] files;
+        private boolean stop;
+        Pattern2D pattsum;
+        LogJTextArea taOut;
+        boolean doSubtract = false;
+        Pattern2D pattFons = null;
+        float inco_aini,inco_afin,inco_aacq, inco_aincr;
+        float sc_aini, sc_astep,bkgScale;
+        String base_fname;
+        File outdir;
+        
+
+        public sumImagesIncoFileWorker(File[] files, File bkgfile, float bkgscale, float scAngleIni, float scAngleStep, float incoAngleIni, float incoAngleFin, float incoAngleAcq, float incoAngleIncr, boolean removeBkg, String baseFilename, File outDir, LogJTextArea textAreaOut){//, Pattern2D patt) {
+            this.files = files;
+            this.stop = false;
+            this.taOut = textAreaOut;
+            this.sc_aini=scAngleIni;
+            this.sc_astep=scAngleStep;
+            this.inco_aini=incoAngleIni;
+            this.inco_afin=incoAngleFin;
+            this.inco_aacq=incoAngleAcq;
+            this.inco_aincr=incoAngleIncr;
+            this.doSubtract=removeBkg;
+            this.base_fname=baseFilename;
+            this.outdir=outDir;
+            this.bkgScale=bkgscale;
+            if (bkgfile!=null) {
+                try {
+                    this.pattFons=ImgFileUtils.readPatternFile(bkgfile, false);    
+                }catch(Exception ex) {
+                    log.info("background file not found");
+                    this.pattFons=null;
+                }
+                
+            }
+        }
+        
+        private void generatePatternInco(float aini, float afin, File outf){
+            int n = FastMath.round((aini - sc_aini)/sc_astep);
+            int nfin = FastMath.round((afin -sc_aini)/sc_astep)-1;
+            log.debug(String.format("images from %d to %d comprises angles %.3f to %.3f",n,nfin,aini,afin));
+            
+            //llegeixo primera imatge header pels parametres
+//            Pattern2D first = ImgFileUtils.readPatternFile(this.files[n],false);
+            Pattern2D patt = ImgFileUtils.readEDFheaderOnly(this.files[n]);
+            int dimY = patt.getDimY();
+            int dimX = patt.getDimX();
+            Pattern2D pattsum = new Pattern2D(patt,false);
+            pattsum.setB4inten(true);//ens assegurem que treballem amb I4
+            Pattern2D dataI4temp = new Pattern2D(dimX,dimY,true);
+            //inicialitzem a zero les dades SUMA
+            for(int i=0; i<dimY;i++){
+                for(int j=0; j<dimX;j++){
+                    dataI4temp.setInten(j, i, 0);
+                }
+            }
+            int maxVal=0;
+            
+            //sumem
+            for(int k=n;k<nfin;k++){
+                //obrim el pattern i sumem
+                patt = ImgFileUtils.readPatternFile(files[k],false);
+                if (patt == null){
+                    if (taOut!=null)taOut.stat("Error reading "+files[k].getName()+" ... skipping");
+                    log.warning("could not read "+files[k].getName()+" ... skiping");
+                    continue;
+                }
+                if (doSubtract){
+                    if (pattFons!=null){
+                        if (this.bkgScale<0) {
+                            bkgScale = ImgOps.calcGlassScale(patt, pattFons);
+                        }
+                        log.fine("bkgScale="+bkgScale);
+                        patt = ImgOps.subtractBKG_v2(patt, pattFons,bkgScale,null)[0];                        
+                    }
+                }
+                
+                for(int i=0; i<dimY;i++){
+                    for(int j=0; j<dimX;j++){
+                        //zona exclosa saltem
+                        if (patt.isInExZone(j, i))continue;
+                        int s = dataI4temp.getInten(j, i) + patt.getInten(j, i);
+                        dataI4temp.setInten(j, i, s);
+                    }
+                }
+                float percent = ((float)k/(float)files.length)*100.f; //files is totalfiles
+                setProgress((int) percent);
+                log.fine(String.valueOf(percent));
+                if (taOut!=null)taOut.stat("File added: "+files[k].getName());
+                if (stop) break;
+            }
+            
+            //escala
+            for(int i=0; i<dimY;i++){
+                for(int j=0; j<dimX;j++){
+                    //mirem si superem els limits (per escalar despres)
+                    if (dataI4temp.getInten(j, i)>maxVal) maxVal=dataI4temp.getInten(j, i);
+                }
+            }
+            
+            //si ens hem passat del maxim calculem el factor d'escala i escalem
+            float fscale=1.0f;
+            log.fine("maxVal= "+maxVal+"  satur="+pattsum.getSaturValue());
+            if(maxVal>pattsum.getSaturValue()){
+                fscale = (float)maxVal/(float)(pattsum.getSaturValue()-1); // -1 per assegurar-nos que entra
+            }
+            
+            for(int i=0; i<dimY;i++){
+                for(int j=0; j<dimX;j++){
+                    pattsum.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)/fscale));
+                }
+            }
+//            this.setProgress(100);
+            pattsum.setScale(fscale);
+            log.writeNameNumPairs("fine", true, "aini(swk), afin(swk)", aini,afin);
+            pattsum.setScanParameters(aini, afin, 0);
+            log.writeNameNumPairs("fine", true, "pattsum.omeini, omefin", pattsum.getOmeIni(),pattsum.getOmeFin());
+            //escribim pattsum
+            ImgFileUtils.writeEDF(outf, pattsum);
+        }
+        
+        @Override
+        protected Integer doInBackground() throws Exception {
+
+            float currOme = this.inco_aini;
+            int index = 0;
+            
+            while ((currOme+this.inco_aacq)<=this.inco_afin) {
+                String outfname = this.outdir.getAbsolutePath()+D2Dplot_global.separator+this.base_fname+"_";
+                //num
+                outfname = String.format("%s%04d", outfname,index);
+                log.fine("outfname="+outfname+".edf");
+                log.fine("currome="+currOme+" inco_aacq="+inco_aacq+" inco_aincr="+inco_aincr+" inco_afin="+inco_afin);
+
+                //GENERATE PATTERN
+                this.generatePatternInco(currOme,currOme+inco_aacq,new File(outfname));
+//                int n = FastMath.round((currOme - sc_aini)/sc_astep);
+//                int nfin = FastMath.round(((currOme+inco_aacq) -sc_aini)/sc_astep)-1;
+//                log.info(String.format("images from %d to %d comprises angles %.3f to %.3f",n,nfin,currOme,currOme+inco_aacq));
+                currOme = currOme+inco_aincr;
+                index=index+1;
+            }
             this.setProgress(100);
             return 0;
         }

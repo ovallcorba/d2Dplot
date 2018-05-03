@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.util.ArrayList;
 
@@ -7,7 +7,7 @@ import javax.swing.ListModel;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 
-public class FilteredListModel extends AbstractListModel {
+public class FilteredListModel extends AbstractListModel<Object> {
 
     private static final long serialVersionUID = 4491767425231601431L;
 
@@ -15,11 +15,11 @@ public class FilteredListModel extends AbstractListModel {
         boolean accept(Object element);
     }
 
-    private final ListModel _source;
+    private final ListModel<?> _source;
     private Filter _filter;
     private final ArrayList<Integer> _indices = new ArrayList<Integer>();
 
-    public FilteredListModel(ListModel source) {
+    public FilteredListModel(ListModel<?> source) {
         if (source == null)
             throw new IllegalArgumentException("Source is null");
         _source = source;

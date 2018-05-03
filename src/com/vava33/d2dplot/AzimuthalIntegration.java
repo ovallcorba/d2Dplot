@@ -34,7 +34,7 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.awt.Insets;
+import java.awt.Font;
 
 public class AzimuthalIntegration extends JFrame {
 
@@ -44,14 +44,10 @@ public class AzimuthalIntegration extends JFrame {
     private static final long serialVersionUID = 1L;
     private JPanel contentPane;
 	private JTextField txt_2t;
-	private static String theta = "\u03B8";
-//    private XYSeriesCollection dataset;
-//    private JFreeChart chart;
 	private ArrayList<Pattern1D> patt1D;
     private static VavaLogger log = D2Dplot_global.getVavaLogger(AzimuthalIntegration.class.getName());
 
 	private Pattern2D patt2D;
-//	private ChartPanel chartPanel;
 	private PlotPanel plotpanel;
 	private JButton btn_save;
 	private JLabel lblCakeIni;
@@ -62,13 +58,14 @@ public class AzimuthalIntegration extends JFrame {
 	
 	private ImagePanel ip;
 	private File maskfile;
+	private JButton btnClose;
+	private JLabel lblInfo;
 	
 	/**
 	 * Create the frame.
 	 */
 	public AzimuthalIntegration(ImagePanel ipanel) {
 	    this.ip=ipanel;
-	    this.inicia();
 		setTitle("Azimuthal Integration");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 940, 540);
@@ -76,21 +73,21 @@ public class AzimuthalIntegration extends JFrame {
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
-		contentPane.setLayout(new MigLayout("", "[][grow][][][grow][][grow][grow][]", "[][grow]"));
+		contentPane.setLayout(new MigLayout("", "[][grow][][grow][][grow][grow][]", "[][grow][]"));
 		
-		JLabel lbltini = new JLabel("2θ");
+		JLabel lbltini = new JLabel("2θ (º)");
 		contentPane.add(lbltini, "cell 0 0,alignx right");
 		
 		txt_2t = new JTextField();
-		txt_2t.setText("1.00");
-		contentPane.add(txt_2t, "cell 1 0 2 1,growx");
+		txt_2t.setText("3.50");
+		contentPane.add(txt_2t, "cell 1 0,growx");
 		
-		lblCakeIni = new JLabel("2θ window");
-		contentPane.add(lblCakeIni, "cell 3 0,alignx trailing");
+		lblCakeIni = new JLabel("2θ window (º)");
+		contentPane.add(lblCakeIni, "cell 2 0,alignx trailing");
 		
 		txtT2w = new JTextField();
 		txtT2w.setText("0.1");
-		contentPane.add(txtT2w, "cell 4 0,growx");
+		contentPane.add(txtT2w, "cell 3 0,growx");
 		
 		btnIntegrar = new JButton("Integrate");
 		btnIntegrar.addActionListener(new ActionListener() {
@@ -100,12 +97,12 @@ public class AzimuthalIntegration extends JFrame {
 		});
 		
 		lblCakeEnd = new JLabel("Azim step (º)");
-		contentPane.add(lblCakeEnd, "cell 5 0,alignx trailing");
+		contentPane.add(lblCakeEnd, "cell 4 0,alignx trailing");
 		
 		txtAzStep = new JTextField();
-		txtAzStep.setText("5");
-		contentPane.add(txtAzStep, "cell 6 0,growx");
-		contentPane.add(btnIntegrar, "cell 7 0,growx");
+		txtAzStep.setText("1");
+		contentPane.add(txtAzStep, "cell 5 0,growx");
+		contentPane.add(btnIntegrar, "cell 6 0,growx");
 		
 		btn_save = new JButton("Save");
 		btn_save.addActionListener(new ActionListener() {
@@ -113,15 +110,31 @@ public class AzimuthalIntegration extends JFrame {
 				do_btn_save_actionPerformed(arg0);
 			}
 		});
-		contentPane.add(btn_save, "cell 8 0,growx");
+		contentPane.add(btn_save, "cell 7 0,growx");
 		
 		plotpanel = new PlotPanel();
-		contentPane.add(plotpanel, "cell 0 1 9 1,grow");
+		contentPane.add(plotpanel, "cell 0 1 8 1,grow");
+		
+		btnClose = new JButton("Close");
+		btnClose.addActionListener(new ActionListener() {
+		    public void actionPerformed(ActionEvent e) {
+		        do_btnClose_actionPerformed(e);
+		    }
+		});
+		
+		lblInfo = new JLabel("");
+		lblInfo.setFont(new Font("Dialog", Font.BOLD, 12));
+		contentPane.add(lblInfo, "cell 0 2 7 1");
+		contentPane.add(btnClose, "cell 7 2");
 		patt1D = new ArrayList<Pattern1D>();
+	    this.inicia();
+
 	}
 	
 	public void inicia(){
 	    this.patt2D=ip.getPatt2D();
+	    plotpanel.setAzIntegrationLabel(true);
+	    lblInfo.setText("");
 	}
 	
     private void plotPattern(Pattern1D p, boolean norm, boolean appendPatt, String seriesName){
@@ -231,24 +244,6 @@ public class AzimuthalIntegration extends JFrame {
                     JOptionPane.ERROR_MESSAGE);
             return;
         }
-
-        //busquem el pixel en la vertical que correspon al 2t entrat
-//        int j = patt2D.getCentrXI();
-//        float minstep = patt2D.calcMinStepsizeBy2Theta4Directions();
-//        int pX = -1;
-//        int pY = -1;
-//        for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-//            double t2i = patt2D.calc2T(j, i, true);
-//            if (FastMath.abs(t2i-t2)<=minstep) {
-//                pX = j;
-//                pY = i;
-//                break;
-//            }
-//        }
-//        if ((pX < 0)||(pY<0)) {
-//            log.info("2theta not found");
-//            return;
-//        }
         
         EllipsePars e = ImgOps.getElliPars(patt2D, FastMath.toRadians(t2));
         ArrayList<Point2D.Float> punts = e.getEllipsePoints(0, 360, Azstep);
@@ -269,7 +264,8 @@ public class AzimuthalIntegration extends JFrame {
         }
         
         //ja tindrem el pattern1D
-        String comment = String.format("Azimuthal integration 0-360º for t2=%.2f with t2win=%.2f and AzStep=.2f", t2,t2w,Azstep);
+        String comment = String.format("Az.Integr.(0-360º) at t2=%.2fº (t2win=%.2fº, step=.2fº)", t2,t2w,Azstep);
+        lblInfo.setText(String.format("Azimuthal integration (0-360º) at t2=%.2fº (t2win=%.2fº, step=.2fº)", t2,t2w,Azstep));
         patt1Daz.setComment(comment);
         this.patt1D.add(patt1Daz);
         this.plotPattern(patt1D.get(patt1D.size()-1),false,false,comment);
@@ -290,5 +286,8 @@ public class AzimuthalIntegration extends JFrame {
 
     public void setMaskfile(File maskfile) {
         this.maskfile = maskfile;
+    }
+    protected void do_btnClose_actionPerformed(ActionEvent e) {
+        this.dispose();
     }
 }

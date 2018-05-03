@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -22,11 +22,10 @@ import javax.swing.JLabel;
 import javax.swing.ListCellRenderer;
 import javax.swing.SwingUtilities;
 
-import vava33.d2dplot.auxi.ImgFileUtils;
-import vava33.d2dplot.auxi.OrientSolucio;
-import vava33.d2dplot.auxi.Pattern2D;
-import vava33.d2dplot.auxi.PuntSolucio;
-
+import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.OrientSolucio;
+import com.vava33.d2dplot.auxi.Pattern2D;
+import com.vava33.d2dplot.auxi.PuntSolucio;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
@@ -54,8 +53,8 @@ public class Dinco_frame extends JFrame {
     private static final long serialVersionUID = 1L;
     private JPanel contentPane;
     private JCheckBox chckbxOnTop;
-    private JList listSol;
-    private JList listEdit;
+    private JList<OrientSolucio> listSol;
+    private JList<PuntSolucio> listEdit;
     private JCheckBox chckbxAddPeaks;
     private static VavaLogger log = D2Dplot_global.getVavaLogger(Dinco_frame.class.getName());
     private JButton btnExtractIntensities;
@@ -117,14 +116,14 @@ public class Dinco_frame extends JFrame {
         JScrollPane scrollPane_1 = new JScrollPane();
         panel.add(scrollPane_1, "cell 0 1,grow");
         
-        listEdit = new JList();
+        listEdit = new JList<PuntSolucio>();
         listEdit.addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
                 do_listEdit_valueChanged(e);
             }
         });
         listEdit.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        ListCellRenderer renderer = new PointSolutionRenderer();
+        ListCellRenderer<? super PuntSolucio> renderer = new PointSolutionRenderer();
         listEdit.setCellRenderer(renderer);
         
         scrollPane_1.setViewportView(listEdit);
@@ -139,7 +138,7 @@ public class Dinco_frame extends JFrame {
         JScrollPane scrollPane = new JScrollPane();
         panel_1.add(scrollPane, "cell 0 1 3 1,grow");
         
-        listSol = new JList();
+        listSol = new JList<OrientSolucio>();
         listSol.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -319,7 +318,7 @@ public class Dinco_frame extends JFrame {
     
     private void addSolutionsToList(){
         // afegim les solucions a la llista
-        DefaultListModel lm = new DefaultListModel();
+        DefaultListModel<OrientSolucio> lm = new DefaultListModel<OrientSolucio>();
         // ordenem arraylist ---> EL SOL JA ESTA ORDENAT A LA DARRERA VERSIO DE INCO, NO CAL
         Collections.sort(this.getPatt2D().getSolucions(),Collections.reverseOrder());
         Iterator<OrientSolucio> iteros = this.getPatt2D().getSolucions().iterator();
@@ -349,8 +348,8 @@ public class Dinco_frame extends JFrame {
     }
     
     public OrientSolucio[] getActiveOrientSols(){
-        if ((listSol.getSelectedValues()==null) || (listSol.getSelectedValues().length==0))return null;
-        Object[] oosobj = listSol.getSelectedValues();
+        if ((listSol.getSelectedValuesList()==null) || (listSol.getSelectedValuesList().size()==0))return null;
+        Object[] oosobj = listSol.getSelectedValuesList().toArray();
         OrientSolucio[] oos = new OrientSolucio[oosobj.length];
         for (int i=0; i<oos.length; i++){
             oos[i] = (OrientSolucio)oosobj[i];
@@ -361,7 +360,7 @@ public class Dinco_frame extends JFrame {
     public void loadPeakList(){
         if (listSol.getSelectedValue()==null)return;
 
-        DefaultListModel lm = new DefaultListModel();
+        DefaultListModel<PuntSolucio> lm = new DefaultListModel<PuntSolucio>();
         
         //mostrarem tots els punts de la solucio seleccionada
         OrientSolucio os = (OrientSolucio) listSol.getSelectedValue();
@@ -430,7 +429,7 @@ public class Dinco_frame extends JFrame {
     /**
      * Custom renderer to display in red the new added points
      */
-    public class PointSolutionRenderer extends JLabel implements ListCellRenderer {
+    public class PointSolutionRenderer extends JLabel implements ListCellRenderer<Object> {
         
         /**
          * 
@@ -439,7 +438,7 @@ public class Dinco_frame extends JFrame {
         protected DefaultListCellRenderer defRenderer = new DefaultListCellRenderer();
         
         @Override
-        public Component getListCellRendererComponent(JList list, Object value,
+        public Component getListCellRendererComponent(JList<?> list, Object value,
                 int index, boolean isSelected, boolean cellHasFocus) {
             JLabel renderer = (JLabel) defRenderer.getListCellRendererComponent(list, value, index,
                     isSelected, cellHasFocus);  

@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -22,13 +22,11 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
-
-import vava33.d2dplot.auxi.PuntClick;
-
 import javax.swing.JList;
 
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.d2dplot.auxi.PuntClick;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
@@ -49,7 +47,7 @@ public class Pklist_dialog extends JDialog {
     private final JPanel contentPanel = new JPanel();
     private JLabel lblCheckValues;
     private JLabel lblPeakList;
-    private JList list_pk;
+    private JList<String> list_pk;
     private JButton btnRemovePoint;
     private JButton btnRemoveAll;
     private JScrollPane scrollPane;
@@ -119,7 +117,7 @@ public class Pklist_dialog extends JDialog {
         	gbc_scrollPane.gridy = 1;
         	contentPanel.add(scrollPane, gbc_scrollPane);
         	{
-        		list_pk = new JList();
+        		list_pk = new JList<String>();
         		scrollPane.setViewportView(list_pk);
         	}
         }
@@ -215,7 +213,7 @@ public class Pklist_dialog extends JDialog {
             getRootPane().setDefaultButton(okButton);
         }
         
-        list_pk.setModel(new DefaultListModel());
+        list_pk.setModel(new DefaultListModel<String>());
         this.loadPeakList();
     }
 
@@ -229,7 +227,7 @@ public class Pklist_dialog extends JDialog {
     
     public void loadPeakList() {
 
-        DefaultListModel lm = (DefaultListModel)list_pk.getModel();
+        DefaultListModel<String> lm = (DefaultListModel<String>)list_pk.getModel();
         lm.clear();
         //mostrem la llista puntsCercles
         Iterator<PuntClick> itrP = ipanel.getPatt2D().getPuntsCercles().iterator();

@@ -121,14 +121,20 @@ public class EllipsePars {
             this.angrot = -1*angr;
         }
         
-        //el fem negatiu (per conveni amb getellipars) sino no va i es mes dificil de pintar
-        this.angrot = -1*angrot;
-        //en principi ara amb atan2 hauria de ser sempre respecte Rmaj...
-//        if (angr<0) {
-//            this.angrot = angr + (FastMath.PI/2);
-//        }else {
-//            this.angrot = (FastMath.PI/2) - angr;
-//        }
+        
+        //ARA ROT ES L'ANGLE de EIX VERTICAL AMB CW +
+        if (rH>rV){ //vol dir Rmaj es a les X, angr es l'angle CW des de les 3 respecte Rmaj, cal canviar-ho
+            this.rmaj = rH;
+            this.rmin = rV;
+            //aixi doncs ara l'angle que vull es equivalent, no cal canviar res... (no sé si hauré de canviar signe, igual que m'ha passat a anterior versió
+            this.angrot = angr;
+        }else{ //tenim l'angle de rmin respecte l'eix X, he de sumar 90º
+            this.rmaj = rV;
+            this.rmin = rH;
+            this.angrot = angr + (FastMath.PI/2);
+        }
+        
+        
         log.writeNameNumPairs("INFO", true, "rmaj,rmin,angrot", this.rmaj,this.rmin,FastMath.toDegrees(this.angrot));
     }
     
@@ -156,10 +162,13 @@ public class EllipsePars {
     public Point2D.Float getEllipsePoint(float angleDeg, double rM, double rm){
         if (!isFit) return null;
 
-        float zero = (float) ((-this.angrot)); //value of the vertical zero according d2dplot convention and the parametric eq below
-        float drawpoint = (float) (zero - FastMath.toRadians(angleDeg));
-        float ex = (float) (this.xcen + rm*Math.cos(drawpoint)*FastMath.cos(this.angrot) + rM*Math.sin(drawpoint)*FastMath.sin(this.angrot));
-        float ey = (float) (this.ycen + rm*Math.cos(drawpoint)*FastMath.sin(this.angrot) - rM*Math.sin(drawpoint)*FastMath.cos(this.angrot));
+        double angRad = FastMath.toRadians(-angleDeg)+Math.PI/2+this.angrot;
+        double ext = rM * FastMath.cos(angRad);
+        double eyt = rm * FastMath.sin(angRad);
+
+        double ex = this.xcen + ext*FastMath.cos(this.angrot)+eyt*FastMath.sin(this.angrot);
+        double ey = this.ycen + -1*(-ext*FastMath.sin(this.angrot)+eyt*FastMath.cos(this.angrot));
+        
         return new Point2D.Float((float)ex,(float)ey);
 
     }

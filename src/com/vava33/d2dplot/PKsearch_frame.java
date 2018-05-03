@@ -69,6 +69,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.border.LineBorder;
 
 public class PKsearch_frame extends JFrame {
     /**
@@ -106,7 +107,6 @@ public class PKsearch_frame extends JFrame {
     private JLabel lblBkgPoints;
     private JTextField txtBkgPt;
     
-//    private ArrayList<Patt2Dzone> pkinteg;
     private JTable table;
     private JScrollPane scrollPane_1;
     private JSpinner spinerAxis;
@@ -162,6 +162,7 @@ public class PKsearch_frame extends JFrame {
     private JButton btnBatchout;
     private JCheckBox chckbxCalcBkgslow;
     private JCheckBox chckbxAvg;
+    private JPanel panel_5;
     
     /**
      * Create the frame.
@@ -226,7 +227,7 @@ public class PKsearch_frame extends JFrame {
         panel_3 = new JPanel();
         panel_3.setBorder(new TitledBorder(null, "Peak detection", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
         panel.add(panel_3, "cell 0 1,grow");
-        panel_3.setLayout(new MigLayout("", "[][grow][]", "[][][][][]"));
+        panel_3.setLayout(new MigLayout("", "[][grow][]", "[][][][]"));
         
         lblDelsig = new JLabel("ESD factor=");
         panel_3.add(lblDelsig, "cell 0 0,alignx right");
@@ -236,6 +237,9 @@ public class PKsearch_frame extends JFrame {
         txtDelsig.setText("3.0");
         txtDelsig.setColumns(10);
         
+        chckbxCalcBkgslow = new JCheckBox("Calc. bkg (slow)");
+        panel_3.add(chckbxCalcBkgslow, "cell 2 0");
+        
         lblZoneradius = new JLabel("Peak merge zone (px)=");
         panel_3.add(lblZoneradius, "cell 0 1,alignx right");
         
@@ -244,7 +248,7 @@ public class PKsearch_frame extends JFrame {
         txtZoneradius.setText(Integer.toString(def_zoneR));
         txtZoneradius.setColumns(10);
         
-        chckbxAvg = new JCheckBox("avg");
+        chckbxAvg = new JCheckBox("Avg. position");
         chckbxAvg.setSelected(true);
         panel_3.add(chckbxAvg, "cell 2 1");
         
@@ -257,24 +261,22 @@ public class PKsearch_frame extends JFrame {
         txtMinpixels.setColumns(10);
         
         chckbxAddremovePeaks = new JCheckBox("Add/Remove peaks");
+        chckbxAddremovePeaks.setToolTipText("Once enabled, left click to Add, right click to remove");
         panel_3.add(chckbxAddremovePeaks, "cell 0 3,alignx center");
         
-        chckbxCalcBkgslow = new JCheckBox("Calc bkg (slow)");
-        panel_3.add(chckbxCalcBkgslow, "cell 1 3");
-        
-        btnRemoveDiamonds = new JButton("Remove Diamonds");
-        panel_3.add(btnRemoveDiamonds, "cell 0 4");
-        
-        btnRemoveSaturated = new JButton("Remove Saturated");
-        panel_3.add(btnRemoveSaturated, "cell 1 4");
-        btnRemoveSaturated.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                do_btnRemoveSaturated_actionPerformed(arg0);
-            }
-        });
+        btnRemoveDiamonds = new JButton("Rem. Diamonds");
+        panel_3.add(btnRemoveDiamonds, "cell 1 3");
         btnRemoveDiamonds.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_btnRemoveDiamonds_actionPerformed(e);
+            }
+        });
+        
+        btnRemoveSaturated = new JButton("Rem. Saturated");
+        panel_3.add(btnRemoveSaturated, "cell 2 3");
+        btnRemoveSaturated.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnRemoveSaturated_actionPerformed(arg0);
             }
         });
         
@@ -399,61 +401,68 @@ public class PKsearch_frame extends JFrame {
         
         panel_1 = new JPanel();
         contentPane.add(panel_1, "flowx,cell 0 1,grow");
-        panel_1.setLayout(new MigLayout("", "[][][][grow][][grow]", "[][]"));
+        panel_1.setLayout(new MigLayout("", "[][][grow]", "[grow][]"));
         
-        btnExportPeakList = new JButton("Write PCS file for INCO");
-        panel_1.add(btnExportPeakList, "cell 1 0 2 1,growx");
+        btnExportTable = new JButton("Export Table");
+        btnExportTable.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnExportTable_actionPerformed(arg0);
+            }
+        });
+        panel_1.add(btnExportTable, "cell 0 0,grow");
         
-        btnBatch = new JButton("Batch Processing (PCS)");
+        panel_5 = new JPanel();
+        panel_5.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "tts_software (INCO)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
+        panel_1.add(panel_5, "cell 1 0 1 2,grow");
+        panel_5.setLayout(new MigLayout("", "[][][][]", "[]"));
+        
+        btnExportPeakList = new JButton("Write PCS");
+        panel_5.add(btnExportPeakList, "cell 0 0");
+        
+        btnBatch = new JButton("Batch Proc. (PCS)");
+        btnBatch.setToolTipText("Batch processing (one PCS file per image)");
+        panel_5.add(btnBatch, "cell 1 0");
         btnBatch.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_btnBatch_actionPerformed(arg0);
             }
         });
         
-        btnImport = new JButton("Import");
-        btnImport.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                do_btnImport_actionPerformed(arg0);
-            }
-        });
-        panel_1.add(btnImport, "cell 3 0");
-        panel_1.add(btnBatch, "cell 4 0");
-        
-        btnExportTable = new JButton("Export Full Table");
-        btnExportTable.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                do_btnExportTable_actionPerformed(arg0);
-            }
-        });
-        panel_1.add(btnExportTable, "cell 1 1");
-        
-        btnMaskbin = new JButton("MASK.BIN");
-        btnMaskbin.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                do_btnMaskbin_actionPerformed(e);
-            }
-        });
-        panel_1.add(btnMaskbin, "cell 2 1");
-        
-        btnBatchout = new JButton("Batch Processing (OUT)");
+        btnBatchout = new JButton("Batch Proc. (OUT)");
+        btnBatchout.setToolTipText("Batch processing (1 single file with all images output)");
+        panel_5.add(btnBatchout, "cell 2 0");
         btnBatchout.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_btnBatchout_actionPerformed(arg0);
             }
         });
-        panel_1.add(btnBatchout, "cell 4 1");
         
-        btnClose = new JButton("close");
-        panel_1.add(btnClose, "cell 5 1,alignx right");
-        btnClose.addActionListener(new ActionListener() {
+        btnMaskbin = new JButton("MASK.BIN");
+        panel_5.add(btnMaskbin, "cell 3 0,growx");
+        btnMaskbin.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                do_btnClose_actionPerformed(e);
+                do_btnMaskbin_actionPerformed(e);
             }
         });
         btnExportPeakList.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_btnExportPeakList_actionPerformed(arg0);
+            }
+        });
+        
+        btnImport = new JButton("Import Table");
+        btnImport.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent arg0) {
+                do_btnImport_actionPerformed(arg0);
+            }
+        });
+        panel_1.add(btnImport, "cell 0 1,grow");
+        
+        btnClose = new JButton("close");
+        panel_1.add(btnClose, "cell 2 1,alignx right");
+        btnClose.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnClose_actionPerformed(e);
             }
         });
         
@@ -874,7 +883,7 @@ public class PKsearch_frame extends JFrame {
                 pic.setnVeinsEixam(Integer.parseInt(lineS[16]));
                 pic.setnSatur(Integer.parseInt(lineS[17]));
                 pic.setNearMask(false);
-                if (lineS[18].trim()=="Yes")pic.setNearMask(true);
+                if (lineS[18].trim().equalsIgnoreCase("Yes"))pic.setNearMask(true);
                 pic.setP(Float.parseFloat(lineS[19]));
 
                 Patt2Dzone pz = new Patt2Dzone(pic.getNpix(), -1, (int)pic.getYmax(), pic.getYmean(), -1, pic.getYbkg(), pic.getYbkgSD());
@@ -995,7 +1004,7 @@ public class PKsearch_frame extends JFrame {
         //carregar imatge, integrar, escriure PCS amb el mateix nom 
         //i tal s'encarrega el swingworker de imgops
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, filt.length-1);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0);
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         
@@ -1003,7 +1012,6 @@ public class PKsearch_frame extends JFrame {
                 "Peak Search and Integrate on several images in progress...",
                 "", 0, 100);
         pm.setProgress(0);
-        //TODO POSAR LOG DEL MAINFRAME
         convwk = new ImgOps.PkIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
                 zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
                 angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging);
@@ -1337,7 +1345,7 @@ public class PKsearch_frame extends JFrame {
         //carregar imatge, integrar, escriure PCS amb el mateix nom 
         //i tal s'encarrega el swingworker de imgops
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, filt.length-1);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0);
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         
@@ -1345,7 +1353,6 @@ public class PKsearch_frame extends JFrame {
                 "Peak Search and Integrate on several images in progress...",
                 "", 0, 100);
         pm.setProgress(0);
-        //TODO POSAR LOG DEL MAINFRAME
         pkscwk = new ImgOps.PkSCIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
                 zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
                 angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging);
