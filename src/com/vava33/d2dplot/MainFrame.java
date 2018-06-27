@@ -153,6 +153,7 @@ public class MainFrame extends JFrame {
     private JMenuItem mntmFastopen;
     private JMenuItem mntmScDataTo;
     private JMenuItem mntmAzimuthalIntegration;
+    private JMenuItem mntmTtssoftware;
     
     public static String getBinDir() {return D2Dplot_global.binDir;}
     public static String getSeparator() {return D2Dplot_global.separator;}
@@ -425,6 +426,14 @@ public class MainFrame extends JFrame {
         });
         //        mntmFindPeaks.setEnabled(false);
                 mnGrainAnalysis.add(mntmFindPeaks);
+        
+        mntmTtssoftware = new JMenuItem("tts_software");
+        mntmTtssoftware.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_mntmTtssoftware_actionPerformed(e);
+            }
+        });
+        mnGrainAnalysis.add(mntmTtssoftware);
         mnGrainAnalysis.add(mntmDincoSol);
         
         mntmLoadXdsFile = new JMenuItem("Load XDS file");
@@ -878,6 +887,17 @@ public class MainFrame extends JFrame {
         }
         
         //TODO ADDD NEW THINGS IF NECESSARY
+    }
+    
+    public void updateFromTTS(File d2File) {
+        if (d2File.exists()){
+            this.reset();
+            this.updatePatt2D(d2File);
+            this.closePanels();
+            return;
+        }else{
+            tAOut.stat("No file found with fname "+d2File.getAbsolutePath());
+        }
     }
     
     public void updatePatt2D(File d2File) {
@@ -1699,7 +1719,7 @@ public class MainFrame extends JFrame {
     
     private void openImgFile(){
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File d2File = FileUtils.fchooser(this,new File(getWorkdir()), filt, 0, false, false);
+        File d2File = FileUtils.fchooserOpen(this,new File(getWorkdir()), filt, 0);
         if (d2File == null){
             if (!fileOpened){
                 tAOut.stat("No data file selected");
@@ -1717,7 +1737,7 @@ public class MainFrame extends JFrame {
     private void saveImgFile(){
         if (this.getPatt2D()!=null){
             FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterWrite();
-            File f = FileUtils.fchooser(this,new File(getWorkdir()), filt, 0, true, true);
+            File f = FileUtils.fchooserSaveAsk(this,new File(getWorkdir()), filt, null);
             if (f!=null){
                 D2Dplot_global.setWorkdir(f);
                 File outf = ImgFileUtils.writePatternFile(f,this.getPatt2D());
@@ -1816,5 +1836,10 @@ public class MainFrame extends JFrame {
     protected void do_mntmScDataTo_actionPerformed(ActionEvent e) {
         SC_to_INCO_dialog scToIncoframe = new SC_to_INCO_dialog(this);
         scToIncoframe.setVisible(true);
+    }
+
+    protected void do_mntmTtssoftware_actionPerformed(ActionEvent e) {
+        TTS_frame tts = new TTS_frame(this);
+        tts.setVisible(true);
     }
 }

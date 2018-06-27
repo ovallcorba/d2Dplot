@@ -1,18 +1,17 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import com.vava33.d2dplot.Calib_dialog;
+import com.vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.Dinco_frame;
+import com.vava33.d2dplot.IntegracioRadial;
+import com.vava33.d2dplot.MainFrame;
 import com.vava33.jutils.ConsoleWritter;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.Calib_dialog;
-import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.Dinco_frame;
-import vava33.d2dplot.IntegracioRadial;
-import vava33.d2dplot.MainFrame;
 
 public final class ArgumentLauncher {
     
@@ -97,6 +96,7 @@ public final class ArgumentLauncher {
             index = index + 1;
         }
         String pathS = path.toString().trim();
+        log.debug("pathS="+pathS);
         D2Dplot_global.setWorkdir(pathS);
         
         //obrim el fitxer si es imatge
@@ -134,53 +134,8 @@ public final class ArgumentLauncher {
             
         ifound = getArgLindexOf(argL,"-sol");
         if (ifound>=0){
-            //opcio SOL mostrem grafics
-            ConsoleWritter.stat("SOL option found, trying to find SOL file");
-            ArgumentLauncher.setLaunchGraphics(true); //mandatory for this option
-//            argL.indexOf per si mes endavant volem especificar fitxer
-            boolean trobat = false;
-            //provarem 2 coses, un sol tal qual amb el mateix nom que f i un sense numeros
-            File fsol = FileUtils.canviExtensio(f, "SOL");
-            log.debug("fsol="+fsol.toString());
-            ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
-            if (fsol.exists()){
-                ConsoleWritter.afegirText(false, false, "YES!");
-                trobat = true;
-            }
-            ConsoleWritter.afegirSaltLinia();
-            if (!trobat){
-                fsol = FileUtils.canviExtensio(f, "sol");
-                log.debug("fsol="+fsol.toString());
-                ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
-                if (fsol.exists()){
-                    ConsoleWritter.afegirText(false, false, "YES!");
-                    trobat = true;
-                }
-            }
-            ConsoleWritter.afegirSaltLinia();
-            if (!trobat){
-                String fn1 = FileUtils.getFNameNoExt(f);
-                String fs = fn1.substring(0, fn1.toString().length()-5)+".SOL";
-                fsol = new File(fs);
-                log.debug("fsol="+fsol.toString());
-                ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
-                if (fsol.exists()){
-                    ConsoleWritter.afegirText(false, false, "YES!");
-                    trobat = true;
-                }
-            }
-            ConsoleWritter.afegirSaltLinia();
-            if (!trobat){
-                fsol = FileUtils.canviExtensio(fsol, "sol");
-                log.debug("fsol="+fsol.toString());
-                ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
-                if (fsol.exists()){
-                    ConsoleWritter.afegirText(false, false, "YES!");
-                    trobat = true;
-                }                        
-            }
-            ConsoleWritter.afegirSaltLinia();
-            if (trobat){
+            File fsol = ArgumentLauncher.findSOLfile(f);
+            if (fsol!=null){
                 ConsoleWritter.stat(String.format("SOL file found: %s", fsol.toString()));
                 //OBRIM dialeg INCO directament amb un fitxer SOL
                 if (mf.getDincoFrame() == null) {
@@ -217,9 +172,19 @@ public final class ArgumentLauncher {
             }
             
             if (!calpathS.isEmpty()){
-                //llegim les opcions i apliquem a irwin
-                ConsoleWritter.stat(String.format("Using integration parameters from CAL file: %s",calpathS));
-                ImgFileUtils.readCALfile(mf.getPatt2D(), new File(calpathS), mf.getIrWin());
+                File calFile = new File(calpathS);
+                if (!calFile.exists()){
+                    //try to find to the same path as Imgfile
+                    calFile = new File(mf.getPatt2D().getImgfile().getParent()+D2Dplot_global.separator+calFile.getName());
+                }
+                if (calFile.exists()){
+                    //llegim les opcions i apliquem a irwin
+                    ConsoleWritter.stat(String.format("** Using integration parameters from CAL file: %s **",calpathS));
+                    ImgFileUtils.readCALfile(mf.getPatt2D(), calFile, mf.getIrWin());
+                }else{
+                    ConsoleWritter.stat("** NO CAL file given or found, using values from header **");
+                }
+                
             }
             
             //integ parameters
@@ -336,6 +301,9 @@ public final class ArgumentLauncher {
                 ConsoleWritter.stat(String.format("Writting output CAL file: %s",outpathS));
                 try {
                     mf.getCalibration().writeCALfile(new File(outpathS));
+                    // GIVE THE COMMAND TO INTEGRATE:
+                    ConsoleWritter.stat("To perform 1D-integration with this cal file type:");
+                    ConsoleWritter.stat(String.format("d2Dplot -macro %s -rint %s",mf.getPatt2D().getImgfile().toString(),outpathS));
                 }catch(Exception e){
                     if (D2Dplot_global.isDebug())e.printStackTrace();
                     ConsoleWritter.stat(String.format("Error writting output CAL file: %s",outpathS));
@@ -373,6 +341,58 @@ public final class ArgumentLauncher {
 
     public static void setLaunchGraphics(boolean launchGraphics) {
         ArgumentLauncher.launchGraphics = launchGraphics;
+    }
+    
+    //f is the opened image file
+    public static File findSOLfile(File f) {
+        //opcio SOL mostrem grafics
+        ConsoleWritter.stat("SOL option found, trying to find SOL file");
+        ArgumentLauncher.setLaunchGraphics(true); //mandatory for this option
+//        argL.indexOf per si mes endavant volem especificar fitxer
+        boolean trobat = false;
+        //provarem 2 coses, un sol tal qual amb el mateix nom que f i un sense numeros
+        File fsol = FileUtils.canviExtensio(f, "SOL");
+        log.debug("fsol="+fsol.toString());
+        ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
+        if (fsol.exists()){
+            ConsoleWritter.afegirText(false, false, "YES!");
+            trobat = true;
+        }
+        ConsoleWritter.afegirSaltLinia();
+        if (!trobat){
+            fsol = FileUtils.canviExtensio(f, "sol");
+            log.debug("fsol="+fsol.toString());
+            ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
+            if (fsol.exists()){
+                ConsoleWritter.afegirText(false, false, "YES!");
+                trobat = true;
+            }
+        }
+        ConsoleWritter.afegirSaltLinia();
+        if (!trobat){
+            String fn1 = FileUtils.getFNameNoExt(f);
+            String fs = fn1.substring(0, fn1.toString().length()-5)+".SOL";
+            fsol = new File(fs);
+            log.debug("fsol="+fsol.toString());
+            ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
+            if (fsol.exists()){
+                ConsoleWritter.afegirText(false, false, "YES!");
+                trobat = true;
+            }
+        }
+        ConsoleWritter.afegirSaltLinia();
+        if (!trobat){
+            fsol = FileUtils.canviExtensio(fsol, "sol");
+            log.debug("fsol="+fsol.toString());
+            ConsoleWritter.afegirText(false, true, String.format("is it %s?", fsol.toString()));
+            if (fsol.exists()){
+                ConsoleWritter.afegirText(false, false, "YES!");
+                trobat = true;
+            }                        
+        }
+        ConsoleWritter.afegirSaltLinia();
+        if (trobat) return fsol;
+        return null;
     }
 
 }

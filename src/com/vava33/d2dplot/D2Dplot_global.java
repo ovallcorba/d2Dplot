@@ -46,9 +46,9 @@ public final class D2Dplot_global {
     
 //*** parametres que es poden canviar a les opcions *****
     //global 
-    public static boolean logging = false;
-    public static String loglevel = "info"; //info, config, etc...
-    private static final boolean overrideLogLevelConfigFile = false;
+    public static boolean logging = true;
+    public static String loglevel = "debug"; //info, config, etc...
+    private static final boolean overrideLogLevelConfigFile = true;
     private static String workdir = System.getProperty("user.dir");
     public static boolean sideControls = true;
     private static Integer def_Width=768;
@@ -89,6 +89,10 @@ public final class D2Dplot_global {
     private static Float dincoSolPointStrokeSize; 
     private static Boolean dincoSolPointSizeByFc;
     private static Boolean dincoSolPointFill;
+    
+    //tts
+    private static String tts_software_folder;
+    private static String txtEditPath;
     
 //***    
     
@@ -138,6 +142,10 @@ public final class D2Dplot_global {
         dincoSolPointSizeByFc=null;
         dincoSolPointStrokeSize=null;
         dincoSolPointFill=null;
+        
+        //tts
+        tts_software_folder=""; 
+        txtEditPath="< system default >";
     }
     
     public static void initPars(){
@@ -485,6 +493,16 @@ public final class D2Dplot_global {
                     Boolean bvalue = parseBoolean(value);
                     if (bvalue!=null)dincoSolPointFill=bvalue.booleanValue();
                 }
+                
+                if (FileUtils.containsIgnoreCase(line, "tts_software")){
+                    String sInco = (line.substring(iigual, line.trim().length()).trim());
+                    if (new File(sInco).exists())tts_software_folder = sInco;
+                }
+
+                if (FileUtils.containsIgnoreCase(line, "text_editor_path")){
+                    String sEditor = (line.substring(iigual, line.trim().length()).trim());
+                    if (new File(sEditor).exists())txtEditPath = sEditor;
+                }
             }
             //per si ha canviat el loglevel/logging
             initLogger(D2Dplot_global.class.getName()); //during the par reading
@@ -533,13 +551,15 @@ public final class D2Dplot_global {
             output.println("colorQLcomp = "+getColorName(colorQLcomp));
             output.println("colorDBcomp = "+getColorName(colorDBcomp));
             
-            output.println("# DINCO");
+            output.println("# INCO");
             output.println(String.format("%s = %d", "hklfontSize",hklfontSize));
             output.println("dincoSolPointSizeByFc = "+Boolean.toString(dincoSolPointSizeByFc));
             output.println(String.format("%s = %d", "dincoSolPointSize",dincoSolPointSize));
             output.println(String.format(Locale.ROOT,"%s = %.1f", "dincoSolPointStrokeSize",dincoSolPointStrokeSize));
             output.println("dincoSolPointFill = "+Boolean.toString(dincoSolPointFill));
-
+            output.println("tts_software_folder = "+tts_software_folder);
+            output.println("text_editor_path = "+txtEditPath);
+            
             output.println("# Calib");
             output.println("colorCallibEllipses = "+getColorName(colorCallibEllipses));
             output.println("colorGuessPointsEllipses = "+getColorName(colorGuessPointsEllipses));
@@ -783,12 +803,16 @@ public final class D2Dplot_global {
         log.printmsg(loglevel,"colorQLcomp = "+getColorName(colorQLcomp));
         log.printmsg(loglevel,"colorDBcomp = "+getColorName(colorDBcomp));
 
-        log.printmsg(loglevel,"# DINCO");
+        log.printmsg(loglevel,"# INCO");
         log.printmsg(loglevel,String.format("%s = %d", "hklfontSize",hklfontSize));
         log.printmsg(loglevel,"dincoSolPointSizeByFc = "+Boolean.toString(dincoSolPointSizeByFc));
         log.printmsg(loglevel,String.format("%s = %d", "dincoSolPointSize",dincoSolPointSize));
         log.printmsg(loglevel,String.format("%s = %.1f", "dincoSolPointStrokeSize",dincoSolPointStrokeSize));
         log.printmsg(loglevel,"dincoSolPointFill = "+Boolean.toString(dincoSolPointFill));
+        log.printmsg(loglevel,"tts_software_folder = "+tts_software_folder);
+//        log.printmsg(loglevel,"tts_merge = "+mergeExec);
+//        log.printmsg(loglevel,"tts_celref = "+celrefExec);
+        log.printmsg(loglevel,"text_editor_path = "+txtEditPath);
 
         log.printmsg(loglevel,"# Calib");
         log.printmsg(loglevel,"colorCallibEllipses = "+getColorName(colorCallibEllipses));
@@ -807,6 +831,24 @@ public final class D2Dplot_global {
         SimpleDateFormat fHora = new SimpleDateFormat(simpleDateFormatStr);
         return fHora.format(new Date());
     }
+
+    public static String getTTSsoftwareFolder() {
+        return tts_software_folder;
+    }
+
+    public static void setTTSsoftwareFolder(String tts_folder) {
+        D2Dplot_global.tts_software_folder = tts_folder;
+    }
+
+    public static String getTxtEditPath() {
+        return txtEditPath;
+    }
+
+    public static void setTxtEditPath(String txtEditPath) {
+        D2Dplot_global.txtEditPath = txtEditPath;
+    }
+    
+    
 }
 
 //EXAMPLE (may be incomplete...)

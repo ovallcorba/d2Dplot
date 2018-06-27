@@ -12,6 +12,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -875,6 +876,9 @@ public final class ImgFileUtils {
         float omeIni = 0, omeFin = 0, acqTime = -1;
         float tilt = 0, rot = 0;
         
+        boolean littleEndian = true;
+        String dataType = "UnsignedShort";
+        
         // primer treiem la info de les linies de text
         try {
             Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
@@ -884,6 +888,18 @@ public final class ImgFileUtils {
                     String line = scD2file.nextLine();
                     log.debug("edf line="+line);
                     int iigual = line.indexOf("=") + 1;
+                    
+                    if (FileUtils.containsIgnoreCase(line, "ByteOrder =")) {
+                        String endiness = line.substring(iigual, line.trim().length() - 1).trim();
+                        if (!endiness.contains("LowByte")) {
+                            littleEndian = false;
+                        }
+                    }
+                    
+                    if (FileUtils.containsIgnoreCase(line, "DataType =")) {
+                        dataType = line.substring(iigual, line.trim().length() - 1).trim();
+                    }
+                    
                     if (FileUtils.containsIgnoreCase(line, "Size =")) {
                         binSize = Integer.parseInt(line.substring(iigual,
                                 line.trim().length() - 1).trim());
@@ -978,66 +994,117 @@ public final class ImgFileUtils {
             scD2file.close();
 
             // ARA LLEGIREM ELS BYTES
-            InputStream in = new BufferedInputStream(
-                    new FileInputStream(d2File));
-            byte[] buff = new byte[2];
-            byte[] header = new byte[headerSize];
-            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,
-                    -1.0f, true);
-            int count = 0;
-            in.read(header);
+            
+            if(dataType.contains("SignedInt")) {
+                log.debug("EDF SIGNED INT");
+                DataInputStream in = new DataInputStream(new FileInputStream(d2File));
+                byte[] buff = new byte[4];
+                byte[] header = new byte[headerSize];
+                patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,-1.0f, true);
+                int count = 0;
+                in.read(header);
 
-            // Haurem de fer dues passades, una per determinar el maxI, minI i
-            // factor d'escala i l'altre per
-            // llegir totes les intensitats i aplicar el factor d'escala per
-            // encabir-ho a short.
-            for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-                for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
-                                                             // (X)
-                    in.read(buff);
-                    int valorLlegit = FileUtils.B2toInt(buff);
-                    count = count + 1;
-                    // nomes considerem valors superiors a zero pel minI
-                    if (valorLlegit >= 0) { // fem >= o > directament sense
-                                            // considerar els zeros??!
-                        if (valorLlegit > patt2D.getMaxI()) {
-                            patt2D.setMaxI(valorLlegit);
-                        }
-                        if (valorLlegit < patt2D.getMinI()) {
-                            patt2D.setMinI(valorLlegit);
+                // Haurem de fer dues passades, una per determinar el maxI, minI i
+                // factor d'escala i l'altre per
+                for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+                    for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+                                                                 // (X)
+                        
+                        in.read(buff);
+                        int valorLlegit = FileUtils.B4toInt(buff);
+                        count = count + 1;
+                        patt2D.setInten(j, i,valorLlegit);
+                        // nomes considerem valors superiors a zero pel minI
+                        if (valorLlegit >= 0) { // fem >= o > directament sense
+                                                // considerar els zeros??!
+                            if (valorLlegit > patt2D.getMaxI()) {
+                                patt2D.setMaxI(valorLlegit);
+                            }
+                            if (valorLlegit < patt2D.getMinI()) {
+                                patt2D.setMinI(valorLlegit);
+                            }
                         }
                     }
                 }
-            }
-            in.close();
+                in.close();
 
-            // calculem el factor d'escala (valor maxim entre quocient i 1, mai
-            // escalem per sobre)
-            patt2D.setScale(FastMath.max(patt2D.getMaxI()
-                    / (float) D2Dplot_global.satur65, 1.000f));
+                // calculem el factor d'escala (valor maxim entre quocient i 1, mai
+                // escalem per sobre)
+                patt2D.setScale(1);
+                // set maxI i minI
+                patt2D.setMaxI((int) (patt2D.getMaxI() / patt2D.getScale()));
+                patt2D.setMinI((int) (patt2D.getMinI() / patt2D.getScale()));
 
-            in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
-                                                                       // buffer
-                                                                       // lectura
-            in.read(header);
+                in.close();
+                long end = System.nanoTime();
+                patt2D.setMillis((float) ((end - start) / 1000000d));
+                patt2D.setPixCount(count);
+                
+            }else { //by default UNSIGNED SHORT (MSPD)
+                log.debug("EDF UNSIGNED SHORT");
+                InputStream in = new BufferedInputStream(
+                        new FileInputStream(d2File));
+                byte[] buff = new byte[2];
+                byte[] header = new byte[headerSize];
+                patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,
+                        -1.0f, true);
+                int count = 0;
+                in.read(header);
 
-            // ara aplico factor escala i guardo on i com toca
-            for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-                for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
-                                                             // (X)
-                    in.read(buff);
-                    patt2D.setInten(j, i,
-                            (int) (FileUtils.B2toInt(buff) / patt2D.getScale()));
+                // Haurem de fer dues passades, una per determinar el maxI, minI i
+                // factor d'escala i l'altre per
+                // llegir totes les intensitats i aplicar el factor d'escala per
+                // encabir-ho a short.
+                for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+                    for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+                                                                 // (X)
+                        in.read(buff);
+                        int valorLlegit = FileUtils.B2toInt(buff);
+                        count = count + 1;
+                        // nomes considerem valors superiors a zero pel minI
+                        if (valorLlegit >= 0) { // fem >= o > directament sense
+                                                // considerar els zeros??!
+                            if (valorLlegit > patt2D.getMaxI()) {
+                                patt2D.setMaxI(valorLlegit);
+                            }
+                            if (valorLlegit < patt2D.getMinI()) {
+                                patt2D.setMinI(valorLlegit);
+                            }
+                        }
+                    }
                 }
-            }
-            // corregim maxI i minI
-            patt2D.setMaxI((int) (patt2D.getMaxI() / patt2D.getScale()));
-            patt2D.setMinI((int) (patt2D.getMinI() / patt2D.getScale()));
+                in.close();
 
-            in.close();
-            long end = System.nanoTime();
-            patt2D.setMillis((float) ((end - start) / 1000000d));
-            patt2D.setPixCount(count);
+                // calculem el factor d'escala (valor maxim entre quocient i 1, mai
+                // escalem per sobre)
+                patt2D.setScale(FastMath.max(patt2D.getMaxI()
+                        / (float) D2Dplot_global.satur65, 1.000f));
+
+                in = new BufferedInputStream(new FileInputStream(d2File)); // reiniciem
+                                                                           // buffer
+                                                                           // lectura
+                in.read(header);
+
+                // ara aplico factor escala i guardo on i com toca
+                for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
+                    for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
+                                                                 // (X)
+                        in.read(buff);
+                        patt2D.setInten(j, i,
+                                (int) (FileUtils.B2toInt(buff) / patt2D.getScale()));
+                    }
+                }
+                // corregim maxI i minI
+                patt2D.setMaxI((int) (patt2D.getMaxI() / patt2D.getScale()));
+                patt2D.setMinI((int) (patt2D.getMinI() / patt2D.getScale()));
+
+                in.close();
+                long end = System.nanoTime();
+                patt2D.setMillis((float) ((end - start) / 1000000d));
+                patt2D.setPixCount(count);
+            }
+            
+
         } catch (Exception e) {
             if (D2Dplot_global.isDebug()) e.printStackTrace();
             log.warning("error reading EDF");
@@ -1723,10 +1790,11 @@ public final class ImgFileUtils {
      */
     public static File writeBIN(File d2File, Pattern2D patt2D) {
         // Forcem extensio bin        //CAS MASK.BIN extensio majuscula
-        if (FileUtils.getFNameNoExt(d2File).equalsIgnoreCase("MASK")){
-            d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".BIN"));
+        if (FileUtils.getFNameNoExt(d2File.getName()).equalsIgnoreCase("MASK")){
+            d2File = FileUtils.canviExtensio(d2File, "BIN");
+            d2File = FileUtils.canviNomFitxer(d2File, "MASK");
         }else{
-            d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".bin"));    
+            d2File = FileUtils.canviExtensio(d2File, "bin");
         }
 
         int dataHeaderBytes = 48; // bytes de dades en el header
@@ -3057,6 +3125,57 @@ public final class ImgFileUtils {
         return pdc;
     }
     
+    public static File generateTSD(File f) {
+        try {
+            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(f)));
+            output.println("DIOPSID ALBA_25gen14 (no offset) C2/C");
+            output.println("CELL");
+            output.println(" 9.7354 8.9109 5.2451  90.   106.385   90. ");
+            output.println("LATTICE");
+            output.println("C-");
+            output.println("LAUE");
+            output.println("2");
+            output.println("SYMMETRY");
+            output.println("X, Y, Z ");
+            output.println("X,-Y,1/2+Z ");
+            output.println("CONTENTS");
+            output.println("Ca  SI  Al MG    O");
+            output.println(" 4   7   2  3   24");
+            output.println("&CONTROL ");
+            output.println("SWING=10.,");
+            output.println("GRUIX=0.16,");
+            output.println("ABSCOF=3.39,");
+            output.println("SCAINT=1.0,");
+            output.println("DSFOU=1.0,");
+            output.println("MULTDOM=0,");
+            output.println("IOFF=0,");
+            output.println("NSOL=10,");
+            output.println("ALON=0.0,");
+            output.println("ALAT=0.0,");
+            output.println("SPIN=0.0");
+            output.println("/");
+            output.println("MODEL");
+            output.println(" 8");
+            output.println("  1  0.0000   0.3019   0.25000   0.50000  CA");
+            output.println("  2  0.2874   0.0935   0.22880   0.85000  SI "); 
+            output.println("  3  0.2874   0.0935   0.22880   0.15000  AL1");
+            output.println("  4  0.0000   0.9080   0.25000   0.35000  MG ");
+            output.println("  3  0.0000   0.9080   0.25000   0.15000  AL2");
+            output.println("  5  0.1140   0.0870   0.13860   1.00000  O1 ");
+            output.println("  5  0.3652   0.2526   0.32060   1.00000  O2 ");
+            output.println("  5  0.3517   0.0186   0.99410   1.00000  O3 ");
+            output.println("PCS/HKL");
+            output.println("1");
+            output.println("0, 0.0  ");
+            output.close();
+        }catch(Exception ex) {
+            if (D2Dplot_global.isDebug()) ex.printStackTrace();
+            log.warning("Error writting TSD file");
+            return null;
+        }
+        return f;
+    }
+    
     public static File writePCS(Pattern2D patt2d, File PCSfile, float delsig,
             float angDeg,boolean autoAngDeg,int zoneR,int minpix,int bkgpt,boolean autoBkgPt,boolean autoazim){
         
@@ -3205,7 +3324,7 @@ public final class ImgFileUtils {
                     options, //the titles of buttons
                     options[1]); //default button title
             if (m==JOptionPane.YES_OPTION){
-                newExZfile = FileUtils.fchooser(null,new File(D2Dplot_global.getWorkdir()), null, false);
+                newExZfile = FileUtils.fchooserOpen(null,new File(D2Dplot_global.getWorkdir()), null, 0);
             }
             
             //Ask for output folder
