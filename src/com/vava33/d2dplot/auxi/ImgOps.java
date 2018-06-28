@@ -619,7 +619,7 @@ public final class ImgOps {
             rloren=0;
             if (arg>0){
                 rloren = 2 * FastMath.sin(t2/2.0) * FastMath.sqrt(arg);    
-                log.debug("hello");
+//                log.debug("hello");
             }
             
         }
@@ -2156,8 +2156,39 @@ public final class ImgOps {
         return getElliPars(patt2D,twothRad);
     }
     
-    
     public static EllipsePars getElliPars(Pattern2D patt2D, double twothRad){
+
+        double distPix = patt2D.getDistMD()/patt2D.getPixSx();        
+//        double tantth = FastMath.tan(twothRad);
+        double tiltrad = -FastMath.toRadians(patt2D.getTiltDeg());
+        double cosTilt = FastMath.cos(tiltrad);
+//        double sinTilt = FastMath.sin(tiltrad);
+        double tanTilt = FastMath.tan(tiltrad);
+        double rotRad = FastMath.toRadians(patt2D.getRotDeg()); 
+        double sintth = FastMath.sin(twothRad);
+        
+       
+        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
+        double tmes = FastMath.tan((twothRad+tiltrad)/2);                
+        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
+        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
+
+        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
+        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
+
+        double rMaj = (vmes+vmenys)/2;
+        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
+        double zdis = (fmes-fmenys)/2;
+
+        double ellicentX = patt2D.getCentrX()+zdis * FastMath.cos(rotRad);
+        double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad); 
+
+
+        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
+//        return new EllipsePars(rM, rm, eX, eY,rotRad);
+    }
+    
+    public static EllipsePars getElliParsBOOO(Pattern2D patt2D, double twothRad){
 
         double rotRad = FastMath.toRadians(patt2D.getRotDeg()); //amb negativa funcionava
         double sintth = FastMath.sin(twothRad);
@@ -2460,11 +2491,11 @@ public final class ImgOps {
             //ara anem imatge per imatge i anirem escribint a un fitxer OUT
             //primer generem fitxer OUT
             PrintWriter output;
-            File fout = FileUtils.fchooserSaveAsk(null, new File(D2Dplot_global.getWorkdir()), null);
+            File fout = FileUtils.fchooserSaveAsk(null, new File(D2Dplot_global.getWorkdir()), null,"OUT");
             int totalNpks=0;
             if (fout==null)return null;
             try {
-                fout = FileUtils.canviExtensio(fout, "OUT");
+//                fout = FileUtils.canviExtensio(fout, "OUT");
                 output = new PrintWriter(new BufferedWriter(new FileWriter(fout)));
                 String eqLine="=============================================================================================================";
                 String minLine="-------------------------------------------------------------------------------------------------------------";

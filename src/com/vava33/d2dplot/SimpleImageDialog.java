@@ -96,7 +96,7 @@ public class SimpleImageDialog extends JDialog {
 	}
 	protected void do_btnSaveBin_actionPerformed(ActionEvent e) {
 	    FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterWrite();
-        File fsave = FileUtils.fchooser(this,new File(D2Dplot_global.getWorkdir()), filt, 0, true, true);
+        File fsave = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), filt, null);
     	if (fsave == null)return;
     	fsave = ImgFileUtils.writePatternFile(fsave, this.patt2D);
     	this.patt2D.setImgfile(fsave);

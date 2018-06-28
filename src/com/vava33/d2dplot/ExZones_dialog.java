@@ -549,7 +549,7 @@ public class ExZones_dialog extends JDialog {
 
     protected void do_btnWriteExzFile_actionPerformed(ActionEvent arg0) {
         btnApply.doClick();
-        File exfile = FileUtils.fchooserSaveNoAsk(this,new File(D2Dplot_global.getWorkdir()), null);
+        File exfile = FileUtils.fchooserSaveNoAsk(this,new File(D2Dplot_global.getWorkdir()), null,null);
         if (exfile != null){
             ImgFileUtils.writeEXZ(exfile, patt2D);
             D2Dplot_global.setWorkdir(exfile);
@@ -703,7 +703,7 @@ public class ExZones_dialog extends JDialog {
         this.getIPanel().pintaImatge();
     }
     protected void do_btnReadExzFile_actionPerformed(ActionEvent e) {
-        File exfile = FileUtils.fchooser(this,new File(D2Dplot_global.getWorkdir()), null, false);
+        File exfile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), null, 0);
         if (exfile != null){
             ImgFileUtils.readEXZ(patt2D,exfile,false);
             updateListPoly();
@@ -731,7 +731,7 @@ public class ExZones_dialog extends JDialog {
         //fem que es posi nom fitxer pero despres preguntem l'extensió
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[1];
         filter[0] = new FileNameExtensionFilter("d2Dplot BIN format", "bin","BIN");
-        File out = FileUtils.fchooserSaveAsk(this, new File(D2Dplot_global.getWorkdir()), filter);
+        File out = FileUtils.fchooserSaveAsk(this, new File(D2Dplot_global.getWorkdir()), filter,null);
         File outexz = FileUtils.canviExtensio(out, "EXZ");
         if (out!=null){
             Pattern2D mask = new Pattern2D(this.patt2D,false,true);

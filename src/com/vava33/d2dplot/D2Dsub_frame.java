@@ -593,7 +593,7 @@ public class D2Dsub_frame extends JFrame {
 
     	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm,edf)", "bin", "img",
                 "spr", "gfrm", "edf")};
-        glassD2File = FileUtils.fchooser(this,new File(MainFrame.getWorkdir()), filter, false);
+        glassD2File = FileUtils.fchooserOpen(this,new File(MainFrame.getWorkdir()), filter, 0);
         if (glassD2File == null) return;
         D2Dplot_global.setWorkdir(glassD2File);
         tAOut.ln("Glass file selected: " + glassD2File.getPath());
@@ -619,7 +619,7 @@ public class D2Dsub_frame extends JFrame {
     	if(this.getPattAft()==null)return true;
     	//filechoser save file
     	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin)", "bin")};
-    	File fsave = FileUtils.fchooser(this,new File(MainFrame.getWorkdir()), filter, true);
+    	File fsave = FileUtils.fchooserSaveAsk(this,new File(MainFrame.getWorkdir()), filter, null);
     	if (fsave == null){
     		tAOut.ln("WARNING: file not saved");
     		return false;
@@ -1070,7 +1070,7 @@ public class D2Dsub_frame extends JFrame {
 	        if (n == JOptionPane.YES_OPTION) {
 	        	//filechoser save file
 	        	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin)", "bin")};
-	        	File fsave = FileUtils.fchooser(this,new File(MainFrame.getWorkdir()), filter, true);
+	        	File fsave = FileUtils.fchooserSaveAsk(this,new File(MainFrame.getWorkdir()), filter, null);
 	        	if (fsave == null){
 	        	    if (this.getMf()!=null){
 	        	        this.getMf().gettAOut().ln("WARNING: Background subtracted data not saved to image file!");    

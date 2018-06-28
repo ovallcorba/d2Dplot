@@ -278,7 +278,7 @@ public class Pklist_dialog extends JDialog {
 		
 	    btnSaveappend.setText("Save");
 	    //simplement guardem normal
-	    File outfileIndex = FileUtils.fchooser(this,new File(D2Dplot_global.getWorkdir()), null, true);
+	    File outfileIndex = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null, null);
 	    try{
 	        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(outfileIndex, false)));
 	        out.println("# "+this.ipanel.getPatt2D().getImgfile().toString());

@@ -441,7 +441,7 @@ public class ImagePanel extends JPanel {
           }
           float azim = patt2D.getAzimAngle((int)(pix.x), (int)(pix.y), true);
           this.setLabelValues(pix.x, pix.y, (float)FastMath.toDegrees(tthRad), dsp, azim, inten);
-//          log.writeNameNumPairs("CONFIG", true, "tth_book", patt2D.testCalc2T(pix.x, pix.y, true));
+//          log.writeNameNumPairs("CONFIG", true, "tth_form", patt2D.calc2T_FORM (pix.x, pix.y, true));
           
           log.writeNameNumPairs("finer", true, "fX,fY,imX,imY,scfit,orX,orY,panw,panh", e.getPoint().x,e.getPoint().y,pix.x,pix.y,scalefit,originX,originY,getPanelImatge().getWidth(),getPanelImatge().getHeight());
         }

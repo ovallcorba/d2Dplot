@@ -208,10 +208,10 @@ public class IntegracioRadial extends JFrame {
 		if(patt1D.size()>0){
 		    File fileout;
             FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("Data file (2T I ESD)","dat","xy")};
-	        fileout = FileUtils.fchooser(null,new File(MainFrame.getWorkdir()), filter, true);
-	        if(!FileUtils.getExtension(fileout).equalsIgnoreCase("dat")||!FileUtils.getExtension(fileout).equalsIgnoreCase("xy")){
-	            fileout = FileUtils.canviExtensio(fileout, "dat");  
-	        }
+	        fileout = FileUtils.fchooserSaveAsk(null,new File(MainFrame.getWorkdir()), filter, "dat"); 
+//	        if(!FileUtils.getExtension(fileout).equalsIgnoreCase("dat")||!FileUtils.getExtension(fileout).equalsIgnoreCase("xy")){
+//	            fileout = FileUtils.canviExtensio(fileout, "dat");  
+//	        }
 		    if (fileout!=null){
 		        this.savePatterns(fileout);
 		    }

@@ -679,7 +679,7 @@ public class Calib_dialog extends JDialog {
         //Per determinar el num de punts, l'unic parametre es la separacio en pixels entre els punts (arcpix)
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
-        log.writeNameNumPairs("fine", true, "angstep", FastMath.toDegrees(angstep));
+        log.writeNameNumPairs("debug", true, "angstep", FastMath.toDegrees(angstep));
         
         for (float a = 0f; a<2*FastMath.PI; a = a + angstep){
             float xmaxI=0;
@@ -729,7 +729,7 @@ public class Calib_dialog extends JDialog {
         //ANGULAR STEP in order to have an arc of aprox 1mm
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
-        log.writeNameNumPairs("fine", true, "angstep", FastMath.toDegrees(angstep));
+        log.writeNameNumPairs("debug", true, "angstep", FastMath.toDegrees(angstep));
         System.out.println(FastMath.toDegrees(elli.getAngrot()));
         //debug Posem les max i min elli de la cerca
         ellicerques.add(new EllipsePars((cradi-tol)*facRmax, (cradi-tol)*facRmin, elli.getXcen(),elli.getYcen(),elli.getAngrot()));
@@ -1110,7 +1110,7 @@ public class Calib_dialog extends JDialog {
     }
     
     protected void do_btnWriteCalFile_actionPerformed(ActionEvent e) {
-        File calfile = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null);
+        File calfile = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null,null);
         if (calfile != null){
             this.writeCALfile(calfile);
             D2Dplot_global.setWorkdir(calfile);

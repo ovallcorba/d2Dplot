@@ -833,17 +833,17 @@ public class PKsearch_frame extends JFrame {
     }
     
     protected void do_btnExportPeakList_actionPerformed(ActionEvent arg0) {
-        File f = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null);
+        File f = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null,"PCS");
         if (f==null) return;
         D2Dplot_global.setWorkdir(f);
-        f = FileUtils.canviExtensio(f, "PCS");
+//        f = FileUtils.canviExtensio(f, "PCS");
         ImgFileUtils.writePCS(patt2d,f,delsig,angDeg,chckbxAutointrad.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),chckbxAutoazim.isSelected());
         
     }
     
 
     protected void do_btnExportTable_actionPerformed(ActionEvent arg0) {
-        File f = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null);
+        File f = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null,null);
         if (f==null) return;
         D2Dplot_global.setWorkdir(f);
         this.exportTable(f);

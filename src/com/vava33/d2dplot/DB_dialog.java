@@ -64,7 +64,8 @@ import java.awt.event.WindowEvent;
 public class DB_dialog extends JFrame {
 
     private static final long serialVersionUID = -6104927797410689910L;
-    private static float minDspacingToSearch = 1.15f;
+    private static float minDspacingToSearch = 1.15f; //def 1.15
+    private static float minDspacingLatGen = 1.05f; //def 1.05
     private static final int maxNsol = 50;
 
     private JButton btnLoadDB;
@@ -88,10 +89,8 @@ public class DB_dialog extends JFrame {
     private PDDatabase.saveDBfileWorker saveDBFwk;
     private PDDatabase.searchDBWorker searchDBwk;
     private JButton btnSearchByPeaks;
-    private JCheckBox chckbxIntensityInfo;
     private JCheckBox chckbxNameFilter;
     private JTextField txtNamefilter;
-    private JCheckBox chckbxNpksInfo;
     
     private JButton btnResetSearch;
     private JButton btnSaveDb;
@@ -169,7 +168,7 @@ public class DB_dialog extends JFrame {
                             {
                                 panel = new JPanel();
                                 panel_left.add(panel, "cell 0 0,grow");
-                                panel.setLayout(new MigLayout("fill, insets 0", "[][][][grow][]", "[][][]"));
+                                panel.setLayout(new MigLayout("fill, insets 0", "[][][][grow][][]", "[]"));
                                 this.btnLoadDB = new JButton("Load DB");
                                 panel.add(btnLoadDB, "cell 0 0,growx,aligny center");
                                 {
@@ -184,30 +183,9 @@ public class DB_dialog extends JFrame {
                                         }
                                     });
                                     this.chckbxPDdata.setSelected(true);
-                                    this.cbox_onTop = new JCheckBox("on top");
-                                    panel.add(cbox_onTop, "cell 4 0,alignx right,aligny center");
-                                    this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
-                                    this.cbox_onTop.addItemListener(new ItemListener() {
-                                        @Override
-                                        public void itemStateChanged(ItemEvent arg0) {
-                                            do_cbox_onTop_itemStateChanged(arg0);
-                                        }
-                                    });
-                                    this.cbox_onTop.setActionCommand("on top");
                                     {
-                                        btnSearchByPeaks = new JButton("Search by peaks");
-                                        panel.add(btnSearchByPeaks, "cell 0 1 2 1,growx,aligny center");
-                                        {
-                                            chckbxIntensityInfo = new JCheckBox("Intensity info");
-                                            chckbxIntensityInfo.addItemListener(new ItemListener() {
-                                                public void itemStateChanged(ItemEvent e) {
-                                                    do_chckbxIntensityInfo_itemStateChanged(e);
-                                                }
-                                            });
-                                            panel.add(chckbxIntensityInfo, "hidemode 3,cell 3 1,alignx left,aligny center");
-                                        }
                                         this.lblHelp = new JLabel("?");
-                                        panel.add(lblHelp, "cell 4 1,alignx right,aligny center");
+                                        panel.add(lblHelp, "cell 4 0,alignx right,aligny center");
                                         this.lblHelp.addMouseListener(new MouseAdapter() {
                                             @Override
                                             public void mouseEntered(MouseEvent e) {
@@ -225,24 +203,17 @@ public class DB_dialog extends JFrame {
                                             }
                                         });
                                         this.lblHelp.setFont(new Font("Tahoma", Font.BOLD, 14));
-                                        {
-                                            {
-                                                chckbxNpksInfo = new JCheckBox("Use nr. of total reflections");
-                                                chckbxNpksInfo.addItemListener(new ItemListener() {
-                                                    public void itemStateChanged(ItemEvent arg0) {
-                                                        do_chckbxNpksInfo_itemStateChanged(arg0);
-                                                    }
-                                                });
-                                                panel.add(chckbxNpksInfo, "hidemode 3,cell 2 1,alignx left,aligny center");
-                                                chckbxNpksInfo.setSelected(true);
-                                            }
-                                        }
-                                        btnSearchByPeaks.addActionListener(new ActionListener() {
-                                            public void actionPerformed(ActionEvent e) {
-                                                do_btnSearchByPeaks_actionPerformed(e);
-                                            }
-                                        });
                                     }
+                                    this.cbox_onTop = new JCheckBox("on top");
+                                    panel.add(cbox_onTop, "cell 5 0,alignx right,aligny center");
+                                    this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
+                                    this.cbox_onTop.addItemListener(new ItemListener() {
+                                        @Override
+                                        public void itemStateChanged(ItemEvent arg0) {
+                                            do_cbox_onTop_itemStateChanged(arg0);
+                                        }
+                                    });
+                                    this.cbox_onTop.setActionCommand("on top");
                                     btnSaveDb.addActionListener(new ActionListener() {
                                         public void actionPerformed(ActionEvent arg0) {
                                             do_btnSaveDb_actionPerformed(arg0);
@@ -385,6 +356,13 @@ public class DB_dialog extends JFrame {
                                     do_btnApplyChanges_actionPerformed(e);
                                 }
                             });
+                            btnAddToQuicklist = new JButton("Add to Quicklist");
+                            panel_3.add(btnAddToQuicklist, "cell 0 10,alignx left");
+                            btnAddToQuicklist.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    do_btnAddToQuicklist_actionPerformed(e);
+                                }
+                            });
                             panel_3.add(btnApplyChanges, "cell 1 10,alignx right");
                         }
                         {
@@ -400,7 +378,7 @@ public class DB_dialog extends JFrame {
                     {
                         panel_1 = new JPanel();
                         splitPane_1.setLeftComponent(panel_1);
-                        panel_1.setLayout(new MigLayout("fill, insets 2", "[][][grow][]", "[][][grow][]"));
+                        panel_1.setLayout(new MigLayout("fill", "[][][grow][]", "[][][grow][]"));
                         {
                             chckbxNameFilter = new JCheckBox("Apply name filter:");
                             panel_1.add(chckbxNameFilter, "cell 0 0 2 1,alignx left");
@@ -421,15 +399,8 @@ public class DB_dialog extends JFrame {
                             });
                         {
                             lblHeader = new JLabel("header");
-                            panel_1.add(lblHeader, "cell 0 1 3 1,alignx left");
+                            panel_1.add(lblHeader, "cell 0 1 4 1,alignx left");
                         }
-                        btnResetSearch = new JButton("reset list");
-                        panel_1.add(btnResetSearch, "cell 3 1,alignx right");
-                        btnResetSearch.addActionListener(new ActionListener() {
-                            public void actionPerformed(ActionEvent arg0) {
-                                do_btnResetSearch_actionPerformed(arg0);
-                            }
-                        });
                         {
                             this.scrollPane = new JScrollPane();
                             panel_1.add(scrollPane, "cell 0 2 4 1,grow");
@@ -457,16 +428,23 @@ public class DB_dialog extends JFrame {
                                 });
                                 panel_1.add(btnRemove, "cell 1 3,alignx left");
                             }
+                            btnSearchByPeaks = new JButton("Search by peaks");
+                            panel_1.add(btnSearchByPeaks, "cell 2 3,alignx right");
+                            btnSearchByPeaks.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    do_btnSearchByPeaks_actionPerformed(e);
+                                }
+                            });
+                            btnResetSearch = new JButton("reset list");
+                            panel_1.add(btnResetSearch, "cell 3 3,alignx center");
+                            btnResetSearch.addActionListener(new ActionListener() {
+                                public void actionPerformed(ActionEvent arg0) {
+                                    do_btnResetSearch_actionPerformed(arg0);
+                                }
+                            });
                             {
-                                btnAddToQuicklist = new JButton("Add to Quicklist");
-                                panel_1.add(btnAddToQuicklist, "cell 3 3,alignx right");
 //                                splitPane_1.setDividerLocation(375);
                                 splitPane_1.setDividerLocation(this.getWidth()/2);
-                                btnAddToQuicklist.addActionListener(new ActionListener() {
-                                    public void actionPerformed(ActionEvent e) {
-                                        do_btnAddToQuicklist_actionPerformed(e);
-                                    }
-                                });
                             }
                             btnAddCompound.addActionListener(new ActionListener() {
                                 public void actionPerformed(ActionEvent arg0) {
@@ -771,22 +749,23 @@ public class DB_dialog extends JFrame {
         ArrayList<PDSearchResult> res = PDDatabase.getDBSearchresults();
         
         //mirem si hi ha criteris complementaris pel residual
-        if (chckbxIntensityInfo.isSelected() || chckbxNpksInfo.isSelected()){
-            Iterator<PDSearchResult> itrcomp = res.iterator();
-            while (itrcomp.hasNext()){
-                PDSearchResult c = itrcomp.next();
-                float resid = c.getResidualPositions();
-                if (chckbxIntensityInfo.isSelected()){
-                    resid = resid + c.getResidual_intensities();
-                }
-                if (chckbxNpksInfo.isSelected()){
-                    resid = resid * ((Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1))/2);
-                }
-                c.setTotal_residual(resid);
-            }            
-        }
-        Collections.sort(res);
+//        if (chckbxIntensityInfo.isSelected() || chckbxNpksInfo.isSelected()){
         Iterator<PDSearchResult> itrcomp = res.iterator();
+        while (itrcomp.hasNext()){
+            PDSearchResult c = itrcomp.next();
+            float resid = c.getResidualPositions();
+            //                if (chckbxIntensityInfo.isSelected()){
+            //                    resid = resid + c.getResidual_intensities();
+            //                }
+            //                if (chckbxNpksInfo.isSelected()){
+            //                    resid = resid * ((Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1))/2);
+            //                }
+            resid = resid * ((Math.max((float)c.getC().getNrRefUpToDspacing(PDSearchResult.getMinDSPin())/(float)PDSearchResult.getnDSPin(),1))/2);
+            c.setTotal_residual(resid);
+        }            
+//        }
+        Collections.sort(res);
+        itrcomp = res.iterator();
         int nsol = 0;
         while (itrcomp.hasNext()){
             if (nsol >= maxNsol) break;
@@ -907,7 +886,7 @@ public class DB_dialog extends JFrame {
     }
     protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB files", "db", "DB")};
-        File f = FileUtils.fchooserSaveAsk(this, new File(PDDatabase.getCurrentDB()),filter);
+        File f = FileUtils.fchooserSaveAsk(this, new File(PDDatabase.getCurrentDB()),filter,null);
         if (f == null)return;
         D2Dplot_global.setWorkdir(f);
         //primer creem el progress monitor, 
@@ -971,12 +950,6 @@ public class DB_dialog extends JFrame {
 
     public void setIpanel(ImagePanel ipanel) {
         this.ipanel = ipanel;
-    }
-    protected void do_chckbxNpksInfo_itemStateChanged(ItemEvent arg0) {
-        this.loadSearchPeaksResults();
-    }
-    protected void do_chckbxIntensityInfo_itemStateChanged(ItemEvent e) {
-        this.loadSearchPeaksResults();
     }
     protected void do_btnAddToQuicklist_actionPerformed(ActionEvent e) {
         PDCompound pdc = this.getCurrentCompound();
@@ -1212,11 +1185,12 @@ public class DB_dialog extends JFrame {
         if (cf.getSgNum()==0) return;
         //else calculem reflexions, utilitzem directament cf que ha estat corregit si era necessari
         Cell cel = new Cell(cf);
-        cel.latgen(1.05f);
+        cel.latgen(minDspacingLatGen);
         cel.calcInten(true);
         cel.normIntensities(100);
         this.textAreaDsp.setText("");
         this.textAreaDsp.setText(cel.getListAsString_HKLMerged_dsp_Fc2());
+        log.debug(cel.getListAsString_HKLMerged_tth_mult_Fc2(0.4246f));
     }
     
     protected void do_btnCalcRefl_actionPerformed(ActionEvent e) {

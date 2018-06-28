@@ -938,15 +938,37 @@ public class Pattern2D {
         float vCPy=this.getCentrY()-row_py;
         
         double testRot = FastMath.toRadians(this.rotDeg);
-        double distprima = (-vCPx*FastMath.cos(testRot) + vCPy*FastMath.sin(testRot))*this.sintilt;
+        double distprima = (vCPx*FastMath.cos(testRot) - vCPy*FastMath.sin(testRot))*this.sintilt; //acw rotation
         double t2p = (vCPx*vCPx) + (vCPy*vCPy) - (distprima*distprima);
         t2p = FastMath.sqrt(t2p);
-        t2p = t2p/(distMDpix-distprima);
+        t2p = t2p/(distMDpix+distprima); 
         t2p = FastMath.atan(t2p);
         if (degrees) {
             t2p = FastMath.toDegrees(t2p);
         }        
         return t2p;
+        
+    } 
+    
+    public double calc2T_FORM(float col_px, float row_py, boolean degrees) {
+        
+        double distMDpix = (this.getDistMD()/this.getPixSx())/this.costilt;
+        float vCPx=col_px-this.getCentrX();
+        float vCPy=this.getCentrY()-row_py;
+        double rot = FastMath.toRadians(this.rotDeg);
+        //apliquem -rot
+        double vCPxRot = vCPx*FastMath.cos(rot) - vCPy*FastMath.sin(rot);
+        double vCPyRot = vCPx*FastMath.sin(rot) + vCPy*FastMath.cos(rot);
+        
+        double num = vCPxRot*vCPxRot*this.costilt*this.costilt+vCPyRot*vCPyRot;
+        double den = (distMDpix + vCPxRot*this.sintilt)*(distMDpix + vCPxRot*this.sintilt);
+                
+        double t2 = FastMath.sqrt(num/den);
+        t2 = FastMath.atan(t2);
+        if (degrees) {
+            t2 = FastMath.toDegrees(t2);
+        }  
+        return t2;
         
     } 
     
@@ -1313,7 +1335,8 @@ public class Pattern2D {
         }else {
             log.writeNameNumPairs("CONFIG", true, "meanI, sdevI", meanI, sdevI);
         }
-
+        int nPixAresta_half = 2;
+        int max = (nPixAresta_half*2+1)*(nPixAresta_half*2+1);
         
         //de 1 a -1 per no agafar els pixels de les vores
         for(int i=1; i<this.getDimY()-1;i++){
@@ -1362,10 +1385,13 @@ public class Pattern2D {
                 
                 boolean hasMinEnough = true;
                 if(minpix>1){
-//                    if (minpix > 20) minpix=20; //restriccio que poso
+                    if (minpix > max) {
+                        log.debug("minPix max = "+max);
+                        minpix=max; //restriccio que poso
+                    }
                     int npixbons = 0;
-                    for (int ii=i-2;ii<i+3;ii++){
-                        for (int jj=j-2;jj<j+3;jj++){
+                    for (int ii=i-nPixAresta_half;ii<=i+nPixAresta_half;ii++){
+                        for (int jj=j-nPixAresta_half;jj<=j+nPixAresta_half;jj++){
                             if (!this.isInside(jj, ii))continue;
                             if (this.isInExZone(jj, ii))continue;
                             

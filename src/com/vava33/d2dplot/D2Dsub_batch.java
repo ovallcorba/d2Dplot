@@ -504,7 +504,7 @@ public class D2Dsub_batch extends JFrame {
 
     	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm,edf)", "bin", "img",
                 "spr", "gfrm", "edf")};
-        glassD2File = FileUtils.fchooser(this,new File(MainFrame.getWorkdir()), filter, false);
+        glassD2File = FileUtils.fchooserOpen(this,new File(MainFrame.getWorkdir()), filter, 0);
         if (glassD2File == null) return;
         tAOut.ln("Glass file selected: " + glassD2File.getPath());
         lblGlassF.setText(glassD2File.getName());

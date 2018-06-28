@@ -82,7 +82,7 @@ public class EllipsePars {
         double rV=Math.sqrt(up/down2);
 
         //ROTACIO
-        float angr = (float) (0.5*Math.atan(2*b/(a-c)));
+        float angr = (float) (0.5*Math.atan(b/(a-c)));
 //        float angr = (float) FastMath.atan2(2*b, a-c);
         log.info("angr directe="+FastMath.toDegrees(angr));
         this.isFit = true;
@@ -107,20 +107,6 @@ public class EllipsePars {
          */
         
         //realment rot es l'angle de l'eix de gir del detector, que coincideix amb Rmin de l'ellipse
-        if (rH>rV){ //vol dir Rmaj es a les X, angr es l'angle CW des de les 3 respecte Rmaj, cal canviar-ho
-            this.rmaj = rH;
-            this.rmin = rV;
-            if (angr<0) {
-                this.angrot = angr + (FastMath.PI/2);
-            }else {
-                this.angrot = (FastMath.PI/2) - angr;
-            }
-        }else{ //tenim l'angle de rmin respecte l'eix X, nomes cal canviar signe
-            this.rmaj = rV;
-            this.rmin = rH;
-            this.angrot = -1*angr;
-        }
-        
         
         //ARA ROT ES L'ANGLE de EIX VERTICAL AMB CW +
         if (rH>rV){ //vol dir Rmaj es a les X, angr es l'angle CW des de les 3 respecte Rmaj, cal canviar-ho
