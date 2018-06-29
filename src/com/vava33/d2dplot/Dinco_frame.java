@@ -66,6 +66,7 @@ public class Dinco_frame extends JFrame {
 
     private Pattern2D patt2D;
     private ImagePanel ip;
+    private JLabel lblFsol;
     
     /**
      * Create the frame.
@@ -74,14 +75,14 @@ public class Dinco_frame extends JFrame {
         this.ip=ip;
         this.setPatt2D(ip.getPatt2D());
 
-        setTitle("DINCO");
+        setTitle("tts_INCO");
         setIconImage(Toolkit.getDefaultToolkit().getImage(Dinco_frame.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBounds(100, 100, 450, 440);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
         setContentPane(contentPane);
-        contentPane.setLayout(new MigLayout("fill, insets 5", "[][][grow]", "[][grow][]"));
+        contentPane.setLayout(new MigLayout("fill, insets 5", "[][][grow]", "[][][grow][]"));
         
         JButton btnLoadSol = new JButton("Load PXY/SOL file");
         btnLoadSol.addActionListener(new ActionListener() {
@@ -100,10 +101,13 @@ public class Dinco_frame extends JFrame {
         chckbxOnTop.setSelected(true);
         contentPane.add(chckbxOnTop, "cell 2 0,alignx right");
         
+        lblFsol = new JLabel(" ");
+        contentPane.add(lblFsol, "cell 1 1 2 1,alignx leading");
+        
         splitPane = new JSplitPane();
         splitPane.setResizeWeight(0.5);
         splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
-        contentPane.add(splitPane, "cell 0 1 3 1,grow");
+        contentPane.add(splitPane, "cell 0 2 3 1,grow");
         
         panel = new JPanel();
         splitPane.setRightComponent(panel);
@@ -180,7 +184,7 @@ public class Dinco_frame extends JFrame {
                 do_btnExtractIntensities_actionPerformed(arg0);
             }
         });
-        contentPane.add(btnExtractIntensities, "cell 0 2 2 1");
+        contentPane.add(btnExtractIntensities, "cell 0 3 2 1");
         
         JButton btnClose = new JButton("Close");
         btnClose.addActionListener(new ActionListener() {
@@ -188,7 +192,7 @@ public class Dinco_frame extends JFrame {
                 do_btnClose_actionPerformed(e);
             }
         });
-        contentPane.add(btnClose, "cell 2 2,alignx right");
+        contentPane.add(btnClose, "cell 2 3,alignx right");
         
         //TEST DESELECT BY CLICK
         MouseListener[] mls = listEdit.getMouseListeners();
@@ -264,6 +268,7 @@ public class Dinco_frame extends JFrame {
                 log.debug("No SOL file opened");
             }else{
                 this.addSolutionsToList();
+                changeFSOLlabel(fsol);
             }
             D2Dplot_global.setWorkdir(fsol);
         }
@@ -274,6 +279,7 @@ public class Dinco_frame extends JFrame {
             this.getPatt2D().clearSolutions();
             fsol = ImgFileUtils.readSOL(fsol, this.getPatt2D());
             this.addSolutionsToList();
+            changeFSOLlabel(fsol);
             D2Dplot_global.setWorkdir(fsol);
         }
         
@@ -295,6 +301,7 @@ public class Dinco_frame extends JFrame {
                 log.debug("No SOL file opened");
             }else{
                 this.addSolutionsToList();
+                changeFSOLlabel(fsol);
             }
             D2Dplot_global.setWorkdir(fsol);
         }
@@ -311,9 +318,14 @@ public class Dinco_frame extends JFrame {
                 log.debug("No XDS file opened");
             }else{
                 this.addSolutionsToList();
+                changeFSOLlabel(fsol);
             }
             D2Dplot_global.setWorkdir(fsol);
         }
+    }
+    
+    private void changeFSOLlabel(File f) {
+        lblFsol.setText(f.getName());
     }
     
     private void addSolutionsToList(){

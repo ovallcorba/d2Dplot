@@ -16,13 +16,11 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
-import com.vava33.d2dplot.auxi.ArgumentLauncher;
 import com.vava33.d2dplot.auxi.ImgFileUtils;
 import com.vava33.d2dplot.tts.AboutTTS_dialog;
 import com.vava33.d2dplot.tts.BackgroundPanel;
 import com.vava33.d2dplot.tts.Settings_dialog;
 import com.vava33.d2dplot.tts.TSDfile;
-import com.vava33.jutils.ConsoleWritter;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
@@ -40,7 +38,6 @@ import java.awt.event.ActionEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -62,11 +59,12 @@ import java.awt.event.MouseEvent;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
+import javax.swing.border.LineBorder;
 
 public class TTS_frame extends JFrame {
 
     private static final long serialVersionUID = -3907664630337090114L;
-    private static int window_width = 780;
+    private static int window_width = 960;
     private static int window_height = 600;
     
     private static final String userGuideFile="Write_up_tts_software.pdf";
@@ -116,7 +114,7 @@ public class TTS_frame extends JFrame {
     public TTS_frame(MainFrame mf) {
         d2DplotMain = mf;
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setBounds(100, 100, 780, 580); //780x600 inicial per provar
+//        setBounds(100, 100, 780, 580); //780x600 inicial per provar
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
         setContentPane(contentPane);
@@ -130,7 +128,7 @@ public class TTS_frame extends JFrame {
         
         JPanel panel_top = new JPanel();
         splitPane.setLeftComponent(panel_top);
-        panel_top.setLayout(new MigLayout("insets 0", "[grow][grow][grow]", "[75px,grow][][][]"));
+        panel_top.setLayout(new MigLayout("insets 0", "[grow][grow][grow]", "[100px,grow][][][]"));
         
         JPanel panel_current = new JPanel();
         panel_top.add(panel_current, "flowx,cell 0 1 3 1,grow");
@@ -218,7 +216,7 @@ public class TTS_frame extends JFrame {
         panel_logo.add(btnManual, "cell 0 1,alignx right,aligny center");
         
         JPanel panel_inco = new JPanel();
-        panel_inco.setBorder(new TitledBorder(null, "Inco", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_inco.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "tts_Inco", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
         panel_top.add(panel_inco, "cell 0 2,grow");
         panel_inco.setLayout(new MigLayout("insets 2", "[grow][grow]", "[][]"));
         
@@ -256,9 +254,9 @@ public class TTS_frame extends JFrame {
         panel_inco.add(btnCreateTsdIref, "cell 1 1,growx");
         
         JPanel panel_merge = new JPanel();
-        panel_merge.setBorder(new TitledBorder(null, "Merge", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panel_merge.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "tts_Merge", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
         panel_top.add(panel_merge, "cell 1 2,grow");
-        panel_merge.setLayout(new MigLayout("insets 2", "[grow]", "[][]"));
+        panel_merge.setLayout(new MigLayout("insets 2", "[grow][]", "[][]"));
         
         btnRunMerge = new JButton("RUN");
         btnRunMerge.addActionListener(new ActionListener() {
@@ -274,12 +272,20 @@ public class TTS_frame extends JFrame {
                 do_btnCheckMrg_actionPerformed(e);
             }
         });
-        panel_merge.add(btnCheckMrg, "cell 0 1,growx");
+        panel_merge.add(btnCheckMrg, "cell 1 0,growx");
+        
+        JButton btnMultdom = new JButton("Create TSD MULTDOM=1");
+        btnMultdom.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnMultdom_actionPerformed(e);
+            }
+        });
+        panel_merge.add(btnMultdom, "cell 0 1 2 1,growx");
         
         JPanel panelCelref = new JPanel();
-        panelCelref.setBorder(new TitledBorder(null, "Celref", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+        panelCelref.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "tts_Celref", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
         panel_top.add(panelCelref, "cell 2 2,grow");
-        panelCelref.setLayout(new MigLayout("insets 2", "[grow]", "[][]"));
+        panelCelref.setLayout(new MigLayout("insets 2", "[grow][]", "[][]"));
         
         btnRunCelRef = new JButton("RUN");
         btnRunCelRef.addActionListener(new ActionListener() {
@@ -295,7 +301,15 @@ public class TTS_frame extends JFrame {
                 do_btnCheckCel_actionPerformed(e);
             }
         });
-        panelCelref.add(btnCheckCel, "cell 0 1,growx");
+        panelCelref.add(btnCheckCel, "cell 1 0,growx");
+        
+        JButton btnCreateTsdFor = new JButton("Create TSD for CelRef");
+        btnCreateTsdFor.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_btnCreateTsdFor_actionPerformed(e);
+            }
+        });
+        panelCelref.add(btnCreateTsdFor, "cell 0 1 2 1,growx");
         
         JPanel panelExec = new JPanel();
         panel_top.add(panelExec, "cell 0 3 3 1,grow");
@@ -398,12 +412,13 @@ public class TTS_frame extends JFrame {
     //Aquest metode crea la finestra preferencies, les llegeix del fitxer .\bin\prefs.cfg i assigna les opcions.
     //TAMBE SERVEIX DE COMPROVACIO QUE EXISTEIXI EL DIRECTORI BIN I ELS FITXERS NECESSARIS.
     private int llegirPreferences(){
+        boolean tts_deps = this.checkTTSDependencies();
         //es creen les preferencies
         if (prefs==null){
             prefs = new Settings_dialog(this);
         }
         //mirem que existeixi tot
-        if(!this.checkTTSDependencies()){return 1;}
+        if(!tts_deps){return 1;}
         return 0; //tot correcte
     }
     
@@ -469,8 +484,8 @@ public class TTS_frame extends JFrame {
     protected void do_btnOpenTsd_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
         File f = FileUtils.fchooserOpen(this, new File(D2Dplot_global.getWorkdir()), filt, 0);
-        this.updateWorkDir(f);
         if (f!=null){
+            this.updateWorkDir(f);
             this.setCurrentTSD(f);
         }
     }
@@ -519,6 +534,7 @@ public class TTS_frame extends JFrame {
     private void openWorkDir(){
         if (this.getCurrentTSD()!=null){
             // vol dir que hi ha fitxer obert amb el que estem treballant
+            log.debug(this.getCurrentTSD().getParentFile().toString());
             boolean opened=true;
             try {
                 if(Desktop.isDesktopSupported()){
@@ -702,7 +718,11 @@ public class TTS_frame extends JFrame {
         
         //Fem correr el programa
         txtOut.saltL();
-        txtOut.stat(" RUNNING INCO:             ");
+        if(tsdfile.getIoff()!=1) { //coarse
+            txtOut.stat(" RUNNING INCO (coarse scan for domains in central frame):");
+        }else { //=1 oriented
+            txtOut.stat(" RUNNING INCO (full scan of a single oriented domain):");
+        }
         txtOut.stat("  Input file: "+this.getCurrentTSD());
         txtOut.saltL();
         //creem i executem el thread del ribbols
@@ -711,91 +731,18 @@ public class TTS_frame extends JFrame {
     }
     
     //retorna la imatge de la qual donem el numero de suffix (cas ioff=1 o per generar pcs)
+    // -1 per tal de tornar primera de la llista del tsd
     private File findImageFileFromTSD(int imgnumber) {
-        log.debug("imgnumber="+imgnumber);
-        boolean trobat = false;
-        String suffix = String.format("_%04d", imgnumber);
-        String imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().concat(suffix);
-        log.debug("suffix="+suffix);
-        log.debug("imgfileNoExt="+imgfileNoExt);
-        
-        File imgfile = new File(imgfileNoExt+".bin");
-        log.debug("imgfile="+imgfile.toString());
-        if (imgfile.exists())trobat = true;
-        
-        if (!trobat){
-            imgfile = new File(imgfileNoExt+".BIN");
-            log.debug("imgfile="+imgfile.toString());
-            if (imgfile.exists())trobat = true;
-        }
-        
-        if (!trobat){
-            imgfile = new File(imgfileNoExt+".edf");
-            log.debug("imgfile="+imgfile.toString());
-            if (imgfile.exists())trobat = true;
-        }
-        
-        if (!trobat){
-            imgfile = new File(imgfileNoExt+".EDF");
-            log.debug("imgfile="+imgfile.toString());
-            if (imgfile.exists())trobat = true;
-        }
-        if (!trobat)return null;
-        return imgfile;
-    }
-    //retorna la imatge de mateix nom que el TSD o la primera de la llista (cas coarse scan)
-    private File findImageFileFromTSD() {
-        //ara hem de mirar que tinguem llegit el TSD
-        if (tsdfile!=null){
-            if (tsdfile.isSuccessfulRead()){
-                //PODEM BUSCAR IMATGE I SOL
-                //LA SOL FILE LA BUSCA D2DPLOT
-//                File solfile = FileUtils.canviExtensio(this.getCurrentTSD(), "SOL");
-//                log.debug("solfile="+solfile.toString());
-                boolean trobat = false;
-                
-                File imgfile = FileUtils.canviExtensio(this.getCurrentTSD(), "bin");
-                log.debug("imgfile="+imgfile.toString());
-                if (imgfile.exists())trobat = true;
-                
-                if (!trobat){
-                    imgfile = FileUtils.canviExtensio(this.getCurrentTSD(), "BIN");
-                    log.debug("imgfile="+imgfile.toString());
-                    if (imgfile.exists())trobat = true;
-                }
-                
-                if (!trobat){
-                    imgfile = FileUtils.canviExtensio(this.getCurrentTSD(), "edf");
-                    log.debug("imgfile="+imgfile.toString());
-                    if (imgfile.exists())trobat = true;
-                }
-                
-                if (!trobat){
-                    imgfile = FileUtils.canviExtensio(this.getCurrentTSD(), "EDF");
-                    log.debug("imgfile="+imgfile.toString());
-                    if (imgfile.exists())trobat = true;
-                }
-                
-                //ara provem la imatge inicial de la llista tsdfile que segur que es la bona
-                int codifile = -1;
-                if(tsdfile.getNfiles()>0)codifile = tsdfile.getFnum()[0];
-                log.debug("codifile="+codifile);
-                
-                if (codifile<0){
-                    txtOut.stat("Sorry, image file could not be found. Open it manually with d2Dplot");
-                    return null;
-                }
-                imgfile = findImageFileFromTSD(codifile);
-                return imgfile;
-            }
-            return null;
-        }
+        File imgfile = this.findRelatedFile(this.getCurrentTSD(), "bin", imgnumber, true);
+        if (imgfile!=null)return imgfile;
+        imgfile = this.findRelatedFile(this.getCurrentTSD(), "edf", imgnumber, true);
+        if (imgfile!=null)return imgfile;
         return null;
     }
-    
+ 
     protected void do_btnChecksol_actionPerformed(ActionEvent arg0) {
         //el sol el gestiona d2dplot amb l'opcio -sol
-        File imgfile = findImageFileFromTSD();
+        File imgfile = findImageFileFromTSD(-1);
         //SI HEM TROBAT OBRIM
         if (imgfile!=null){
             txtOut.stat("Opening d2Dplot (imgfile="+imgfile.toString()+")");
@@ -808,16 +755,14 @@ public class TTS_frame extends JFrame {
 
     protected void do_btnCheckOut_actionPerformed(ActionEvent e) {
         if (!checkTSDrequirements())return;
-        File outFile = FileUtils.canviExtensio(this.getCurrentTSD(), "OUT");
-        if (outFile.exists()){
+        File outFile = this.findRelatedFile(this.getCurrentTSD(), "out", -1, true);
+        if (outFile!=null) {
             this.openTEXTfile(outFile);
             return;
         }
-        outFile = FileUtils.canviExtensio(this.getCurrentTSD(), "out");
-        if (outFile.exists()){
-            this.openTEXTfile(outFile);
-            return;
-        }
+        
+        
+        
         //si s'ha arribat aqui no s'ha trobat fitxer out
         txtOut.stat("No INCO results file found (.OUT), run INCO first");
         return;
@@ -864,34 +809,37 @@ public class TTS_frame extends JFrame {
         
         //provem obrir directe
         d2DplotMain.updateFromTTS(imgFull);
-        File fsol = ArgumentLauncher.findSOLfile(imgFull);
-        if (fsol!=null) {
-            this.print_loginfo_tAOut(String.format("SOL file found: %s", fsol.toString()));
-            //OBRIM dialeg INCO directament amb un fitxer SOL
-            if (d2DplotMain.getDincoFrame() == null) {
-                d2DplotMain.setDincoFrame(new Dinco_frame(d2DplotMain.getPanelImatge()));
+        
+        if(openSOL) {//busquem el sol i l'obrim
+//            File fsol = ArgumentLauncher.findSOLfile(imgFull);
+            File fsol = this.findRelatedFile(this.getCurrentTSD(), "sol", -1, false); //false per donar prioritat al del domini
+            if (fsol==null) {
+                fsol = this.findRelatedFile(this.getCurrentTSD(), "sol", -1, true); //ara mirem el SOL general (coarse)
             }
-            d2DplotMain.getDincoFrame().setSOLMode();
-            d2DplotMain.getDincoFrame().loadSOLFileDirectly(fsol);
-            d2DplotMain.getDincoFrame().setVisible(true);
-            d2DplotMain.getPanelImatge().setDinco(d2DplotMain.getDincoFrame());
-        }else {
-            this.print_loginfo_tAOut("Could not find SOL file, try to open it manually");
+            if (fsol!=null) {
+                this.print_loginfo_tAOut(String.format("SOL file found: %s", fsol.toString()));
+                //OBRIM dialeg INCO directament amb un fitxer SOL
+                if (d2DplotMain.getDincoFrame() == null) {
+                    d2DplotMain.setDincoFrame(new Dinco_frame(d2DplotMain.getPanelImatge()));
+                }
+                d2DplotMain.getDincoFrame().setSOLMode();
+                d2DplotMain.getDincoFrame().loadSOLFileDirectly(fsol);
+                d2DplotMain.getDincoFrame().setVisible(true);
+                d2DplotMain.getPanelImatge().setDinco(d2DplotMain.getDincoFrame());
+            }else {
+                this.print_loginfo_tAOut("Could not find SOL file, try to open it manually");
+            }
         }
     }
     
     protected void do_btnCheckCel_actionPerformed(ActionEvent e) {
         if (!checkTSDrequirements())return;
-        File celFile = FileUtils.canviExtensio(this.getCurrentTSD(), "CEL");
-        if (celFile.exists()){
+        File celFile = this.findRelatedFile(this.getCurrentTSD(), "cel", -1, true);
+        if (celFile!=null) {
             this.openTEXTfile(celFile);
             return;
         }
-        celFile = FileUtils.canviExtensio(this.getCurrentTSD(), "cel");
-        if (celFile.exists()){
-            this.openTEXTfile(celFile);
-            return;
-        }
+        
         //si s'ha arribat aqui no s'ha trobat fitxer out
         txtOut.stat("No CELREF results file found (.CEL), run CELREF first");
         return;
@@ -899,16 +847,12 @@ public class TTS_frame extends JFrame {
     
     protected void do_btnCheckMrg_actionPerformed(ActionEvent e) {
         if (!checkTSDrequirements())return;
-        File mrgFile = FileUtils.canviExtensio(this.getCurrentTSD(), "MRG");
-        if (mrgFile.exists()){
+        File mrgFile = this.findRelatedFile(this.getCurrentTSD(), "mrg", -1, true);
+        if (mrgFile!=null) {
             this.openTEXTfile(mrgFile);
             return;
         }
-        mrgFile = FileUtils.canviExtensio(this.getCurrentTSD(), "mrg");
-        if (mrgFile.exists()){
-            this.openTEXTfile(mrgFile);
-            return;
-        }
+
         //si s'ha arribat aqui no s'ha trobat fitxer out
         txtOut.stat("No MERGE results file found (.MRG), run MERGE first");
         return;
@@ -918,12 +862,21 @@ public class TTS_frame extends JFrame {
     protected void do_btnRunMerge_actionPerformed(ActionEvent e) {
         //comprovacions previes (missatges a les subrutines) TODO
         if (!checkTSDrequirements())return;
-        if (!checkForExistingMaskBIN())return; 
-        if (!checkForPCSfiles())return;
+        
+        if (tsdfile.getMultdom()!=1) {
+            if (!checkForExistingMaskBIN())return; 
+            if (!checkForPCSfiles())return;
+        }
+        
         
         //Fem correr el programa
         txtOut.saltL();
-        txtOut.stat(" RUNNING MERGE:             ");
+        if (tsdfile.getMultdom()!=1) {
+            txtOut.stat(" RUNNING MERGE (partial datasets of 1 domain):");    
+        }else { //==1 multidomain
+            txtOut.stat(" RUNNING MERGE (multiple oriented domains):");
+        }
+        
         txtOut.stat("  Input file: "+this.getCurrentTSD());
         txtOut.saltL();
         //creem i executem el thread del merge
@@ -965,7 +918,7 @@ public class TTS_frame extends JFrame {
         boolean open = FileUtils.YesNoDialog(this,"MASK.BIN not found, open Excluded Zones module to generate one?");
         if (open) {
             //first open image
-            File imgfile = this.findImageFileFromTSD();
+            File imgfile = this.findImageFileFromTSD(-1);
             //first open image
             this.openInD2Dplot(imgfile.getAbsolutePath(), false);
             //then open module
@@ -979,72 +932,24 @@ public class TTS_frame extends JFrame {
         //TODO
         //comprovem de la llista si hi ha tots els pcs
         boolean generalTrobat = true;
-        int codifile = -1;
         if(tsdfile.getNfiles()>0) {
             for (int i=0; i<tsdfile.getNfiles();i++) {
-                boolean trobat = false;
-                codifile = tsdfile.getFnum()[i];
-                log.debug("codifile="+codifile);
-                String suffix = String.format("_%04d", codifile);
-                String imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().concat(suffix);
-                String imgfileNoExtNoDomain = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().substring(0, FileUtils.getFNameNoExt(this.getCurrentTSD()).length()-2).concat(suffix); //check also removing d1 from: z1p1d1
-                log.debug("suffix="+codifile);
-                log.debug("imgfileNoExt="+imgfileNoExt);
-                log.debug("imgfileNoExtNoDomain="+imgfileNoExtNoDomain);
-                File pcsfile = new File(imgfileNoExt+".pcs");
-                if (pcsfile.exists()) trobat = true;
-                if (!trobat) {
-                    pcsfile = new File(imgfileNoExt+".PCS");
-                    if (pcsfile.exists())trobat = true;
-                }
-                if (!trobat) {
-                    pcsfile = new File(imgfileNoExtNoDomain+".pcs");
-                    if (pcsfile.exists())trobat = true;
-                }
-                if (!trobat) {
-                    pcsfile = new File(imgfileNoExtNoDomain+".PCS");
-                    if (pcsfile.exists())trobat = true;
-                }
-                if (!trobat) {
-                    this.print_loginfo_tAOut(imgfileNoExt+".pcs or .PCS not found");
-                    this.print_loginfo_tAOut(imgfileNoExtNoDomain+".pcs or .PCS not found");
-                    generalTrobat = false;
+                int codifile = tsdfile.getFnum()[i];
+                File pcsfile = this.findRelatedFile(this.getCurrentTSD(), "pcs", codifile, false);
+                if (pcsfile==null) {
+                    generalTrobat = false; //n'hi ha una al menys de no trobada
                     continue;
                 }
-                log.debug("pcs file found="+pcsfile.getAbsolutePath());
             }
-            if (generalTrobat==true) {
+            if (generalTrobat==true) { //s'han trobat totes
                 return true;
             }else {
                 boolean open = FileUtils.YesNoDialog(this,"Generate missing PCS files in the peaksearch module?");
-                if (open) {
-                    //we will open only the first one missing
+                if (open) {//we will open only the first one missing
                     for (int i=0; i<tsdfile.getNfiles();i++) {
-                        boolean trobat = false;
-                        codifile = tsdfile.getFnum()[i];
-                        log.debug("codifile="+codifile);
-                        String suffix = String.format("_%04d", codifile);
-                        String imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().concat(suffix);
-                        String imgfileNoExtNoDomain = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().substring(0, FileUtils.getFNameNoExt(this.getCurrentTSD()).length()-2).concat(suffix); //check also removing d1 from: z1p1d1
-                        log.debug("suffix="+codifile);
-                        log.debug("imgfileNoExt="+imgfileNoExt);
-                        log.debug("imgfileNoExtNoDomain="+imgfileNoExtNoDomain);
-                        File pcsfile = new File(imgfileNoExt+".pcs");
-                        if (pcsfile.exists()) trobat = true;
-                        if (!trobat) {
-                            pcsfile = new File(imgfileNoExt+".PCS");
-                            if (pcsfile.exists())trobat = true;
-                        }
-                        if (!trobat) {
-                            pcsfile = new File(imgfileNoExtNoDomain+".pcs");
-                            if (pcsfile.exists())trobat = true;
-                        }
-                        if (!trobat) {
-                            pcsfile = new File(imgfileNoExtNoDomain+".PCS");
-                            if (pcsfile.exists())trobat = true;
-                        }
-                        if (!trobat) {
-//                            this.print_loginfo_tAOut(imgfileNoExt+".pcs or .PCS not found");
+                        int codifile = tsdfile.getFnum()[i];
+                        File pcsfile = this.findRelatedFile(this.getCurrentTSD(), "pcs", codifile, false);
+                        if (pcsfile==null) {
                             File imgfile = findImageFileFromTSD(codifile);
                             this.openInD2Dplot(imgfile.getAbsolutePath(), false);
                             d2DplotMain.do_mntmFindPeaks_actionPerformed(null);
@@ -1058,87 +963,87 @@ public class TTS_frame extends JFrame {
   }
     
     /*
-     * Busca un fitxer amb el mateix nom però amb l'extensió donada (majuscula o minuscula, indiferent) i 
+     * Busca un fitxer amb el mateix nom però amb l'extensió donada (majuscula o minuscula, indiferent) a un fitxer original (usualment currentTSD) i 
      * també mira si existeix sense el domini (removing d1 from: z1p1d1)
+     * Es pot donar directament el num de sequència (o -1 per mirar tota la llista del tsd)
+     * Es pot posar self true per mirar exactament el mateix nom de fitxer (sense afegir _0000) o treure d1, etc...
+     * 
+     * 
+     * SELF té preferència sobre SELF+SEQ+DOMINI i domini sobre el SELF+SEQ
+     *  
      */
-    private File findRelatedFile(String ext, int seqNumber) {
+    private File findRelatedFile(File original, String ext, int codiFile, boolean self) {//, boolean domini) {
+        File extfile = null;
         
-        if (seqNumber < 0) {
-            
-        }
-        for (int i=0; i<tsdfile.getNfiles();i++) {
+        //primer mirar si cal mirarse amb el mateix nom i si es troba retornem
+        if (self) { 
             boolean trobat = false;
-            int codifile = tsdfile.getFnum()[i];
-            log.debug("codifile="+codifile);
-            String suffix = String.format("_%04d", codifile);
+            extfile = FileUtils.canviExtensio(original, ext.toLowerCase());
+            log.debug("extfile="+extfile.toString());
+            if (extfile.exists())trobat = true;
+            
+            if (!trobat){
+                extfile = FileUtils.canviExtensio(original, ext.toUpperCase());
+                log.debug("imgfile="+extfile.toString());
+                if (extfile.exists())trobat = true;
+            }
+            if (trobat) return extfile;
+        }
+        
+        //Segon busquem pel codi (o llista tsd) però en cada cas primer sense reduïr el nom per mantenir el "dX" i donar-li prioritat
+        if (codiFile >= 0) { //busquem imatge concreta
+            String suffix = String.format("_%04d", codiFile);
             String imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().concat(suffix);
-            String imgfileNoExtNoDomain = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().substring(0, FileUtils.getFNameNoExt(this.getCurrentTSD()).length()-2).concat(suffix); //check also removing d1 from: z1p1d1
-            log.debug("suffix="+codifile);
+            log.debug("suffix="+codiFile);
             log.debug("imgfileNoExt="+imgfileNoExt);
-            log.debug("imgfileNoExtNoDomain="+imgfileNoExtNoDomain);
-            File extfile = new File(imgfileNoExt+"."+ext.toLowerCase());
-            if (extfile.exists()) trobat = true;
-            if (!trobat) {
-                extfile = new File(imgfileNoExt+"."+ext.toUpperCase());
-                if (extfile.exists())trobat = true;
-            }
-            if (!trobat) {
-                extfile = new File(imgfileNoExtNoDomain+"."+ext.toLowerCase());
-                if (extfile.exists())trobat = true;
-            }
-            if (!trobat) {
-                extfile = new File(imgfileNoExtNoDomain+"."+ext.toUpperCase());
-                if (extfile.exists())trobat = true;
-            }
-            if (!trobat) {
-                this.print_loginfo_tAOut(imgfileNoExt+".pcs or .PCS not found");
-                this.print_loginfo_tAOut(imgfileNoExtNoDomain+".pcs or .PCS not found");
-            }
-            if (trobat) {
-                return extfile;
+            extfile = this.findFileExtCaseInsensitive(imgfileNoExt, ext);
+            if (extfile!=null) return extfile;
+            //ara mirem reduint 2 caracters "dX"
+            imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().substring(0, FileUtils.getFNameNoExt(this.getCurrentTSD()).length()-2).concat(suffix); //check also removing d1 from: z1p1d1
+            log.debug("imgfileNoExt="+imgfileNoExt);
+            extfile = this.findFileExtCaseInsensitive(imgfileNoExt, ext);
+            if (extfile!=null) return extfile;
+        }else {//aqui mirem la llsta del tsd (retorna el primer trobat) pero igual que abans mirar primer per domini
+            for (int i=0; i<tsdfile.getNfiles();i++) {
+                codiFile = tsdfile.getFnum()[i];
+                String suffix = String.format("_%04d", codiFile);
+                String imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().concat(suffix);
+                log.debug("suffix="+codiFile);
+                log.debug("imgfileNoExt="+imgfileNoExt);
+                extfile = this.findFileExtCaseInsensitive(imgfileNoExt, ext);
+                if (extfile!=null) return extfile;
+                //ara mirem reduint 2 caracters "dX"
+                imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().substring(0, FileUtils.getFNameNoExt(this.getCurrentTSD()).length()-2).concat(suffix); //check also removing d1 from: z1p1d1
+                log.debug("imgfileNoExt="+imgfileNoExt);
+                extfile = this.findFileExtCaseInsensitive(imgfileNoExt, ext);
+                if (extfile!=null) return extfile;
             }
         }
         return null;
     }
     
-    private File findRelatedFile(String ext, int seqNumber) {
+    
+    private File findFileExtCaseInsensitive(String filenameNoExt, String ext) {
         boolean trobat = false;
-        int codifile = tsdfile.getFnum()[seqNumber];
-        log.debug("codifile="+codifile);
-        String suffix = String.format("_%04d", codifile);
-        String imgfileNoExt = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().concat(suffix);
-        String imgfileNoExtNoDomain = FileUtils.getFNameNoExt(this.getCurrentTSD()).trim().substring(0, FileUtils.getFNameNoExt(this.getCurrentTSD()).length()-2).concat(suffix); //check also removing d1 from: z1p1d1
-        log.debug("suffix="+codifile);
-        log.debug("imgfileNoExt="+imgfileNoExt);
-        log.debug("imgfileNoExtNoDomain="+imgfileNoExtNoDomain);
-        File extfile = new File(imgfileNoExt+"."+ext.toLowerCase());
+        File extfile = new File(filenameNoExt+"."+ext.toLowerCase());
         if (extfile.exists()) trobat = true;
         if (!trobat) {
-            extfile = new File(imgfileNoExt+"."+ext.toUpperCase());
+            extfile = new File(filenameNoExt+"."+ext.toUpperCase());
             if (extfile.exists())trobat = true;
         }
         if (!trobat) {
-            extfile = new File(imgfileNoExtNoDomain+"."+ext.toLowerCase());
-            if (extfile.exists())trobat = true;
+            this.print_loginfo_tAOut(filenameNoExt+"."+ext.toLowerCase()+" or ."+ext.toUpperCase()+" not found");
+            return null;
         }
-        if (!trobat) {
-            extfile = new File(imgfileNoExtNoDomain+"."+ext.toUpperCase());
-            if (extfile.exists())trobat = true;
-        }
-        if (!trobat) {
-            this.print_loginfo_tAOut(imgfileNoExt+".pcs or .PCS not found");
-            this.print_loginfo_tAOut(imgfileNoExtNoDomain+".pcs or .PCS not found");
-        }
-        if (trobat) {
-            return extfile;
-        }
+        this.print_loginfo_tAOut("file found: "+extfile.getAbsolutePath());
+        return extfile;
     }
     
     protected void do_btnRunCelRef_actionPerformed(ActionEvent e) {
         //comprovacions previes (missatges a les subrutines) TODO
         if (!checkTSDrequirements())return;
-        if (!checkForExistingMaskBIN())return; 
-        if (!checkForPCSfiles())return;
+//        if (!checkForExistingMaskBIN())return; 
+//        if (!checkForPCSfiles())return;
         
         //Fem correr el programa
         txtOut.saltL();
@@ -1202,7 +1107,7 @@ public class TTS_frame extends JFrame {
     //alon, alat, aspin
     
     //destfile ha de tenir el suffix dX, cal preguntar el num domini i el num d'imatges abans
-    private File copyTSDtoIREF1(){
+    private File copyTSDtoIREF1(File out){
         //copia linia a linia
         //canvi linia iref
         //posar/canviar alon alat aspin
@@ -1236,7 +1141,7 @@ public class TTS_frame extends JFrame {
                 //tindrem les imatges 0 1 2 3... centralImage ...3 2 1 0  (es a dir "simètric" segons la central)
                 
                 //ara llegim i escribim
-                File out = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), null, "TSD");
+//                File out = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), null, "TSD");
 //                boolean firstDash = false;
                 try {
                     Scanner inTSDfile = new Scanner(new BufferedReader(new FileReader(this.getCurrentTSD())));
@@ -1371,7 +1276,10 @@ public class TTS_frame extends JFrame {
                     txtOut.stat("no opened solutions found, you must open a SOL file to generate TSD(IREF=1)");
                     return;
                 }
-                File f = this.copyTSDtoIREF1();
+                FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
+                File out = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), filt, "TSD");
+                if (out==null)return;
+                File f = this.copyTSDtoIREF1(out);
                 if (f!=null) {
                     //open new TSD
                     boolean over = FileUtils.YesNoDialog(this, "Load "+f.getName()+" as working file and edit it?");
@@ -1380,8 +1288,157 @@ public class TTS_frame extends JFrame {
                         this.openTEXTfile(f);
                     }
                 }
-                txtOut.stat("TSD (IREF=1) file created, check that everything is ok (especially PCS/HKL block)");
+                txtOut.stat("TSD (IREF=1) file created, check that everything is ok (especially PCS/HKL block) and click RUN");
             }
+        }
+    }
+    
+    protected void do_btnMultdom_actionPerformed(ActionEvent e) {
+        //1r Demanem fitxer TSD a guardar
+        if (tsdfile!=null){
+            if (tsdfile.isSuccessfulRead()){
+                FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
+                File f = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), filt, "TSD", "New TSD file to create");
+                if (f==null)return;
+                FileNameExtensionFilter[] filt2 = {new FileNameExtensionFilter("HKL file", "hkl","HKL")};
+                File[] hkls = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), filt2, 0,"Select HKL files to merge (FULL oriented domains only)");
+                String[] hklfilenames = new String[hkls.length];
+                for (int i=0; i<hkls.length;i++) {
+                    hklfilenames[i]=hkls[i].getName();
+                }
+                File newTSD = copyTSDtoMULTDOM(this.getCurrentTSD(),f,hklfilenames);
+                if (newTSD!=null) {
+                    //ask to open and run merge
+                    boolean over = FileUtils.YesNoDialog(this, "Load "+newTSD.getName()+" as working file and run merge?");
+                    if (over){
+                        setCurrentTSD(f);
+                        this.btnRunMerge.doClick();
+                        return;
+                    }
+                }
+            }
+            txtOut.stat("You should have a valid single-domain TSD as working file");
+        }
+        
+        
+    }
+    
+    private File copyTSDtoMULTDOM(File tsdin, File tsdout, String[] hklfilenames){
+        //copia linia a linia
+        //canvi linia MULTDOM=1,
+        //PCS hkl escriure llista de fitxers HKL
+        try {
+            Scanner inTSDfile = new Scanner(new BufferedReader(new FileReader(tsdin)));
+            PrintWriter outTSDfile = new PrintWriter(new BufferedWriter(new FileWriter(tsdout)));
+
+            while (inTSDfile.hasNextLine()){
+                String line = inTSDfile.nextLine();
+                boolean multdomFound = false;
+                if(line.startsWith("&CONTROL")) {
+                    //comença el bloc control
+                    outTSDfile.println(line);
+                    boolean end = false;
+                    while (!end) {
+                        line = inTSDfile.nextLine();
+                        
+                        if(line.startsWith("MULTDOM")) {
+                            outTSDfile.println("MULTDOM=1,");
+                            multdomFound=true;
+                            continue;
+                        }
+                        
+                        if (line.contains("/")) {
+                            end = true; //hem arribat al final
+                            //hem escrit MULTDOM??
+                            if (!multdomFound) {
+                                outTSDfile.println("MULTDOM=1,");
+                            }
+                            outTSDfile.println("/");
+                            continue;
+                        }
+                        outTSDfile.println(line);
+                    }
+                    continue;
+                }
+                
+                if (line.startsWith("PCS")) {//ja estem al final
+                    outTSDfile.println(line);
+                    outTSDfile.println(Integer.toString(hklfilenames.length));
+                    break;
+                }
+                outTSDfile.println(line);
+            }
+            inTSDfile.close();
+            //ara cal escriure els noms
+            for(int i=0;i<hklfilenames.length;i++) {
+                outTSDfile.println(hklfilenames[i]);
+            }
+            outTSDfile.close();
+            txtOut.stat("file TSD written");
+            return tsdout;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    
+    protected void do_btnCreateTsdFor_actionPerformed(ActionEvent e) { //molt igual a MULTDOM=1
+        //1r Demanem fitxer TSD a guardar
+        if (tsdfile!=null){
+            if (tsdfile.isSuccessfulRead()){
+                FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
+                File f = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), filt, "TSD", "New TSD file to create");
+                if (f==null)return;
+                FileNameExtensionFilter[] filt2 = {new FileNameExtensionFilter("HKL file", "hkl","HKL")};
+                File[] hkls = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), filt2, 0,"Select HKL files to use in CelRef (PARTIAL oriented domains only)");
+                String[] hklfilenames = new String[hkls.length];
+                for (int i=0; i<hkls.length;i++) {
+                    hklfilenames[i]=hkls[i].getName();
+                }
+                File newTSD = copyTSDtoCELREF(this.getCurrentTSD(),f,hklfilenames);
+                if (newTSD!=null) {
+                    //ask to open and run merge
+                    boolean over = FileUtils.YesNoDialog(this, "Load "+newTSD.getName()+" as working file and run celref?");
+                    if (over){
+                        setCurrentTSD(f);
+                        this.btnRunCelRef.doClick();
+                        return;
+                    }
+                }
+            }
+            txtOut.stat("You should have a valid single-domain TSD as working file");
+        }
+    }
+    private File copyTSDtoCELREF(File tsdin, File tsdout, String[] hklfilenames){
+        //copia linia a linia
+        //PCS hkl escriure llista de fitxers HKL
+        try {
+            Scanner inTSDfile = new Scanner(new BufferedReader(new FileReader(tsdin)));
+            PrintWriter outTSDfile = new PrintWriter(new BufferedWriter(new FileWriter(tsdout)));
+
+            while (inTSDfile.hasNextLine()){
+                String line = inTSDfile.nextLine();
+                if (line.startsWith("PCS")) {//ja estem al final
+                    outTSDfile.println(line);
+                    outTSDfile.println(Integer.toString(hklfilenames.length));
+                    break;
+                }
+                outTSDfile.println(line);
+            }
+            inTSDfile.close();
+            //ara cal escriure els noms
+            for(int i=0;i<hklfilenames.length;i++) {
+                outTSDfile.println(hklfilenames[i]);
+            }
+            outTSDfile.close();
+            txtOut.stat("file TSD written");
+            return tsdout;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }

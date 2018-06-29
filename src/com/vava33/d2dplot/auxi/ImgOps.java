@@ -23,6 +23,7 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.MainFrame;
 import com.vava33.d2dplot.PKsearch_frame;
 import com.vava33.d2dplot.Param_dialog;
 import com.vava33.d2dplot.auxi.PDDatabase.searchDBWorker;
@@ -2183,7 +2184,7 @@ public final class ImgOps {
         double ellicentX = patt2D.getCentrX()+zdis * FastMath.cos(rotRad);
         double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad); 
 
-
+        
         return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
 //        return new EllipsePars(rM, rm, eX, eY,rotRad);
     }
@@ -2340,13 +2341,14 @@ public final class ImgOps {
         float delsig, angDeg;
         boolean autoBkgPt, autoTol2T, autoAngD, lorCorr,estimbkg,pond;
         int zoneR,minPix,bkgpt,iosc,tol2tpix;
+        MainFrame d2Dmain;
 
         // distMD & wavel -1 to take the ones from the original image,
         // exzfile=null for the same.
         public PkIntegrateFileWorker(File[] files, LogJTextArea textAreaOutput,
                 float delsig, int zoneR, int minPix, int bkgpt, 
                 boolean autoBkgPt, int tol2tpix, boolean autoTol2t, float angDeg, 
-                boolean autoAngDeg, boolean lorCorr, int iosc,boolean estimbkg,boolean pond) {
+                boolean autoAngDeg, boolean lorCorr, int iosc,boolean estimbkg,boolean pond,MainFrame d2Dmain) {
             this.flist = files;
             this.delsig=delsig;
             this.zoneR=zoneR;
@@ -2362,6 +2364,7 @@ public final class ImgOps {
             this.iosc=iosc;
             this.estimbkg=estimbkg;
             this.pond=pond;
+            this.d2Dmain=d2Dmain;
         }
 
         @Override
@@ -2384,9 +2387,18 @@ public final class ImgOps {
                     log.info("Error reading file "+flist[i].getName()+" ...skipping");
                     continue;
                 }
+                if(d2Dmain!=null) {
+                    d2Dmain.updatePatt2D(in, false,true);
+                }
+                
                 taOut.stat("   Finding peaks...");
                 in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false,estimbkg,pond));
                 Iterator<Peak> itrpks = in.getPkSearchResult().iterator();
+                if(d2Dmain!=null) {
+                    if(d2Dmain.getpksearchframe()!=null) {
+                        d2Dmain.getpksearchframe().updateTable();
+                    }
+                }
                 taOut.stat("   Integrating...");
                 while (itrpks.hasNext()){
                     Peak pk = (Peak)itrpks.next();

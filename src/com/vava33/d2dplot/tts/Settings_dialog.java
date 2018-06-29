@@ -174,7 +174,7 @@ public class Settings_dialog extends JDialog {
         if (D2Dplot_global.getTTSsoftwareFolder().trim().isEmpty()) {
             this.txtTtsfolder.setText("< not set >");
         }else {
-            this.txtTxteditor.setText(D2Dplot_global.getTTSsoftwareFolder());
+            this.txtTtsfolder.setText(D2Dplot_global.getTTSsoftwareFolder());
             //we try to detect the executables now...
             if (!TTS_frame.getIncoExec().trim().isEmpty()) {
                 lblInco.setText("tts_inco FOUND!");

@@ -33,6 +33,13 @@ public class TSDfile {
     //creates a TSD file via reading it
     public TSDfile(String pathToFile){
         this.pathToFile=pathToFile;
+        this.multdom=0;
+        this.alon=0;
+        this.alat=0;
+        this.aspin=0;
+        this.ioff=2;
+        this.nsol=10;
+        this.swing=7.5f;
         this.successfulRead = this.readTSD();
     }
     
@@ -139,13 +146,15 @@ public class TSDfile {
                 
                 if ((line.contains("PCS"))||(line.contains("HKL"))){
                     this.nfiles = Integer.parseInt(scTSDfile.nextLine().trim());
-                    this.fnum = new int[nfiles];
-                    this.fnumAngOff = new float[nfiles];
-                    for (int i=0; i<this.nfiles; i++){
-//                        String[] items = scTSDfile.nextLine().trim().split("\\s+");
-                        String[] items = scTSDfile.nextLine().trim().split(",");
-                        this.fnum[i]=Integer.parseInt(items[0]);
-                        this.fnumAngOff[i]=Float.parseFloat(items[1]);
+                    if (this.multdom!=1) {
+                        this.fnum = new int[nfiles];
+                        this.fnumAngOff = new float[nfiles];
+                        for (int i=0; i<this.nfiles; i++){
+//                            String[] items = scTSDfile.nextLine().trim().split("\\s+");
+                            String[] items = scTSDfile.nextLine().trim().split(",");
+                            this.fnum[i]=Integer.parseInt(items[0]);
+                            this.fnumAngOff[i]=Float.parseFloat(items[1]);
+                        }
                     }
                     finished = true;
                     continue;
