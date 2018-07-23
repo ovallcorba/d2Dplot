@@ -1004,7 +1004,7 @@ public class PKsearch_frame extends JFrame {
         //carregar imatge, integrar, escriure PCS amb el mateix nom 
         //i tal s'encarrega el swingworker de imgops
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to process");
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         
@@ -1014,7 +1014,7 @@ public class PKsearch_frame extends JFrame {
         pm.setProgress(0);
         convwk = new ImgOps.PkIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
                 zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
-                angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging);
+                angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging,this.iPanel.getMainFrame());
         
         convwk.addPropertyChangeListener(new PropertyChangeListener() {
 
@@ -1345,7 +1345,7 @@ public class PKsearch_frame extends JFrame {
         //carregar imatge, integrar, escriure PCS amb el mateix nom 
         //i tal s'encarrega el swingworker de imgops
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to process");
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         

@@ -117,7 +117,7 @@ public class VideoImg extends JDialog {
 
     protected void do_btnOpenImgs_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] fs = FileUtils.fchooserMultiple(this, new File(D2Dplot_global.getWorkdir()), filt, 0);
+        File[] fs = FileUtils.fchooserMultiple(this, new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to open");
         files = new ArrayList<File>(Arrays.asList(fs));
         if (fs.length<=0)return;
         slider.setMinimum(0);

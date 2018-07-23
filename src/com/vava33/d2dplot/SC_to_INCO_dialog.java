@@ -252,7 +252,7 @@ public class SC_to_INCO_dialog extends JDialog {
     }
 
     protected void do_btnLoadFiles_actionPerformed(ActionEvent e) {
-        infiles = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), ImgFileUtils.getExtensionFilterRead(), 0);
+        infiles = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), ImgFileUtils.getExtensionFilterRead(), 0,"Select 2DXRD data files to load");
         if (infiles==null){
             log.info("no files selected");
             return;

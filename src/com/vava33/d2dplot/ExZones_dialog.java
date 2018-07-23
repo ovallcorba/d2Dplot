@@ -894,7 +894,7 @@ public class ExZones_dialog extends JDialog {
     }
     protected void do_btnUndo_actionPerformed(ActionEvent e) {
         if (backupImage!=null){
-            this.ip.getMainFrame().updatePatt2D(backupImage, false);
+            this.ip.getMainFrame().updatePatt2D(backupImage, false,false);
             this.ip.pintaImatge();
             patt2D = backupImage;
         }

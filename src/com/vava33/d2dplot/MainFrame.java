@@ -319,6 +319,7 @@ public class MainFrame extends JFrame {
         mnFile.add(mntmBatchConvert);
         
         mntmFastopen = new JMenuItem("Fast Viewer");
+        mntmFastopen.setMnemonic('f');
         mntmFastopen.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmFastopen_actionPerformed(e);
@@ -398,6 +399,7 @@ public class MainFrame extends JFrame {
         });
         
         mntmAzimuthalIntegration = new JMenuItem("Azimuthal Integration");
+        mntmAzimuthalIntegration.setMnemonic('a');
         mntmAzimuthalIntegration.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_mntmAzimuthalIntegration_actionPerformed(arg0);
@@ -412,6 +414,7 @@ public class MainFrame extends JFrame {
         menuBar.add(mnGrainAnalysis);
         
         mntmDincoSol = new JMenuItem("Load tts-INCO SOL/PCS files");
+        mntmDincoSol.setMnemonic('l');
         mntmDincoSol.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmDincoSol_actionPerformed(e);
@@ -419,6 +422,7 @@ public class MainFrame extends JFrame {
         });
         
         mntmFindPeaks = new JMenuItem("Find/Integrate Peaks");
+        mntmFindPeaks.setMnemonic('f');
         mntmFindPeaks.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
                 do_mntmFindPeaks_actionPerformed(arg0);
@@ -427,7 +431,8 @@ public class MainFrame extends JFrame {
         //        mntmFindPeaks.setEnabled(false);
                 mnGrainAnalysis.add(mntmFindPeaks);
         
-        mntmTtssoftware = new JMenuItem("tts_software");
+        mntmTtssoftware = new JMenuItem("Run tts_Software");
+        mntmTtssoftware.setMnemonic('t');
         mntmTtssoftware.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmTtssoftware_actionPerformed(e);
@@ -451,7 +456,7 @@ public class MainFrame extends JFrame {
             }
         });
         
-        mntmScDataTo = new JMenuItem("SC data to INCO");
+        mntmScDataTo = new JMenuItem("SC data to tts_INCO");
         mntmScDataTo.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmScDataTo_actionPerformed(e);
@@ -751,7 +756,7 @@ public class MainFrame extends JFrame {
         panel_1.add(btnPeakSearchint, "cell 0 1,growx,aligny center");
 
 
-        btnTtsdincoSol = new JButton("tts-INCO");
+        btnTtsdincoSol = new JButton("tts-INCO SOL");
         btnTtsdincoSol.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_btnTtsdincoSol_actionPerformed(e);
@@ -877,7 +882,7 @@ public class MainFrame extends JFrame {
             this.dbDialog.inicia();;
         }
         if (this.irWin != null) {
-            this.irWin.inicia();;
+            this.irWin.inicia();
         }
         if (this.iazWin != null) {
             this.iazWin.inicia();;
@@ -924,7 +929,7 @@ public class MainFrame extends JFrame {
         }
     }
     
-    public void updatePatt2D(Pattern2D p2D, boolean verbose) {
+    public void updatePatt2D(Pattern2D p2D, boolean verbose, boolean refreshPanels) {
       this.patt2D = p2D;
       if (patt2D != null) {
           panelImatge.setImagePatt2D(patt2D);
@@ -944,7 +949,7 @@ public class MainFrame extends JFrame {
           fileOpened = true;
           openedFile = patt2D.getImgfile();
           this.updateIparameters();
-//          this.closePanels();
+          if(refreshPanels)this.closePanels();
       } else {
           tAOut.stat("Error reading 2D file");
           tAOut.stat("No file opened");
@@ -1367,7 +1372,7 @@ public class MainFrame extends JFrame {
         if (patt2D == null) {
             //batch convert
             FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-            File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0);
+            File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0,null);
             if (flist==null) return;
             D2Dplot_global.setWorkdir(flist[0]);
             this.reset();
@@ -1626,14 +1631,14 @@ public class MainFrame extends JFrame {
         if(img2==null)return;
         
         Pattern2D dataSub = ImgOps.subtractBKG_v2(img, img2, fac, tAOut)[0];
-        updatePatt2D(dataSub,false);    
+        updatePatt2D(dataSub,false,true);    
     }
     
 
     
     protected void do_mntmSumImages_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0,"Select 2DXRD data files to sum");
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
 
@@ -1671,7 +1676,7 @@ public class MainFrame extends JFrame {
                         tAOut.stat("Error summing files");
                         return;
                     }else{
-                        updatePatt2D(suma,false);    
+                        updatePatt2D(suma,false,true);    
                     }
                 }
             }
@@ -1683,7 +1688,7 @@ public class MainFrame extends JFrame {
     
     protected void do_mntmBatchConvert_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0);
+        File[] flist = FileUtils.fchooserMultiple(this,new File(getWorkdir()), filt, 0,"Select 2DXRD data files to convert");
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         
@@ -1841,5 +1846,9 @@ public class MainFrame extends JFrame {
     protected void do_mntmTtssoftware_actionPerformed(ActionEvent e) {
         TTS_frame tts = new TTS_frame(this);
         tts.setVisible(true);
+    }
+    
+    public PKsearch_frame getpksearchframe() {
+        return this.pksframe;
     }
 }

@@ -563,7 +563,7 @@ public class D2Dsub_frame extends JFrame {
 		this.pattAft = pattAft;
 		//s'ha de mostrar al mainframe i activar reload previous:
 		if (getMf()!=null){
-		    this.getMf().updatePatt2D(this.pattAft,false);    
+		    this.getMf().updatePatt2D(this.pattAft,false,false);    
 		}
         this.btnReload.setText("Reload Source");
 	}
@@ -604,12 +604,12 @@ public class D2Dsub_frame extends JFrame {
     	//torna a carregar el pattBefore al mainframe o b� el resultat
     	if(this.btnReload.getText().startsWith("Reload")){
     	    if (this.getMf()!=null){
-    	        this.getMf().updatePatt2D(this.getPattBef(),false);    
+    	        this.getMf().updatePatt2D(this.getPattBef(),false,false);    
     	    }
         	this.btnReload.setText("Load Result");
     	}else{ //load result
     	    if (this.getMf()!=null){
-    	        this.getMf().updatePatt2D(this.getPattAft(),false);    
+    	        this.getMf().updatePatt2D(this.getPattAft(),false,false);    
     	    }
     		this.btnReload.setText("Reload Source");
     	}
@@ -779,7 +779,7 @@ public class D2Dsub_frame extends JFrame {
 	        if (n == JOptionPane.YES_OPTION) {
 	        	this.setPattBef(this.getPattAft());
 	        	if (this.getMf()!=null){
-	        	    this.getMf().updatePatt2D(this.getPattBef(),false);    
+	        	    this.getMf().updatePatt2D(this.getPattBef(),false,false);    
 	        	}
 	        }
 		}

@@ -275,7 +275,7 @@ public class Peak implements Comparable<Peak> {
         if (nearMask) flag = -1;
         if (nSatur>0) flag = nSatur*(-1);
         return String.format("%10.2f %10.2f %10.2f %12.2f %12.2f %12.2f %8.3f %5d %4d %9.4f",
-                pixelCentre.x,pixelCentre.y,radi,ymax,fh2,sfh2,p,flag,FastMath.round(intRadPx/2.0f),dsp);
+                pixelCentre.x,pixelCentre.y,radi,ymax,FastMath.sqrt(fh2),FastMath.sqrt(sfh2),p,flag,FastMath.round(intRadPx/2.0f),dsp);
     }
     
 // NPEAK     XPIXEL    YPIXEL    RO_VAL        YMAX         FH      sigma(FH)    p    CODI INTRAD   D

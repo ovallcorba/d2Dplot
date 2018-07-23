@@ -172,6 +172,6 @@ public class ImageTiltRot_diag extends JDialog {
         float pixszMM = Float.parseFloat(txtPixsize.getText());
         
         lab6 = CalibOps.createLaB6Img(cenx, ceny, dist, tiltd, rotd, wavea,pixszMM);
-        mf.updatePatt2D(lab6,true);
+        mf.updatePatt2D(lab6,true,true);
     }
 }
