@@ -44,6 +44,7 @@ import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.analysis.*;
 
 import com.vava33.d2dplot.auxi.CalibOps;
+import com.vava33.d2dplot.auxi.Calibrant;
 import com.vava33.d2dplot.auxi.CircleFitter;
 import com.vava33.d2dplot.auxi.EllipsePars;
 import com.vava33.d2dplot.auxi.Pattern2D;
@@ -55,6 +56,7 @@ import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JToggleButton;
 import javax.swing.border.TitledBorder;
+import javax.swing.JComboBox;
 
 
 public class Calib_dialog extends JDialog {
@@ -117,6 +119,10 @@ public class Calib_dialog extends JDialog {
     
     private ImagePanel ip;
     private JButton btnWriteCalFile;
+    private JLabel lblCalibrant;
+    private JComboBox<String> comboCalib;
+    
+    public float[] cal_d;
     
     /**
      * Create the dialog.
@@ -125,7 +131,7 @@ public class Calib_dialog extends JDialog {
         this.setIpanel(ipanel);
         setIconImage(Toolkit.getDefaultToolkit().getImage(Calib_dialog.class.getResource("/img/Icona.png")));
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("LaB6 Calibration");
+        setTitle("Instrumental Parameters Calibration");
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
@@ -143,7 +149,7 @@ public class Calib_dialog extends JDialog {
                 this.panel_left = new JPanel();
                 this.splitPane.setLeftComponent(this.panel_left);
                 {
-                    panel_left.setLayout(new MigLayout("", "[grow][][]", "[26px][][][][grow]"));
+                    panel_left.setLayout(new MigLayout("", "[][grow][][][]", "[26px][][grow]"));
                 }
                 {
                     this.cbox_onTop = new JCheckBox("on top");
@@ -164,10 +170,10 @@ public class Calib_dialog extends JDialog {
                             }
                         });
                         this.chckbxCalibrate.setSelected(true);
-                        this.panel_left.add(this.chckbxCalibrate, "cell 0 0,alignx left,aligny center");
+                        this.panel_left.add(this.chckbxCalibrate, "cell 0 0 3 1,alignx left,aligny center");
                     }
                     this.cbox_onTop.setActionCommand("on top");
-                    this.panel_left.add(this.cbox_onTop, "cell 1 0 2 1,alignx right,aligny center");
+                    this.panel_left.add(this.cbox_onTop, "cell 3 0 2 1,alignx right,aligny center");
                 }
                 {
                     {
@@ -181,7 +187,20 @@ public class Calib_dialog extends JDialog {
                         do_btnAutoCalibration_itemStateChanged(e);
                     }
                 });
-                panel_left.add(btnAutoCalibration, "flowy,cell 0 2,grow");
+                {
+                    lblCalibrant = new JLabel("Calibrant");
+                    panel_left.add(lblCalibrant, "cell 0 1,alignx trailing");
+                }
+                {
+                    comboCalib = new JComboBox<String>();
+//                    comboCalib.addItemListener(new ItemListener() {
+//                        public void itemStateChanged(ItemEvent e) {
+//                            do_comboCalib_itemStateChanged(e);
+//                        }
+//                    });
+                    panel_left.add(comboCalib, "cell 1 1,growx");
+                }
+                panel_left.add(btnAutoCalibration, "flowy,cell 2 1,grow");
                 {
                     this.lbllist = new JLabel("?");
                     this.lbllist.addMouseListener(new MouseAdapter() {
@@ -207,14 +226,14 @@ public class Calib_dialog extends JDialog {
                                 do_btnAuto_actionPerformed(arg0);
                             }
                         });
-                        panel_left.add(btnAuto, "cell 1 2");
+                        panel_left.add(btnAuto, "cell 3 1");
                     }
                     this.lbllist.setFont(new Font("Tahoma", Font.BOLD, 14));
-                    this.panel_left.add(this.lbllist, "cell 2 2,alignx right,aligny center");
+                    this.panel_left.add(this.lbllist, "cell 4 1,alignx right,aligny center");
                 }
                 {
                     panel_1 = new JPanel();
-                    panel_left.add(panel_1, "cell 0 4 3 1,grow");
+                    panel_left.add(panel_1, "cell 0 2 5 1,grow");
                     panel_1.setLayout(new MigLayout("", "[grow][grow]", "[grow]"));
                     {
                         panel = new JPanel();
@@ -372,7 +391,7 @@ public class Calib_dialog extends JDialog {
 
         this.setAlwaysOnTop(true);
 
-        tAOut.ln("** LaB6 instrumental parameters calibration **");
+        tAOut.ln("** Instrumental parameters calibration **");
         inicia();
         
         
@@ -400,6 +419,16 @@ public class Calib_dialog extends JDialog {
         txtArcsize.setText(Integer.toString(findElliPointsArcSizemm));
         txtEsdfact.setText(Integer.toString(factESDIntensityThreshold));
 
+        //La llista de calibrants s'ha omplert a l'obrir el programa (opcions), la llegim i posem calibrant per defecte (LaB6)
+        Iterator<Calibrant> itrC = CalibOps.getCalibrants().iterator();
+        comboCalib.removeAllItems();
+        while (itrC.hasNext()) {
+            comboCalib.addItem(itrC.next().getName());
+            comboCalib.setSelectedIndex(0);//we suppose the first is LaB6
+//            log.config("added calibrant "+comboCalib.getSelectedItem().toString());
+        }
+        //aixo no seria necessari aquí... ja que ho farem al començar calibració (llegir parametres)
+//        this.setCal_d(CalibOps.getCalibrants().get(comboCalib.getSelectedIndex()).getDsp());
     }
     
     @Override
@@ -409,6 +438,15 @@ public class Calib_dialog extends JDialog {
         super.dispose();
     }
 
+    public void selectCalibrant(int index) {
+        try {
+            comboCalib.setSelectedIndex(index);    
+        }catch(Exception e) {
+            log.info("calibrant not exists");
+        }
+        
+    }
+    
     protected void do_btnNewButton_actionPerformed(ActionEvent arg0) {
         if (getRefMD() > 0) {
             patt2D.setDistMD(refMD);
@@ -496,7 +534,10 @@ public class Calib_dialog extends JDialog {
         }catch(Exception ex){
             ommitRings = new ArrayList<Integer>();
             log.config("using default value for ommitRings");
-        }       
+        }
+        //set the dspacings of the current selection
+        this.setCal_d(CalibOps.getCalibrants().get(comboCalib.getSelectedIndex()).getDsp());
+        log.debug("selected calibrant = "+CalibOps.getCalibrants().get(comboCalib.getSelectedIndex()).getName());
     }
     
     //omplim automaticament els pointsRing1circle segons distMD i dspacing 1r pic LaB6 (considerem CERCLE)
@@ -509,7 +550,7 @@ public class Calib_dialog extends JDialog {
         this.readFindElliPars();
         
         //ara cal buscar el suposat radi del primer pic de LaB6 considerant els param instrumentals actuals
-        circleRadius = (float) ((patt2D.getDistMD()/patt2D.getPixSx()) * FastMath.tan(2*FastMath.asin(patt2D.getWavel()/(2*CalibOps.LaB6_d[1]))));
+        circleRadius = (float) ((patt2D.getDistMD()/patt2D.getPixSx()) * FastMath.tan(2*FastMath.asin(patt2D.getWavel()/(2*this.getCal_d()[1-1]))));
         circleCenter = new Point2D.Float(patt2D.getCentrX(),patt2D.getCentrY());
         log.writeNameNumPairs("config", true, "circleRadius", circleRadius);
         this.pointsRing1circle = findRingPoints(this.getCircleRadius(),findElliPointsTolPix);
@@ -589,7 +630,7 @@ public class Calib_dialog extends JDialog {
                 this.fitCircle(d);
                 if (this.getCircleRadius()<=0){
                     log.warning("Error also in circle fit, try to add more points and/or check image parameters");
-                    tAOut.stat("Impossible to fit lab6 peak number 1. Please check image parameters and/or add more points");
+                    tAOut.stat("Impossible to fit calibrant peak number 1. Please check image parameters and/or add more points");
                     return;
                 }
                 p.setEstimPoints(findRingPoints(this.getCircleRadius(),findElliPointsTolPix)); //posem punts del cercle
@@ -606,7 +647,7 @@ public class Calib_dialog extends JDialog {
                 solutions.add(p);                
             }else{
                 log.warning("Impossible to fit ellipse number 1. Please check.");
-                tAOut.stat("Impossible to fit lab6 peak number 1. Please check image parameters and/or add more points");
+                tAOut.stat("Impossible to fit calibrant peak number 1. Please check image parameters and/or add more points");
                 return;
             }
 
@@ -627,10 +668,10 @@ public class Calib_dialog extends JDialog {
                 
                 EllipsePars p0 = solutions.get(fitCount-1);
                 
-                float twoth = (float) (2*FastMath.asin(wave/(2*CalibOps.LaB6_d[i])));
+                float twoth = (float) (2*FastMath.asin(wave/(2*this.getCal_d()[i-1])));
                 float radiPix = (float) (FastMath.tan(twoth)*estMD);
                 
-                float twothP0 = (float) (2*FastMath.asin(wave/(2*CalibOps.LaB6_d[p0.getLab6ring()])));
+                float twothP0 = (float) (2*FastMath.asin(wave/(2*this.getCal_d()[p0.getLab6ring()-1])));
                 float radiPixP0 = (float) (FastMath.tan(twothP0)*estMD);
                 
                 float factRP0maj = (float) (p0.getRmax()/radiPixP0);
@@ -730,7 +771,7 @@ public class Calib_dialog extends JDialog {
         float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
         log.writeNameNumPairs("debug", true, "angstep", FastMath.toDegrees(angstep));
-        System.out.println(FastMath.toDegrees(elli.getAngrot()));
+//        System.out.println(FastMath.toDegrees(elli.getAngrot()));
         //debug Posem les max i min elli de la cerca
         ellicerques.add(new EllipsePars((cradi-tol)*facRmax, (cradi-tol)*facRmin, elli.getXcen(),elli.getYcen(),elli.getAngrot()));
         ellicerques.add(new EllipsePars((cradi+tol)*facRmax, (cradi+tol)*facRmin, elli.getXcen(),elli.getYcen(),elli.getAngrot()));
@@ -790,7 +831,7 @@ public class Calib_dialog extends JDialog {
     
     private float estimMDdist(EllipsePars e, int lab6peak){
         float wave = patt2D.getWavel();
-        float twoth = (float) (2*FastMath.asin(wave/(2*CalibOps.LaB6_d[lab6peak])));
+        float twoth = (float) (2*FastMath.asin(wave/(2*this.getCal_d()[lab6peak-1])));
         float estMD = (float) ((e.getRmin()*e.getRmin())/(FastMath.tan(twoth)*e.getRmax()));
         return estMD;
     }
@@ -823,7 +864,7 @@ public class Calib_dialog extends JDialog {
             if (e==null){continue;}
             
             float wave = patt2D.getWavel();
-            double tth = 2*FastMath.asin(wave/(2*CalibOps.LaB6_d[i]));
+            double tth = 2*FastMath.asin(wave/(2*this.getCal_d()[i-1]));
             double tantth = FastMath.tan(tth);
 
             //estimate of tilt,distMD 
@@ -933,7 +974,7 @@ public class Calib_dialog extends JDialog {
         MultivariateFunction function = new MultivariateFunction() {
             @Override
             public double value(double[] array) {
-                double res = CalibOps.minimize2Theta(patt2D, array[0],array[1],array[2],array[3],array[4], solutions);
+                double res = CalibOps.minimize2Theta(patt2D, array[0],array[1],array[2],array[3],array[4], solutions,cal_d);
                 log.writeNameNums("fine", true, "array,sum", array[0],array[1],array[2],array[3],array[4],res);
                 return res;
             }
@@ -1147,5 +1188,20 @@ public class Calib_dialog extends JDialog {
             if (D2Dplot_global.isDebug())ex.printStackTrace();
             log.info(String.format("Error writting output CAL file: %s",calfile.toString()));
         }
+    }
+    
+//    protected void do_comboCalib_itemStateChanged(ItemEvent e) {
+//        if (e.getStateChange() == ItemEvent.SELECTED) {
+//            CalibOps.setCal_d(CalibOps.getCalibrants().get(comboCalib.getSelectedIndex()).getDsp());
+//            log.config("selected index="+comboCalib.getSelectedIndex());
+//         }
+//    }
+
+    public float[] getCal_d() {
+        return cal_d;
+    }
+
+    public void setCal_d(float[] cal_d) {
+        this.cal_d = cal_d;
     }
 }

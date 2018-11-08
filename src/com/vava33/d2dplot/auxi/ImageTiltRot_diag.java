@@ -10,6 +10,7 @@ import javax.swing.JLabel;
 import javax.swing.ImageIcon;
 
 import java.awt.event.ActionListener;
+import java.util.Iterator;
 import java.awt.event.ActionEvent;
 
 import net.miginfocom.swing.MigLayout;
@@ -20,6 +21,7 @@ import com.vava33.d2dplot.MainFrame;
 import javax.swing.border.TitledBorder;
 import javax.swing.border.LineBorder;
 import java.awt.Color;
+import javax.swing.JComboBox;
 
 public class ImageTiltRot_diag extends JDialog {
 
@@ -34,6 +36,7 @@ public class ImageTiltRot_diag extends JDialog {
     private JTextField txtPixsize;
     MainFrame mf;
     Pattern2D lab6;
+    private JComboBox<String> comboCalib;
     
     /**
      * Create the dialog.
@@ -54,9 +57,9 @@ public class ImageTiltRot_diag extends JDialog {
         }
         {
             JPanel panel = new JPanel();
-            panel.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "Simulate LaB6 2D-XRPD (2048x2048)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
+            panel.setBorder(new TitledBorder(new LineBorder(new Color(184, 207, 229)), "Simulate Calibrant 2D-XRPD (2048x2048)", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
             contentPanel.add(panel, "cell 1 0,grow");
-            panel.setLayout(new MigLayout("", "[][grow]", "[][][][][][][][][grow]"));
+            panel.setLayout(new MigLayout("", "[][grow]", "[][][][][][][][][][grow]"));
             {
                 JLabel lblBeamCenterX = new JLabel("Beam Center X (pix)");
                 panel.add(lblBeamCenterX, "cell 0 0,alignx trailing");
@@ -134,7 +137,15 @@ public class ImageTiltRot_diag extends JDialog {
                         do_btnGenerateFrame_actionPerformed(e);
                     }
                 });
-                panel.add(btnGenerateFrame, "cell 0 7 2 1,growx");
+                {
+                    JLabel lblCalibrant = new JLabel("calibrant");
+                    panel.add(lblCalibrant, "cell 0 7,alignx trailing");
+                }
+                {
+                    comboCalib = new JComboBox<String>();
+                    panel.add(comboCalib, "cell 1 7,growx");
+                }
+                panel.add(btnGenerateFrame, "cell 0 8 2 1,growx");
             }
             {
                 JButton btnClose = new JButton("Close");
@@ -143,7 +154,7 @@ public class ImageTiltRot_diag extends JDialog {
                         do_btnClose_actionPerformed(e);
                     }
                 });
-                panel.add(btnClose, "cell 1 8,alignx right,aligny bottom");
+                panel.add(btnClose, "cell 1 9,alignx right,aligny bottom");
             }
         }
         inicia();
@@ -157,6 +168,12 @@ public class ImageTiltRot_diag extends JDialog {
         txtRot.setText("0");
         txtWave.setText("0.4246");
         txtPixsize.setText("0.079");
+        //La llista de calibrants s'ha omplert a l'obrir el programa (opcions), la llegim i posem calibrant per defecte (LaB6)
+        Iterator<Calibrant> itrC = CalibOps.getCalibrants().iterator();
+        while (itrC.hasNext()) {
+            comboCalib.addItem(itrC.next().getName());
+            comboCalib.setSelectedIndex(0);//we suppose the first is LaB6
+        }
     }
 
     protected void do_btnClose_actionPerformed(ActionEvent e) {
@@ -170,8 +187,7 @@ public class ImageTiltRot_diag extends JDialog {
         float rotd = Float.parseFloat(txtRot.getText());
         float wavea = Float.parseFloat(txtWave.getText());
         float pixszMM = Float.parseFloat(txtPixsize.getText());
-        
-        lab6 = CalibOps.createLaB6Img(cenx, ceny, dist, tiltd, rotd, wavea,pixszMM);
+        lab6 = CalibOps.createLaB6Img(cenx, ceny, dist, tiltd, rotd, wavea,pixszMM,CalibOps.getCalibrants().get(comboCalib.getSelectedIndex()).getDsp());
         mf.updatePatt2D(lab6,true,true);
     }
 }

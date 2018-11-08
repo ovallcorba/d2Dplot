@@ -16,11 +16,17 @@ import com.vava33.jutils.VavaLogger;
 public final class CalibOps {
     private static VavaLogger log = D2Dplot_global.getVavaLogger(CalibOps.class.getName());
     
-    public static float[] LaB6_d = { 0.0f, 4.156878635f, 2.939357609f,
-        2.399975432f, 2.078432243f, 1.859004281f, 1.697043447f,
-        1.469674856f, 1.385628455f, 1.314520218f, 1.25335391f,
-        1.199991704f, 1.152911807f, 1.110975349f, 1, .039218708f,
-        1.008191043f };
+    
+    public static ArrayList<Calibrant> calibrants = new ArrayList<Calibrant>();
+    
+    public static ArrayList<Calibrant> getCalibrants() {
+        return calibrants;
+    }
+
+
+    public static void setCalibrants(ArrayList<Calibrant> calibrants) {
+        CalibOps.calibrants = calibrants;
+    }
 
     public static Point2D.Float centerEstimationGrid(Pattern2D patt2d) {
 
@@ -323,7 +329,7 @@ public final class CalibOps {
 
     
     public static float minimize2Theta(Pattern2D patt2d, double xcen, double ycen,
-            double distMDmm, double tiltD, double rotD,ArrayList<EllipsePars> solutions){
+            double distMDmm, double tiltD, double rotD,ArrayList<EllipsePars> solutions, float[] cal_d){
         float oldxcen = patt2d.getCentrX();
         float oldycen = patt2d.getCentrY();
         float oldtilt = patt2d.getTiltDeg();
@@ -338,10 +344,13 @@ public final class CalibOps {
         
         Iterator<EllipsePars> itr = solutions.iterator();
         float residual = 0;
+//        float angstep = 2.5f;
         while (itr.hasNext()){
             EllipsePars e = itr.next();
-            float lab6dsp = LaB6_d[e.getLab6ring()];
+            float lab6dsp = cal_d[e.getLab6ring()-1];
             ArrayList<Point2D.Float> punts = e.getEstimPoints();
+//            ArrayList<Point2D.Float> punts = e.getEllipsePoints(0, 360, angstep);
+//            angstep=angstep/2.f;
             Iterator<Point2D.Float> itrp = punts.iterator();
             while (itrp.hasNext()){
                 Point2D.Float p = itrp.next();
@@ -367,7 +376,7 @@ public final class CalibOps {
     // anirà sumant pixels dels anells de LaB6
     // el valor maxim serà aquell on la coincidència serà màxima
     public static int calcSum(Pattern2D patt2d, float xcen, float ycen,
-            float distMDmm, float tiltD, float rotD) {
+            float distMDmm, float tiltD, float rotD, float[] cal_d) {
 
         float oldxcen = patt2d.getCentrX();
         float oldycen = patt2d.getCentrY();
@@ -383,9 +392,9 @@ public final class CalibOps {
 
         int suma = 0;
 
-        for (int i = 0; i < 10; i++) {
-            double tth = 2 * FastMath.asin(patt2d.getWavel() / (2 * LaB6_d[i]));
-            double weight = 1 / LaB6_d[i];
+        for (int i = 0; i < cal_d.length; i++) {
+            double tth = 2 * FastMath.asin(patt2d.getWavel() / (2 * cal_d[i]));
+            double weight = 1 / cal_d[i];
             EllipsePars p = ImgOps.getElliPars(patt2d, tth);
             ArrayList<Point2D.Float> punts = p.getEllipsePoints(0, 360, 5);
             Iterator<Point2D.Float> itrp = punts.iterator();
@@ -417,7 +426,7 @@ public final class CalibOps {
     }
 
     public static Pattern2D createLaB6Img(float xcen, float ycen,
-            float distMDmm, float tiltD, float rotD, float wavel, float pixsizeMM) {
+            float distMDmm, float tiltD, float rotD, float wavel, float pixsizeMM, float[] cal_d) {
 
         Pattern2D lab6 = new Pattern2D(2048, 2048, xcen, ycen, 5000, 0, 1, true);
         lab6.setWavel(wavel);
@@ -431,8 +440,8 @@ public final class CalibOps {
         // hem de posar intensitat als anells amb uncert fwhm
 //        float fwhmPx = 5;
         int maxInten = 10000;
-        for (int i = 0; i < 15; i++) {
-            double tth = 2 * FastMath.asin(lab6.getWavel() / (2 * LaB6_d[i]));
+        for (int i = 0; i < cal_d.length; i++) {
+            double tth = 2 * FastMath.asin(lab6.getWavel() / (2 * cal_d[i])); //aqui ja anem des de cal_d i=zero...
             EllipsePars p = ImgOps.getElliPars(lab6, tth);
             log.config("lab6 ring"+i);
             p.logElliPars("CONFIG");

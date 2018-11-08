@@ -21,6 +21,17 @@ public final class ArgumentLauncher {
     
     private static VavaLogger log = D2Dplot_global.getVavaLogger(ArgumentLauncher.class.getName());
 
+    /*
+     * -macro com a primer argument implica interactive
+     * el segon argument aleshores ha de ser la imatge de treball
+     * 
+     * 
+     * possibilitat macrofile? -macrofile i llegir linia a linia les opcions?
+     * 
+     * DE MOMENT FUNCIONA PERO CALDRIA ESCRIURE MISSATGES PER CONSOLA.
+     * 
+     */
+    
     public static void readArguments(MainFrame mf, String[] args){
         
         if (args.length==0)return; //no hi ha res
@@ -44,21 +55,23 @@ public final class ArgumentLauncher {
             ConsoleWritter.stat("    the image to be processed. Then following options are available:");
             ConsoleWritter.stat("");
             ConsoleWritter.stat("      -sol");
-            ConsoleWritter.stat("            Displays directly a tts-inco SOL file (same filename as the input image)");
+            ConsoleWritter.stat("          Displays directly a tts-inco SOL file (same filename as the input image)");
             ConsoleWritter.stat("");
             ConsoleWritter.stat("      -rint [CALfile] [-outdat DATfile]");
-            ConsoleWritter.stat("            Performs radial integration.");
-            ConsoleWritter.stat("            If no CALfile is specified, calibration parameters are taken from the image header.");
-            ConsoleWritter.stat("            If no DATfile is specified, same name as the input image (but .dat) is used.");
+            ConsoleWritter.stat("          Performs radial integration.");
+            ConsoleWritter.stat("          · If no CALfile is specified, calibration parameters are taken from the image header.");
+            ConsoleWritter.stat("          · If no DATfile is specified, same name as the input image (but .dat) is used.");
             ConsoleWritter.stat("");
-            ConsoleWritter.stat("      -cal [dist] [wave] [-outcal [CALfile]]");
-            ConsoleWritter.stat("            LaB6 calibration.");
-            ConsoleWritter.stat("            If no dist or wave are specified they are taken from the image header");
-            ConsoleWritter.stat("            Add -outcal option to generate a CAL filename with the same name as the input image");
+            ConsoleWritter.stat("      -cal 0/1/2... [dist] [wave] [-outcal [CALfile]]");
+            ConsoleWritter.stat("          Instrumental Parameter Calibration.");
+            ConsoleWritter.stat("          · The first argument following -cal is an integer to select the calibrant (mandatory)");
+            ConsoleWritter.stat("            [0= LaB6, 1= Si, 2= first calibrant in config file, 3= second calibrant in cfg file, etc...");
+            ConsoleWritter.stat("          · If no dist or wave are specified they are taken from the image header");
+            ConsoleWritter.stat("          · Add -outcal option to generate a CAL filename with the same name as the input image");
             ConsoleWritter.stat("            as long as no CALfile is specified.");
             ConsoleWritter.stat("");
             ConsoleWritter.stat("      -show");
-            ConsoleWritter.stat("            To open graphical display and do not exit after processing");
+            ConsoleWritter.stat("          · To open graphical display and do not exit after processing");
             ConsoleWritter.stat("");
             return;
         }
@@ -244,11 +257,22 @@ public final class ArgumentLauncher {
         
         ifound = getArgLindexOf(argL,"-cal");
         if (ifound>=0){
-            ConsoleWritter.stat("CAL option found, performing LaB6 calibration with header info (distance, wavelength, pixsize)");
+            ConsoleWritter.stat("CAL option found, performing instrumental parameters calibration with header info (distance, wavelength, pixsize)");
+            
+            //primer llegim calibrant
+            int calib = 0;
+            int arg_index_correction = 0;
+            try{
+                calib = Integer.parseInt(argL.get(ifound +1));
+                ConsoleWritter.stat(String.format("Using calibrant %s",CalibOps.getCalibrants().get(calib).getName()));
+            }catch(Exception e){
+                ConsoleWritter.stat(String.format("No calibrant provided, using  %s",CalibOps.getCalibrants().get(calib).getName()));
+                arg_index_correction = -1;
+            }
             
             //TODO LLEGIR PARAMETRES SEGÜENTS? dist, wave
             try{
-                float dist = Float.parseFloat(argL.get(ifound +1));
+                float dist = Float.parseFloat(argL.get(ifound + 2 +arg_index_correction));
                 mf.getPatt2D().setDistMD(dist);
                 ConsoleWritter.stat(String.format("Using entered distance %.3f",mf.getPatt2D().getDistMD()));
             }catch(Exception e){
@@ -256,7 +280,7 @@ public final class ArgumentLauncher {
             }
 
             try{
-                float wave = Float.parseFloat(argL.get(ifound +2));
+                float wave = Float.parseFloat(argL.get(ifound + 3 + arg_index_correction));
                 mf.getPatt2D().setWavel(wave);
                 ConsoleWritter.stat(String.format("Using entered wavelength %.4f",mf.getPatt2D().getWavel()));
             }catch(Exception e){
@@ -274,6 +298,7 @@ public final class ArgumentLauncher {
             if((!mf.getPatt2D().checkIfWavel() || !mf.getPatt2D().checkIfPixSize() || !mf.getPatt2D().checkIfDistMD())){
                 ConsoleWritter.stat("Wavelength, PixelSize or Sample-Detector distance missing in the header. ABORTING.");
             }else{
+                mf.getCalibration().selectCalibrant(calib);
                 mf.getCalibration().do_btnAuto_actionPerformed(null);
                 float cx = mf.getCalibration().getRefCX();
                 float cy = mf.getCalibration().getRefCY();

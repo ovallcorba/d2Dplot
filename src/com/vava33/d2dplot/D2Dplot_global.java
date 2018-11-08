@@ -6,10 +6,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Scanner;
 
+import com.vava33.d2dplot.auxi.CalibOps;
+import com.vava33.d2dplot.auxi.Calibrant;
 import com.vava33.d2dplot.auxi.PDDatabase;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.d2dplot.auxi.PuntClick;
@@ -21,7 +25,7 @@ public final class D2Dplot_global {
 
     public static final int satur32 = Short.MAX_VALUE;
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
-    public static final String version = "v1806 (180629)"; //nomes canviare la versio global quan faci un per distribuir
+    public static final String version = "v1811 (181122)"; //nomes canviare la versio global quan faci un per distribuir
     public static final String welcomeMSG = "d2Dplot "+version+" by OV";
     public static final String separator = System.getProperty("file.separator");
     public static final String binDir = System.getProperty("user.dir") + separator + "bin" + separator;
@@ -60,6 +64,7 @@ public final class D2Dplot_global {
     private static Float minDspacingToSearch;
 
     //Calib
+    private static ArrayList<Calibrant> userCalibs;
 
     //ImagePanel and pattern2D
     private static Float t2tolDegClickPoints; //in patt2d
@@ -239,6 +244,16 @@ public final class D2Dplot_global {
             dincoSolPointFill = PuntSolucio.isDincoSolPointFill();
         }else{
             PuntSolucio.setDincoSolPointFill(dincoSolPointFill.booleanValue());
+        }
+        //we add the default calibrants to the list
+        CalibOps.getCalibrants().add(new Calibrant("LaB6 NIST-660B",Calibrant.LaB6_d));
+        CalibOps.getCalibrants().add(new Calibrant("Silicon NIST-640D",Calibrant.Silicon_d));
+        //now we add the user calibrants
+        if (userCalibs!=null) {
+            Iterator<Calibrant> itrCal = userCalibs.iterator();
+            while (itrCal.hasNext()) {
+                CalibOps.getCalibrants().add(itrCal.next());
+            }
         }
         
     }
@@ -503,6 +518,24 @@ public final class D2Dplot_global {
                     String sEditor = (line.substring(iigual, line.trim().length()).trim());
                     if (new File(sEditor).exists())txtEditPath = sEditor;
                 }
+                
+                if (FileUtils.containsIgnoreCase(line, "calibrant")){
+                    try {
+                        String[] values = (line.substring(iigual, line.trim().length()).trim()).split(";");
+                        if (values.length>0) {
+                            Calibrant c = new Calibrant(values[0]);
+                            float[] dsps = new float[values.length-1];
+                            for (int i=1; i<values.length; i++) {
+                                dsps[i-1]=Float.parseFloat(values[i].trim());
+                            }
+                            c.setDsp(dsps);
+                            if (userCalibs==null)userCalibs=new ArrayList<Calibrant>();
+                            userCalibs.add(c);
+                        }
+                    }catch(Exception ex) {
+                        if(isDebug())ex.printStackTrace();
+                    }
+                }
             }
             //per si ha canviat el loglevel/logging
             initLogger(D2Dplot_global.class.getName()); //during the par reading
@@ -551,13 +584,15 @@ public final class D2Dplot_global {
             output.println("colorQLcomp = "+getColorName(colorQLcomp));
             output.println("colorDBcomp = "+getColorName(colorDBcomp));
             
-            output.println("# INCO");
+            output.println("# TTS");
             output.println(String.format("%s = %d", "hklfontSize",hklfontSize));
             output.println("dincoSolPointSizeByFc = "+Boolean.toString(dincoSolPointSizeByFc));
             output.println(String.format("%s = %d", "dincoSolPointSize",dincoSolPointSize));
             output.println(String.format(Locale.ROOT,"%s = %.1f", "dincoSolPointStrokeSize",dincoSolPointStrokeSize));
             output.println("dincoSolPointFill = "+Boolean.toString(dincoSolPointFill));
             output.println("tts_software_folder = "+tts_software_folder);
+//            output.println("tts_merge = "+mergeExec);
+//            output.println("tts_celref = "+celrefExec);
             output.println("text_editor_path = "+txtEditPath);
             
             output.println("# Calib");
@@ -565,6 +600,18 @@ public final class D2Dplot_global {
             output.println("colorGuessPointsEllipses = "+getColorName(colorGuessPointsEllipses));
             output.println("colorFittedEllipses = "+getColorName(colorFittedEllipses));
             output.println("colorBoundariesEllipses = "+getColorName(colorPeakSearchSelected));
+            Iterator<Calibrant> itrC = CalibOps.calibrants.iterator();
+            while (itrC.hasNext()) {
+                Calibrant c = itrC.next();
+                if (c.getName().equalsIgnoreCase("LaB6 NIST-660B")) continue;//only the user's
+                if (c.getName().equalsIgnoreCase("Silicon NIST-640D")) continue;
+                StringBuilder dsps = new StringBuilder();
+                for (int i=0; i<c.getDsp().length;i++) {
+                    dsps.append(String.valueOf(c.getDsp()[i]));
+                    dsps.append("; ");
+                }
+                output.println("calibrant = "+c.getName().trim()+"; "+dsps.toString().substring(0, dsps.toString().length()-2));
+            }
             
             output.println("# PeakSearch and Excluded Zones");
             output.println("colorPeakSearch = "+getColorName(colorPeakSearch));
@@ -803,7 +850,7 @@ public final class D2Dplot_global {
         log.printmsg(loglevel,"colorQLcomp = "+getColorName(colorQLcomp));
         log.printmsg(loglevel,"colorDBcomp = "+getColorName(colorDBcomp));
 
-        log.printmsg(loglevel,"# INCO");
+        log.printmsg(loglevel,"# TTS");
         log.printmsg(loglevel,String.format("%s = %d", "hklfontSize",hklfontSize));
         log.printmsg(loglevel,"dincoSolPointSizeByFc = "+Boolean.toString(dincoSolPointSizeByFc));
         log.printmsg(loglevel,String.format("%s = %d", "dincoSolPointSize",dincoSolPointSize));
@@ -819,6 +866,19 @@ public final class D2Dplot_global {
         log.printmsg(loglevel,"colorGuessPointsEllipses = "+getColorName(colorGuessPointsEllipses));
         log.printmsg(loglevel,"colorFittedEllipses = "+getColorName(colorFittedEllipses));
         log.printmsg(loglevel,"colorBoundariesEllipses = "+getColorName(colorPeakSearchSelected));
+        Iterator<Calibrant> itrC = CalibOps.calibrants.iterator();
+        //here we print all the calibrants
+        while (itrC.hasNext()) {
+            Calibrant c = itrC.next();
+//            if (c.getName().equalsIgnoreCase("LaB6 NIST-660B")) continue;//only the user's
+//            if (c.getName().equalsIgnoreCase("Silicon NIST-640D")) continue;
+            StringBuilder dsps = new StringBuilder();
+            for (int i=0; i<c.getDsp().length;i++) {
+                dsps.append(String.valueOf(c.getDsp()[i]));
+                dsps.append("; ");
+            }
+            log.printmsg(loglevel,"calibrant = "+c.getName().trim()+"; "+dsps.toString().substring(0, dsps.toString().length()-2));
+        }
 
         log.printmsg(loglevel,"# PeakSearch and Excluded Zones");
         log.printmsg(loglevel,"colorPeakSearch = "+getColorName(colorPeakSearch));
@@ -851,7 +911,7 @@ public final class D2Dplot_global {
     
 }
 
-//EXAMPLE (may be incomplete...)
+//EXAMPLE (may be incomplete...) TODO:update
 //** D2Dplot parameter file **
 //# Global
 //workdir = /home/ovallcorba/ovallcorba/Progs_dev/2DXRD_UI/test_calib_integ/
