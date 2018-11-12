@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import javax.imageio.ImageIO;
+//import javax.imageio.ImageIO;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -856,6 +857,17 @@ public final class ImgFileUtils {
         patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
         patt2D.setTiltDeg(tilt);
         patt2D.setRotDeg(rot);
+//        if ((tilt!=0) && (rot!=0)){
+//            if (!fit2d){
+//                //d2dplot convention, directly the values
+//                patt2D.setTiltDeg(tilt);
+//                patt2D.setRotDeg(rot);
+//            }else{
+//                //fit2d convention, convert to d2d
+//                patt2D.setRotDeg(ImageTiltRot_diag.f2dRotToD2d(rot));
+//                patt2D.setTiltDeg(ImageTiltRot_diag.f2dTiltToD2d(tilt));
+//            }
+//        }
 
         // parametres adquisicio
         patt2D.setScanParameters(omeIni, omeFin, acqTime);
@@ -875,6 +887,7 @@ public final class ImgFileUtils {
         int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
         float omeIni = 0, omeFin = 0, acqTime = -1;
         float tilt = 0, rot = 0;
+//        boolean fit2d = false;
         
         boolean littleEndian = true;
         String dataType = "UnsignedShort";
@@ -950,6 +963,12 @@ public final class ImgFileUtils {
                         rot = Float.parseFloat(line.substring(iigual,
                                 line.trim().length() - 1).trim());
                     }
+//                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
+//                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
+//                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
+//                            fit2d = true;
+//                        } //else d2dplot convention
+//                    }
 
                     try {
                         // scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
@@ -1364,7 +1383,8 @@ public final class ImgFileUtils {
     
     public static Pattern2D readTIFF(File d2File) {
         Opener op = new Opener();
-        ImagePlus imp = op.openImage("/home/ovallcorba/ovallcorba/eclipse_ws/TESTS/ipp6.TIF");
+//        ImagePlus imp = op.openImage("/home/ovallcorba/ovallcorba/eclipse_ws/TESTS/ipp6.TIF");
+        ImagePlus imp = op.openImage(d2File.getAbsolutePath());
 //        ImageProcessor sp = (imp.getProcessor()).convertToShort(false);
         ImageProcessor sp = imp.getProcessor();
 
@@ -1779,6 +1799,19 @@ public final class ImgFileUtils {
         return patt2D; // tot correcte
     }
 
+//    public static File writeTIF(File d2File, BufferedImage img) {
+//        d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".tif"));    
+//         try {
+//            boolean done = ImageIO.write(img, "TIFF", d2File);
+//            log.debug(String.valueOf(done));
+//        } catch (IOException e) {
+//            // TODO Auto-generated catch block
+//            e.printStackTrace();
+//        }
+//        log.debug("tiff saved "+d2File);
+//        return d2File;
+//    }
+    
     /*
      * QUE HAURIEM DE FER. - Com que a l'obrir un fitxer probablement s'haur�
      * escalat, haur�em de tornar a llegir les intensitats del fitxer original

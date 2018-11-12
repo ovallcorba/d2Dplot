@@ -1930,8 +1930,17 @@ public class ImagePanel extends JPanel {
                 if (originY>0)offsetY = originY;
                 t.translate(offsetX, offsetY);
                 t.scale(scalefit, scalefit);
-                g2.drawImage(getSubimage(), t, null);
-                final Graphics2D g1 = (Graphics2D) g2.create();
+                
+                BufferedImage off_Image =
+                        new BufferedImage(this.getWidth(), this.getHeight(),
+                                          BufferedImage.TYPE_INT_ARGB);
+                final Graphics2D g1 = off_Image.createGraphics();
+                
+                g1.addRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,
+                  RenderingHints.VALUE_ANTIALIAS_ON)); // perque es vegin mes suaus...
+                
+                g2.drawImage(getSubimage(), t, null); //dibuixem imatge
+//                final Graphics2D g1 = (Graphics2D) g2.create();
 
                 // dibuixem els cercles
                 g2.addRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING,
@@ -1959,6 +1968,9 @@ public class ImagePanel extends JPanel {
 //                g1.setPaint(Color.CYAN);
 //                Point2D.Float c = getFramePointFromPixel(new Point2D.Float(patt2D.getCentrX(),patt2D.getCentrY()));
 //                g1.drawOval((int)c.x-2, (int)c.y-2, 4, 4);
+                
+                //provo dibuixar
+                g.drawImage(off_Image, 0, 0, null); //ara dibuixem a sobre la parafarnalia
                 
                 g1.dispose();
                 g2.dispose();

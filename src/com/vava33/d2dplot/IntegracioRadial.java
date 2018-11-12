@@ -68,7 +68,7 @@ public class IntegracioRadial extends JFrame {
 	public IntegracioRadial(ImagePanel ipanel) {
 	    this.ip=ipanel;
 	    this.inicia();
-		setTitle("Radial Integration");
+		setTitle("Integration of 2DXRD to 1DXRD");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 940, 540);
         setIconImage(Toolkit.getDefaultToolkit().getImage(Help_dialog.class.getResource("/img/Icona.png")));
@@ -325,7 +325,7 @@ public class IntegracioRadial extends JFrame {
     
     public void do_btnIntegrartilt_actionPerformed(ActionEvent arg0) {
         this.patt1D.clear();
-        
+        patt2D = ip.getPatt2D();
         if(patt2D==null)return;
         float t2ini=1.0f;
         float t2fin=40.0f;

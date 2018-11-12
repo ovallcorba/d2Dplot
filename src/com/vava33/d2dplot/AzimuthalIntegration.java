@@ -66,14 +66,14 @@ public class AzimuthalIntegration extends JFrame {
 	 */
 	public AzimuthalIntegration(ImagePanel ipanel) {
 	    this.ip=ipanel;
-		setTitle("Azimuthal Integration");
+		setTitle("Azimuthal Plotting");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 940, 540);
         setIconImage(Toolkit.getDefaultToolkit().getImage(Help_dialog.class.getResource("/img/Icona.png")));
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
-		contentPane.setLayout(new MigLayout("", "[][grow][][grow][][grow][grow][]", "[][grow][]"));
+		contentPane.setLayout(new MigLayout("", "[][grow][][grow][][grow][][]", "[][grow][]"));
 		
 		JLabel lbltini = new JLabel("2θ (º)");
 		contentPane.add(lbltini, "cell 0 0,alignx right");
@@ -86,10 +86,10 @@ public class AzimuthalIntegration extends JFrame {
 		contentPane.add(lblCakeIni, "cell 2 0,alignx trailing");
 		
 		txtT2w = new JTextField();
-		txtT2w.setText("0.1");
+		txtT2w.setText("0.05");
 		contentPane.add(txtT2w, "cell 3 0,growx");
 		
-		btnIntegrar = new JButton("Integrate");
+		btnIntegrar = new JButton("Plot");
 		btnIntegrar.addActionListener(new ActionListener() {
 		    public void actionPerformed(ActionEvent arg0) {
 		        do_btnIntegrartilt_actionPerformed(arg0);
@@ -100,7 +100,7 @@ public class AzimuthalIntegration extends JFrame {
 		contentPane.add(lblCakeEnd, "cell 4 0,alignx trailing");
 		
 		txtAzStep = new JTextField();
-		txtAzStep.setText("1");
+		txtAzStep.setText("0.5");
 		contentPane.add(txtAzStep, "cell 5 0,growx");
 		contentPane.add(btnIntegrar, "cell 6 0,growx");
 		

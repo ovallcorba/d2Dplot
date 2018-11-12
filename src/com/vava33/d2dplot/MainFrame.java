@@ -354,8 +354,8 @@ public class MainFrame extends JFrame {
         });
         mnImageOps.add(mntmInstrumentalParameters);
         
-        mntmLabCalibration = new JMenuItem("LaB6 Calibration");
-        mntmLabCalibration.setMnemonic('l');
+        mntmLabCalibration = new JMenuItem("Inst. Param. Calibration");
+        mntmLabCalibration.setMnemonic('c');
         mntmLabCalibration.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmLabCalibration_actionPerformed(e);
@@ -381,9 +381,10 @@ public class MainFrame extends JFrame {
         });
         mnImageOps.add(mntmBackgroundSubtraction);
         
-        mntmRadialIntegration = new JMenuItem("Radial Integration");
+        mntmRadialIntegration = new JMenuItem("Conversion to 1D PXRD");
+        mntmRadialIntegration.setToolTipText("Debye rings integration (cakes)");
         mntmRadialIntegration.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_MASK));
-        mntmRadialIntegration.setMnemonic('r');
+        mntmRadialIntegration.setMnemonic('1');
         mntmRadialIntegration.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_mntmRadialIntegration_actionPerformed(e);
@@ -398,7 +399,7 @@ public class MainFrame extends JFrame {
             }
         });
         
-        mntmAzimuthalIntegration = new JMenuItem("Azimuthal Integration");
+        mntmAzimuthalIntegration = new JMenuItem("Azimuthal (circular) plot");
         mntmAzimuthalIntegration.setMnemonic('a');
         mntmAzimuthalIntegration.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
@@ -764,7 +765,7 @@ public class MainFrame extends JFrame {
         });
         panel_1.add(btnTtsdincoSol, "flowy,cell 0 2,growx,aligny center");
 
-        btnRadIntegr = new JButton("Rad. Integr");
+        btnRadIntegr = new JButton("1D PXRD");
         btnRadIntegr.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_btnRadIntegr_actionPerformed(e);
