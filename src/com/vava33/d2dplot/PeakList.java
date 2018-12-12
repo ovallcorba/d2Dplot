@@ -17,6 +17,7 @@ import java.util.Locale;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -40,11 +41,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 
-public class Pklist_dialog extends JDialog {
+public class PeakList {
 
-    private static final long serialVersionUID = -5876034353317165127L;
+    private JDialog pointListDialog;
     private JButton btnUpdate;
-    private final JPanel contentPanel = new JPanel();
+    private JPanel contentPanel;
     private JLabel lblCheckValues;
     private JLabel lblPeakList;
     private JList<String> list_pk;
@@ -54,28 +55,30 @@ public class Pklist_dialog extends JDialog {
     private JCheckBox cbox_onTop;
     private JButton btnSaveappend;
     
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(Pklist_dialog.class.getName());
-
+    private static final String className = "PKlist";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
+    
     private ImagePanel ipanel;
 
     /**
      * Create the dialog.
      */
-    public Pklist_dialog(ImagePanel ip) {
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Pklist_dialog.class.getResource("/img/Icona.png")));
+    public PeakList(JFrame parent, ImagePanel ip) {
+    	this.contentPanel=new JPanel();
+    	pointListDialog = new JDialog(parent,"Selected peak List",false);
+    	pointListDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(PeakList.class.getResource("/img/Icona.png")));
         ipanel = ip;
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("Selected peak List");
+        pointListDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         // setBounds(100, 100, 660, 730);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 400, 500);
-        getContentPane().setLayout(new BorderLayout());
+        pointListDialog.setBounds(x, y, width, height);
+        pointListDialog.getContentPane().setLayout(new BorderLayout());
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        pointListDialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         GridBagLayout gbl_contentPanel = new GridBagLayout();
         gbl_contentPanel.columnWidths = new int[] { 0, 0, 0, 0 };
         gbl_contentPanel.rowHeights = new int[] { 0, 0, 0, 0 };
@@ -162,7 +165,7 @@ public class Pklist_dialog extends JDialog {
         }
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            pointListDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 GridBagLayout gbl_buttonPane = new GridBagLayout();
                 gbl_buttonPane.columnWidths = new int[] { 0, 0, 0, 0, 0 };
@@ -210,11 +213,12 @@ public class Pklist_dialog extends JDialog {
             gbc_okButton.gridx = 3;
             gbc_okButton.gridy = 0;
             buttonPane.add(okButton, gbc_okButton);
-            getRootPane().setDefaultButton(okButton);
+            pointListDialog.getRootPane().setDefaultButton(okButton);
         }
         
         list_pk.setModel(new DefaultListModel<String>());
         this.loadPeakList();
+        pointListDialog.pack();
     }
 
     protected void do_btnUpdate_actionPerformed(ActionEvent arg0) {
@@ -222,7 +226,7 @@ public class Pklist_dialog extends JDialog {
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
-        this.dispose();
+    	pointListDialog.dispose();
     }
     
     public void loadPeakList() {
@@ -244,7 +248,7 @@ public class Pklist_dialog extends JDialog {
     }
 
     protected void tanca() {
-        this.dispose();
+    	pointListDialog.dispose();
     }
 	protected void do_btnRemoveAll_actionPerformed(ActionEvent arg0) {
 		if(list_pk.getModel().getSize()<=0)return;
@@ -271,14 +275,14 @@ public class Pklist_dialog extends JDialog {
 		
 	}
 	protected void do_chckbxOnTop_itemStateChanged(ItemEvent arg0) {
-        this.setAlwaysOnTop(cbox_onTop.isSelected());
+		pointListDialog.setAlwaysOnTop(cbox_onTop.isSelected());
 	}
 	
 	protected void do_btnSaveappend_actionPerformed(ActionEvent e) {
 		
 	    btnSaveappend.setText("Save");
 	    //simplement guardem normal
-	    File outfileIndex = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null, null);
+	    File outfileIndex = FileUtils.fchooserSaveAsk(pointListDialog,new File(D2Dplot_global.getWorkdir()), null, null);
 	    try{
 	        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(outfileIndex, false)));
 	        out.println("# "+this.ipanel.getPatt2D().getImgfile().toString());
@@ -302,10 +306,22 @@ public class Pklist_dialog extends JDialog {
 	        out.close();
 	    }catch(Exception ex){
 	        if(D2Dplot_global.isDebug())ex.printStackTrace();
-	        log.warning("error saving file");
+	        log.warning("Error saving peak list file");
 	    }
 	    D2Dplot_global.setWorkdir(outfileIndex);
 	    return;
 	}
+	
+    public void dispose() {
+    	pointListDialog.dispose();
+    }
+    
+    public void setVisible(boolean vis) {
+    	pointListDialog.setVisible(vis);
+    }
+    public void toFront() {
+    	pointListDialog.toFront();
+    }
+    
 }
 

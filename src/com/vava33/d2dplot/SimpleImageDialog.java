@@ -5,6 +5,7 @@ import java.awt.Toolkit;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
@@ -20,38 +21,35 @@ import java.io.File;
 
 import net.miginfocom.swing.MigLayout;
 
-public class SimpleImageDialog extends JDialog {
+public class SimpleImageDialog {
 
-	/**
-     * 
-     */
-    private static final long serialVersionUID = 1L;
-
-    private final JPanel contentPanel = new JPanel();
+	private JDialog simpleImgDialog;
+    private JPanel contentPanel;
 
 	Pattern2D patt2D;
 	private ImagePanel panel;
 	/**
 	 * Create the dialog.
 	 */
-	public SimpleImageDialog(Pattern2D patt, String title) {
-        setIconImage(Toolkit.getDefaultToolkit().getImage(About_dialog.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle(title);
-		setBounds(100, 100, 530, 559);
-		getContentPane().setLayout(new BorderLayout());
+	public SimpleImageDialog(JFrame parent, Pattern2D patt, String title) {
+		this.contentPanel=new JPanel();
+		simpleImgDialog = new JDialog(parent,title,false);
+		simpleImgDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(About.class.getResource("/img/Icona.png")));
+		simpleImgDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		simpleImgDialog.setBounds(100, 100, 530, 559);
+		simpleImgDialog.getContentPane().setLayout(new BorderLayout());
 		contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-		getContentPane().add(contentPanel, BorderLayout.CENTER);
+		simpleImgDialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
 		contentPanel.setLayout(new MigLayout("insets 0", "[grow]", "[grow]"));
 		{
-			panel = new ImagePanel(true);
-			contentPanel.add(panel, "cell 0 0,grow");
+			panel = new ImagePanel();
+			contentPanel.add(panel.getIpanelMain(), "cell 0 0,grow");
 		}
 		{
 			JPanel buttonPane = new JPanel();
-			getContentPane().add(buttonPane, BorderLayout.SOUTH);
+			simpleImgDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
 			{
-				JButton btnSaveBin = new JButton("Save BIN");
+				JButton btnSaveBin = new JButton("Save Image");
 				btnSaveBin.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent e) {
 						do_btnSaveBin_actionPerformed(e);
@@ -88,17 +86,18 @@ public class SimpleImageDialog extends JDialog {
 			buttonPane.add(cancelButton, "cell 3 0,alignx left,aligny top");
 		}
 		
+		
 		this.patt2D=patt;
 		panel.setImagePatt2D(this.patt2D);
 	}
 	protected void do_cancelButton_actionPerformed(ActionEvent e) {
-		this.dispose();
+		simpleImgDialog.dispose();
 	}
 	protected void do_btnSaveBin_actionPerformed(ActionEvent e) {
 	    FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterWrite();
-        File fsave = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), filt, null);
+        File fsave = FileUtils.fchooserSaveAsk(simpleImgDialog,new File(D2Dplot_global.getWorkdir()), filt, null);
     	if (fsave == null)return;
-    	fsave = ImgFileUtils.writePatternFile(fsave, this.patt2D);
+    	fsave = ImgFileUtils.writePatternFile(fsave, this.patt2D, true);
     	this.patt2D.setImgfile(fsave);
     }
 	protected void do_btnResetView_actionPerformed(ActionEvent e) {
@@ -107,4 +106,7 @@ public class SimpleImageDialog extends JDialog {
 	protected void do_btnTrueSize_actionPerformed(ActionEvent e) {
 		this.panel.setScalefit(1.0f);
 	}
+    public void setVisible(boolean vis) {
+    	simpleImgDialog.setVisible(vis);
+    }
 }

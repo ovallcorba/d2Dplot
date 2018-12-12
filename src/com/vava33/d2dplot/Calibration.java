@@ -2,7 +2,6 @@ package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Toolkit;
@@ -14,10 +13,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -25,10 +21,9 @@ import java.util.Iterator;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
@@ -47,9 +42,9 @@ import com.vava33.d2dplot.auxi.CalibOps;
 import com.vava33.d2dplot.auxi.Calibrant;
 import com.vava33.d2dplot.auxi.CircleFitter;
 import com.vava33.d2dplot.auxi.EllipsePars;
+import com.vava33.d2dplot.auxi.ImgFileUtils;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 import net.miginfocom.swing.MigLayout;
@@ -59,28 +54,20 @@ import javax.swing.border.TitledBorder;
 import javax.swing.JComboBox;
 
 
-public class Calib_dialog extends JDialog {
+public class Calibration {
 
-    private static final long serialVersionUID = -5947817749730984383L;
-
+    private JDialog calibDialog;
     private JButton btnApply;
     private JCheckBox cbox_onTop;
     private JCheckBox chckbxCalibrate;
-    private final JPanel contentPanel = new JPanel();
+    private JPanel contentPanel;
     private JLabel lbllist;
-    private JPanel panel_left;
-    private JPanel panel_right;
-    private JScrollPane scrollPane_1;
-    private JSplitPane splitPane;
     private JToggleButton btnAutoCalibration;
-    private LogJTextArea tAOut;
-//    private Param_dialog paramDialog;
     private JButton btnImageParameters;
     private JPanel panel;
     private JCheckBox chckbxShowGuessPoints;
     private JCheckBox chckbxShowFittedEllipses;
     private JCheckBox chckbxShowSearchEllipses;
-    private JPanel panel_1;
     private JPanel panel_2;
     private JLabel lblPixtol;
     private JLabel lblArcSize;
@@ -94,7 +81,7 @@ public class Calib_dialog extends JDialog {
 
     private float refCX, refCY, refMD, refTiltDeg, refRotDeg;
     private boolean calibrating;
-    private Pattern2D patt2D;
+//    private Pattern2D patt2D;
     private ArrayList<Point2D.Float> pointsRing1circle;
     private ArrayList<EllipsePars> solutions;
     private boolean isSetting1stPeakCircle=false;
@@ -114,7 +101,8 @@ public class Calib_dialog extends JDialog {
     public ArrayList<Line2D.Float> cerques;
     public ArrayList<EllipsePars> ellicerques;
     
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(Calib_dialog.class.getName());
+	private static final String className = "Calibration";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
     private JButton btnAuto;
     
     private ImagePanel ip;
@@ -127,42 +115,28 @@ public class Calib_dialog extends JDialog {
     /**
      * Create the dialog.
      */
-    public Calib_dialog(ImagePanel ipanel) {
+    public Calibration(JFrame parent, ImagePanel ipanel) {
         this.setIpanel(ipanel);
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Calib_dialog.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("Instrumental Parameters Calibration");
+        calibDialog = new JDialog(parent,"Instrumental Parameters Calibration",false);
+        this.contentPanel=new JPanel();
+        calibDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(Calibration.class.getResource("/img/Icona.png")));
+        calibDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        int width = 660;
-        int height = 730;
+        int width = 300;
+        int height = 560;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 629, 580);
-        getContentPane().setLayout(new BorderLayout());
-        getContentPane().add(this.contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("insets 0", "[grow]", "[grow]"));
+        calibDialog.setBounds(x, y, width, height);
+        calibDialog.getContentPane().setLayout(new BorderLayout());
+        calibDialog.getContentPane().add(this.contentPanel, BorderLayout.NORTH);
+        contentPanel.setLayout(new MigLayout("", "[][][grow][]", "[][][][][][grow]"));
+
         {
-            this.splitPane = new JSplitPane();
-            this.splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
-            contentPanel.add(this.splitPane, "cell 0 0,grow");
             {
-                this.panel_left = new JPanel();
-                this.splitPane.setLeftComponent(this.panel_left);
                 {
-                    panel_left.setLayout(new MigLayout("", "[][grow][][][]", "[26px][][grow]"));
-                }
-                {
-                    this.cbox_onTop = new JCheckBox("on top");
-                    cbox_onTop.setSelected(true);
-                    this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
-                    this.cbox_onTop.addItemListener(new ItemListener() {
-                        @Override
-                        public void itemStateChanged(ItemEvent arg0) {
-                            do_cbox_onTop_itemStateChanged(arg0);
-                        }
-                    });
                     {
                         this.chckbxCalibrate = new JCheckBox("Calibration Mode");
+                        contentPanel.add(chckbxCalibrate, "cell 0 0 2 1");
                         this.chckbxCalibrate.addItemListener(new ItemListener() {
                             @Override
                             public void itemStateChanged(ItemEvent arg0) {
@@ -170,112 +144,106 @@ public class Calib_dialog extends JDialog {
                             }
                         });
                         this.chckbxCalibrate.setSelected(true);
-                        this.panel_left.add(this.chckbxCalibrate, "cell 0 0 3 1,alignx left,aligny center");
                     }
-                    this.cbox_onTop.setActionCommand("on top");
-                    this.panel_left.add(this.cbox_onTop, "cell 3 0 2 1,alignx right,aligny center");
-                }
-                {
                     {
-                        {
-                        }
+                        this.cbox_onTop = new JCheckBox("on top");
+                        contentPanel.add(cbox_onTop, "cell 2 0,alignx right");
+                        cbox_onTop.setSelected(true);
+                        this.cbox_onTop.setHorizontalTextPosition(SwingConstants.LEADING);
+                        this.cbox_onTop.addItemListener(new ItemListener() {
+                            @Override
+                            public void itemStateChanged(ItemEvent arg0) {
+                                do_cbox_onTop_itemStateChanged(arg0);
+                            }
+                        });
+                        this.cbox_onTop.setActionCommand("on top");
                     }
-                }
-                btnAutoCalibration = new JToggleButton("Start Manual Calibration");
-                btnAutoCalibration.addItemListener(new ItemListener() {
-                    public void itemStateChanged(ItemEvent e) {
-                        do_btnAutoCalibration_itemStateChanged(e);
+                    {
+                        this.lbllist = new JLabel("?");
+                        contentPanel.add(lbllist, "cell 3 0");
+                        this.lbllist.addMouseListener(new MouseAdapter() {
+                            @Override
+                            public void mouseEntered(MouseEvent e) {
+                                do_lbllist_mouseEntered(e);
+                            }
+
+                            @Override
+                            public void mouseExited(MouseEvent e) {
+                                do_lbllist_mouseExited(e);
+                            }
+
+                            @Override
+                            public void mouseReleased(MouseEvent e) {
+                                do_lbllist_mouseReleased(e);
+                            }
+                        });
+                        this.lbllist.setFont(new Font("Tahoma", Font.BOLD, 14));
                     }
-                });
-                {
-                    lblCalibrant = new JLabel("Calibrant");
-                    panel_left.add(lblCalibrant, "cell 0 1,alignx trailing");
-                }
-                {
-                    comboCalib = new JComboBox<String>();
-//                    comboCalib.addItemListener(new ItemListener() {
-//                        public void itemStateChanged(ItemEvent e) {
-//                            do_comboCalib_itemStateChanged(e);
-//                        }
-//                    });
-                    panel_left.add(comboCalib, "cell 1 1,growx");
-                }
-                panel_left.add(btnAutoCalibration, "flowy,cell 2 1,grow");
-                {
-                    this.lbllist = new JLabel("?");
-                    this.lbllist.addMouseListener(new MouseAdapter() {
-                        @Override
-                        public void mouseEntered(MouseEvent e) {
-                            do_lbllist_mouseEntered(e);
-                        }
-
-                        @Override
-                        public void mouseExited(MouseEvent e) {
-                            do_lbllist_mouseExited(e);
-                        }
-
-                        @Override
-                        public void mouseReleased(MouseEvent e) {
-                            do_lbllist_mouseReleased(e);
-                        }
-                    });
+                    {
+                        lblCalibrant = new JLabel("Calibrant");
+                        contentPanel.add(lblCalibrant, "cell 0 1");
+                    }
+                    {
+                        comboCalib = new JComboBox<String>();
+                        contentPanel.add(comboCalib, "cell 1 1 3 1,growx");
+                    }
                     {
                         btnAuto = new JButton("Autocalibration");
+                        btnAuto.setFont(new Font("Dialog", Font.BOLD, 15));
+                        contentPanel.add(btnAuto, "cell 0 2 4 1,growx");
                         btnAuto.addActionListener(new ActionListener() {
                             public void actionPerformed(ActionEvent arg0) {
                                 do_btnAuto_actionPerformed(arg0);
                             }
                         });
-                        panel_left.add(btnAuto, "cell 3 1");
-                    }
-                    this.lbllist.setFont(new Font("Tahoma", Font.BOLD, 14));
-                    this.panel_left.add(this.lbllist, "cell 4 1,alignx right,aligny center");
-                }
-                {
-                    panel_1 = new JPanel();
-                    panel_left.add(panel_1, "cell 0 2 5 1,grow");
-                    panel_1.setLayout(new MigLayout("", "[grow][grow]", "[grow]"));
-                    {
-                        panel = new JPanel();
-                        panel_1.add(panel, "cell 0 0,grow");
-                        panel.setBorder(new TitledBorder(null, "Display settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-                        panel.setLayout(new MigLayout("", "[grow]", "[][][][]"));
+                        btnAutoCalibration = new JToggleButton("Manual Calibration");
+                        contentPanel.add(btnAutoCalibration, "cell 0 3 4 1,growx");
+                        btnAutoCalibration.addItemListener(new ItemListener() {
+                            public void itemStateChanged(ItemEvent e) {
+                                do_btnAutoCalibration_itemStateChanged(e);
+                            }
+                        });
                         {
-                            chckbxShowGuessPoints = new JCheckBox("Show Guess Points");
-                            chckbxShowGuessPoints.addItemListener(new ItemListener() {
-                                public void itemStateChanged(ItemEvent arg0) {
-                                    do_chckbxShowGuessPoints_itemStateChanged(arg0);
-                                }
-                            });
-                            chckbxShowGuessPoints.setSelected(true);
-                            panel.add(chckbxShowGuessPoints, "flowy,cell 0 0,alignx left");
+                            panel = new JPanel();
+                            contentPanel.add(panel, "cell 0 4 4 1,grow");
+                            panel.setBorder(new TitledBorder(null, "Display settings", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+                            panel.setLayout(new MigLayout("", "[grow]", "[][][]"));
+                            {
+                                chckbxShowGuessPoints = new JCheckBox("Show Guess Points");
+                                chckbxShowGuessPoints.addItemListener(new ItemListener() {
+                                    public void itemStateChanged(ItemEvent arg0) {
+                                        do_chckbxShowGuessPoints_itemStateChanged(arg0);
+                                    }
+                                });
+                                chckbxShowGuessPoints.setSelected(true);
+                                panel.add(chckbxShowGuessPoints, "flowy,cell 0 0,alignx left");
+                            }
+                            {
+                                chckbxShowFittedEllipses = new JCheckBox("Show Fitted Ellipses");
+                                chckbxShowFittedEllipses.addItemListener(new ItemListener() {
+                                    public void itemStateChanged(ItemEvent e) {
+                                        do_chckbxShowFittedEllipses_itemStateChanged(e);
+                                    }
+                                });
+                                chckbxShowFittedEllipses.setSelected(true);
+                                panel.add(chckbxShowFittedEllipses, "flowx,cell 0 1,alignx left");
+                            }
+                            {
+                                chckbxShowSearchEllipses = new JCheckBox("Show search boundaries");
+                                chckbxShowSearchEllipses.addItemListener(new ItemListener() {
+                                    public void itemStateChanged(ItemEvent e) {
+                                        do_chckbxShowSearchEllipses_itemStateChanged(e);
+                                    }
+                                });
+                                chckbxShowSearchEllipses.setActionCommand("Show search ellipses boundaries");
+                                panel.add(chckbxShowSearchEllipses, "cell 0 2,alignx left");
+                            }
                         }
-                        {
-                            chckbxShowFittedEllipses = new JCheckBox("Show Fitted Ellipses");
-                            chckbxShowFittedEllipses.addItemListener(new ItemListener() {
-                                public void itemStateChanged(ItemEvent e) {
-                                    do_chckbxShowFittedEllipses_itemStateChanged(e);
-                                }
-                            });
-                            chckbxShowFittedEllipses.setSelected(true);
-                            panel.add(chckbxShowFittedEllipses, "flowx,cell 0 1,alignx left");
-                        }
-                        {
-                            chckbxShowSearchEllipses = new JCheckBox("Show search boundaries");
-                            chckbxShowSearchEllipses.addItemListener(new ItemListener() {
-                                public void itemStateChanged(ItemEvent e) {
-                                    do_chckbxShowSearchEllipses_itemStateChanged(e);
-                                }
-                            });
-                            chckbxShowSearchEllipses.setActionCommand("Show search ellipses boundaries");
-                            panel.add(chckbxShowSearchEllipses, "cell 0 2,alignx left");
-                        }
-                    }
-                    {
                         panel_2 = new JPanel();
+                        panel_2.setPreferredSize(new Dimension(310, 10));
+                        contentPanel.add(panel_2, "cell 0 5 4 1,grow");
                         panel_2.setBorder(new TitledBorder(null, "Advanced Parameters", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-                        panel_1.add(panel_2, "cell 1 0,grow");
-                        panel_2.setLayout(new MigLayout("", "[][grow]", "[][][][][]"));
+                        panel_2.setLayout(new MigLayout("", "[][grow]", "[][][][][grow]"));
                         {
                             lblPixtol = new JLabel("Pixel Range");
                             panel_2.add(lblPixtol, "cell 0 0,alignx trailing");
@@ -312,49 +280,34 @@ public class Calib_dialog extends JDialog {
                             panel_2.add(txtOmmitrings, "cell 1 3,growx");
                             txtOmmitrings.setColumns(10);
                         }
-                        {
-                            btnRecalc = new JButton("Recalc");
-                            panel_2.add(btnRecalc, "cell 0 4 2 1,alignx center");
-                            btnRecalc.addActionListener(new ActionListener() {
-                                public void actionPerformed(ActionEvent arg0) {
-                                    do_btnRecalc_actionPerformed(arg0);
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-            {
-                this.panel_right = new JPanel();
-                this.panel_right.setBackground(Color.BLACK);
-                this.splitPane.setRightComponent(this.panel_right);
-                panel_right.setLayout(new MigLayout("insets 5", "[grow]", "[grow]"));
-                {
-                    this.scrollPane_1 = new JScrollPane();
-                    this.scrollPane_1.setBorder(null);
-                    this.panel_right.add(this.scrollPane_1, "cell 0 0,grow");
-                    {
-                        this.tAOut = new LogJTextArea();
-                        this.tAOut.setTabSize(4);
-                        this.tAOut.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
-                        this.tAOut.setWrapStyleWord(true);
-                        this.tAOut.setLineWrap(true);
-                        this.tAOut.setEditable(false);
-                        // this.textArea.setForeground(Color.GREEN);
-                        // this.textArea.setBackground(Color.BLACK);
-                        this.scrollPane_1.setViewportView(this.tAOut);
+                        btnRecalc = new JButton("Recalculate ellipses");
+                        panel_2.add(btnRecalc, "cell 0 4 2 1,alignx right");
+                        btnRecalc.addActionListener(new ActionListener() {
+                            public void actionPerformed(ActionEvent arg0) {
+                                do_btnRecalc_actionPerformed(arg0);
+                            }
+                        });
                     }
                 }
             }
         }
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
-            JButton okButton = new JButton("close");
-            okButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent arg0) {
-                    do_okButton_actionPerformed(arg0);
+            calibDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            {
+                buttonPane.setLayout(new MigLayout("", "[grow][grow]", "[][][25px]"));
+                btnImageParameters = new JButton("Image Parameters");
+                buttonPane.add(btnImageParameters, "cell 0 0,growx");
+                btnImageParameters.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent arg0) {
+                        do_btnImageParameters_actionPerformed(arg0);
+                    }
+                });
+            }
+            btnWriteCalFile = new JButton("Write CAL file");
+            btnWriteCalFile.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    do_btnWriteCalFile_actionPerformed(e);
                 }
             });
             {
@@ -365,33 +318,25 @@ public class Calib_dialog extends JDialog {
                         do_btnNewButton_actionPerformed(arg0);
                     }
                 });
-                buttonPane.setLayout(new MigLayout("", "[][][][grow]", "[25px]"));
-                btnImageParameters = new JButton("Image Parameters");
-                buttonPane.add(btnImageParameters, "cell 0 0");
-                btnImageParameters.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent arg0) {
-                        do_btnImageParameters_actionPerformed(arg0);
-                    }
-                });
-                buttonPane.add(this.btnApply, "cell 1 0,alignx center,aligny center");
+                buttonPane.add(this.btnApply, "cell 0 1,growx,aligny center");
             }
-            {
-                btnWriteCalFile = new JButton("Write CAL file");
-                btnWriteCalFile.addActionListener(new ActionListener() {
-                    public void actionPerformed(ActionEvent e) {
-                        do_btnWriteCalFile_actionPerformed(e);
-                    }
-                });
-                buttonPane.add(btnWriteCalFile, "cell 2 0");
-            }
+            buttonPane.add(btnWriteCalFile, "cell 0 2,growx");
+            JButton okButton = new JButton("close");
+            okButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent arg0) {
+                    do_okButton_actionPerformed(arg0);
+                }
+            });
             okButton.setActionCommand("OK");
-            buttonPane.add(okButton, "cell 3 0,alignx right,aligny center");
-            getRootPane().setDefaultButton(okButton);
+            buttonPane.add(okButton, "cell 1 2,alignx right,aligny center");
+            calibDialog.getRootPane().setDefaultButton(okButton);
         }
 
-        this.setAlwaysOnTop(true);
+        calibDialog.setAlwaysOnTop(true);
 
-        tAOut.ln("** Instrumental parameters calibration **");
+        log.info("** Instrumental parameters calibration **");
+        calibDialog.pack();
         inicia();
         
         
@@ -405,8 +350,17 @@ public class Calib_dialog extends JDialog {
         return ip;
     }
 
+	//es una manera de posar al log tot el que surt pel txtArea local
+//	public void printTaOut(String msg,boolean stat) {
+//        if (stat) {
+//        	this.tAOut.stat(msg);
+//        }else {
+//        	this.tAOut.ln(msg);
+//        }
+//		log.debug(msg);
+//	}
+    
     protected void inicia(){
-        this.patt2D = this.getIPanel().getPatt2D();
         this.pointsRing1circle=null; //perque no funcioni el recalc
 
         refCX=0;
@@ -425,45 +379,49 @@ public class Calib_dialog extends JDialog {
         while (itrC.hasNext()) {
             comboCalib.addItem(itrC.next().getName());
             comboCalib.setSelectedIndex(0);//we suppose the first is LaB6
-//            log.config("added calibrant "+comboCalib.getSelectedItem().toString());
         }
-        //aixo no seria necessari aquí... ja que ho farem al començar calibració (llegir parametres)
-//        this.setCal_d(CalibOps.getCalibrants().get(comboCalib.getSelectedIndex()).getDsp());
     }
     
-    @Override
     public void dispose() {
         this.chckbxCalibrate.setSelected(false);
         this.getIPanel().actualitzarVista();
-        super.dispose();
+        calibDialog.dispose();
+    }
+    
+    public void setVisible(boolean vis) {
+    	calibDialog.setVisible(vis);
+    	if (vis==true) {
+            this.chckbxCalibrate.setSelected(true);
+    	}
     }
 
     public void selectCalibrant(int index) {
         try {
             comboCalib.setSelectedIndex(index);    
         }catch(Exception e) {
-            log.info("calibrant not exists");
+            log.debug("calibrant not exists");
         }
         
     }
     
     protected void do_btnNewButton_actionPerformed(ActionEvent arg0) {
+        Pattern2D patt2D = this.getIPanel().getPatt2D();
         if (getRefMD() > 0) {
             patt2D.setDistMD(refMD);
             patt2D.setCentrX(refCX);
             patt2D.setCentrY(refCY);
             patt2D.setTiltDeg(refTiltDeg);
             patt2D.setRotDeg(refRotDeg);
-            tAOut.ln("Values set as image calibration parameters");
+            log.info("Values set as image calibration parameters");
             this.getIPanel().actualitzarVista();
             this.getIPanel().getMainFrame().updateIparameters();
             return;
         }
-        tAOut.ln("Please perform a calculation first");
+        log.info("Please perform a calculation first");
     }
 
     protected void do_cbox_onTop_itemStateChanged(ItemEvent arg0) {
-        this.setAlwaysOnTop(cbox_onTop.isSelected());
+    	calibDialog.setAlwaysOnTop(cbox_onTop.isSelected());
     }
 
     protected void do_chckbxCalibrate_itemStateChanged(ItemEvent arg0) {
@@ -480,9 +438,9 @@ public class Calib_dialog extends JDialog {
     }
 
     protected void do_lbllist_mouseReleased(MouseEvent e) {
-      tAOut.ln("");
-      tAOut.ln("** CALIBRATION HELP **");
-      tAOut.ln(" 1) Click Start Manual Calibration\n"
+      String msg = "\n"
+    		  +"** CALIBRATION HELP **\n"
+              +" 1) Click Start Manual Calibration\n"
               + " 2) Click 5 or more points within the inner ring\n"
               + " 3) Click Finish -- ellipses will be fitted to the peak rings\n"
               + " 4) Click on recalc if you change the parameters (without clicking points again)\n"
@@ -491,7 +449,9 @@ public class Calib_dialog extends JDialog {
               + "OR\n"
               + " 1) Click on autocalibration\n"
               + " (it need aprox. initial parameters and the first ring should be close to a circle)\n"
-              + "\n");
+              + "\n";
+      FileUtils.InfoDialog(calibDialog, msg, "Calibration Help");
+
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
@@ -500,7 +460,7 @@ public class Calib_dialog extends JDialog {
     }
     
     protected void do_btnImageParameters_actionPerformed(ActionEvent arg0) {
-        if (patt2D != null) {
+        if (this.getIPanel().getPatt2D() != null) {
             this.ip.getMainFrame().do_mntmInstrumentalParameters_actionPerformed(null);
         }
     }
@@ -542,7 +502,7 @@ public class Calib_dialog extends JDialog {
     
     //omplim automaticament els pointsRing1circle segons distMD i dspacing 1r pic LaB6 (considerem CERCLE)
     public void do_btnAuto_actionPerformed(ActionEvent arg0) {
-        
+        Pattern2D patt2D = this.getIPanel().getPatt2D();
         solutions = new ArrayList<EllipsePars>(); //BORREM ANTERIORS SOLUCIONS
         
         if(!checkWavePixSDist(true))return;
@@ -566,8 +526,9 @@ public class Calib_dialog extends JDialog {
     }
     
     private boolean checkWavePixSDist(boolean showParams){
+        Pattern2D patt2D = this.getIPanel().getPatt2D();
         if((!patt2D.checkIfWavel() || !patt2D.checkIfPixSize() || !patt2D.checkIfDistMD())){
-            tAOut.afegirText(true, true, "Please provide pixel size, sample-detector distance and wavelength");
+        	log.warning("Please provide pixel size, sample-detector distance and wavelength");
             if(showParams)btnImageParameters.doClick();
             return false;
         }
@@ -587,7 +548,7 @@ public class Calib_dialog extends JDialog {
             this.btnAutoCalibration.setText("Click here when finished!");
             this.setSetting1stPeakCircle(true);
         }else{
-            this.btnAutoCalibration.setText("Start Calibration");
+            this.btnAutoCalibration.setText("Manual Calibration");
             this.setSetting1stPeakCircle(false);
             //busquem ellipses (ja llegirem els parametres dins, abans ho feiem aqui pero calcEllipses tambe es pot cridar amb recalc)
             this.readFindElliPars();
@@ -603,6 +564,7 @@ public class Calib_dialog extends JDialog {
     
     private void calcEllipses(){
         if ((this.pointsRing1circle!=null)){
+            Pattern2D patt2D = this.getIPanel().getPatt2D();
             
             //INICIALITZEM I CHECKEJEM ELS PARAMETRES ABANS DE CALCULAR/BUSCAR ELLIPSES
             this.cerques=new ArrayList<Line2D.Float>();
@@ -625,12 +587,11 @@ public class Calib_dialog extends JDialog {
             p.setEstimPoints(pointsRing1circle);
             p.fitElli();
             if (!p.isFit()){
-                log.warning("Error fitting ellipse for 1st ring, trying 1st with circle...");
+                log.debug("Error fitting ellipse for 1st ring, trying 1st with circle...");
                 //try with a circle
                 this.fitCircle(d);
                 if (this.getCircleRadius()<=0){
-                    log.warning("Error also in circle fit, try to add more points and/or check image parameters");
-                    tAOut.stat("Impossible to fit calibrant peak number 1. Please check image parameters and/or add more points");
+                	log.warning("Error fitting calibrant peak number 1. Please check image parameters and/or add more points");
                     return;
                 }
                 p.setEstimPoints(findRingPoints(this.getCircleRadius(),findElliPointsTolPix)); //posem punts del cercle
@@ -646,8 +607,7 @@ public class Calib_dialog extends JDialog {
                 p.logElliPars("debug");
                 solutions.add(p);                
             }else{
-                log.warning("Impossible to fit ellipse number 1. Please check.");
-                tAOut.stat("Impossible to fit calibrant peak number 1. Please check image parameters and/or add more points");
+            	log.warning("Error fitting calibrant peak number 1. Please check image parameters and/or add more points");
                 return;
             }
 
@@ -713,12 +673,13 @@ public class Calib_dialog extends JDialog {
     //busca punts al voltant d'un cercle radi cradi amb un rang +-tol (del radi)
     //unitats PIXELS
     private ArrayList<Point2D.Float> findRingPoints(float cradi,float tol){
+        Pattern2D patt2D = this.getIPanel().getPatt2D();
         //parametric circle
         //x  =  h + r cos(t)
         //y  =  k + r sin(t)
         ArrayList<Point2D.Float> ringPoints = new ArrayList<Point2D.Float>();
         //Per determinar el num de punts, l'unic parametre es la separacio en pixels entre els punts (arcpix)
-        float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
+        float arcInPixels = findElliPointsArcSizemm/patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
         log.writeNameNumPairs("debug", true, "angstep", FastMath.toDegrees(angstep));
         
@@ -736,9 +697,9 @@ public class Calib_dialog extends JDialog {
                 for (int i = -1; i<2; i++){
                     int px = (int)(xpix)+i;
                     int py = (int)(ypix)+i;
-                    if (!this.patt2D.isInside(px, py))continue;
-                    if (this.patt2D.isInExZone(px, py))continue;
-                    inten = this.patt2D.getInten(px, py);
+                    if (!patt2D.isInside(px, py))continue;
+                    if (patt2D.isExcluded(px, py))continue;
+                    inten = patt2D.getInten(px, py);
                     if (inten>maxI){
                         maxI = inten;
                         xmaxI = px;
@@ -760,7 +721,7 @@ public class Calib_dialog extends JDialog {
     //busca punts al voltant d'una ellipse amb un rang +-tol (del radi)
     //unitats PIXELS
     private ArrayList<Point2D.Float> findRingPoints(EllipsePars elli,float tol){
-
+        Pattern2D patt2D = this.getIPanel().getPatt2D();
         ArrayList<Point2D.Float> ringPoints = new ArrayList<Point2D.Float>();
         
         float cradi = (float) ((elli.getRmax()+elli.getRmin())/2);
@@ -768,7 +729,7 @@ public class Calib_dialog extends JDialog {
         float facRmin = (float) (elli.getRmin()/cradi);
 
         //ANGULAR STEP in order to have an arc of aprox 1mm
-        float arcInPixels = findElliPointsArcSizemm/this.patt2D.getPixSx();
+        float arcInPixels = findElliPointsArcSizemm/patt2D.getPixSx();
         float angstep = (float) (FastMath.asin(arcInPixels/(2*cradi))/2);
         log.writeNameNumPairs("debug", true, "angstep", FastMath.toDegrees(angstep));
 //        System.out.println(FastMath.toDegrees(elli.getAngrot()));
@@ -795,13 +756,13 @@ public class Calib_dialog extends JDialog {
                 for (int i = -1; i<2; i++){
                     int px = (int)(p.x)+i;
                     int py = (int)(p.y)+i;
-                    if (!this.patt2D.isInside(px,py)){
+                    if (!patt2D.isInside(px,py)){
                         continue;
                     }
-                    if (this.patt2D.isInExZone(px,py)){
+                    if (patt2D.isExcluded(px,py)){
                         continue;
                     }
-                    inten = this.patt2D.getInten(px,py);
+                    inten = patt2D.getInten(px,py);
                     log.writeNameNumPairs("fine", true, "ang,radi,px,py,inten,maxI,xmaxI,ymaxI", FastMath.toDegrees(a),r,px,py,inten,maxI,xmaxI,ymaxI);
                     if (inten>maxI){
                         maxI = inten;
@@ -830,7 +791,7 @@ public class Calib_dialog extends JDialog {
     
     
     private float estimMDdist(EllipsePars e, int lab6peak){
-        float wave = patt2D.getWavel();
+        float wave = this.getIPanel().getPatt2D().getWavel();
         float twoth = (float) (2*FastMath.asin(wave/(2*this.getCal_d()[lab6peak-1])));
         float estMD = (float) ((e.getRmin()*e.getRmin())/(FastMath.tan(twoth)*e.getRmax()));
         return estMD;
@@ -849,7 +810,7 @@ public class Calib_dialog extends JDialog {
     }
     
     private void calcInstrumFromEllipses(){
-        
+        Pattern2D patt2D = this.getIPanel().getPatt2D();
         ArrayList<Double> distsMD = new ArrayList<Double>();
         ArrayList<Double> tilts = new ArrayList<Double>();
         ArrayList<Double> rots = new ArrayList<Double>();
@@ -974,7 +935,7 @@ public class Calib_dialog extends JDialog {
         MultivariateFunction function = new MultivariateFunction() {
             @Override
             public double value(double[] array) {
-                double res = CalibOps.minimize2Theta(patt2D, array[0],array[1],array[2],array[3],array[4], solutions,cal_d);
+                double res = CalibOps.minimize2Theta(getIPanel().getPatt2D(), array[0],array[1],array[2],array[3],array[4], solutions,cal_d);
                 log.writeNameNums("fine", true, "array,sum", array[0],array[1],array[2],array[3],array[4],res);
                 return res;
             }
@@ -996,12 +957,19 @@ public class Calib_dialog extends JDialog {
         this.setRefTiltDeg((float) optimum.getPoint()[3]);
         this.setRefRotDeg((float) optimum.getPoint()[4]);
         
-        tAOut.afegirText(true, true,"Calibration results ================");
-        tAOut.ln(" Distance Sample-Det (mm) ="+FileUtils.dfX_3.format(this.getRefMD()));
-        tAOut.ln(" Beam Center (best) (pX pY) ="+FileUtils.dfX_3.format(this.getRefCX())+" "+FileUtils.dfX_3.format(this.getRefCY()));
-        tAOut.ln(" Detecctor rot. (ind) (deg) = "+FileUtils.dfX_2.format(this.getRefRotDeg()));                
-        tAOut.ln(" Detector tilt (deg) = "+FileUtils.dfX_3.format(this.getRefTiltDeg()));    
-        tAOut.ln("=================================");
+//        log.info("Calibration results ================",className);
+//        log.info(" Distance Sample-Det (mm) ="+FileUtils.dfX_3.format(this.getRefMD()),className);
+//        log.info(" Beam Center (best) (pX pY) ="+FileUtils.dfX_3.format(this.getRefCX())+" "+FileUtils.dfX_3.format(this.getRefCY()),className);
+//        log.info(" Detecctor rot. (ind) (deg) = "+FileUtils.dfX_2.format(this.getRefRotDeg()),className);                
+//        log.info(" Detector tilt (deg) = "+FileUtils.dfX_3.format(this.getRefTiltDeg()),className);    
+//        log.info("=================================",className);
+        
+        log.info("Calibration results ================");
+        log.info(" Distance Sample-Det (mm) ="+FileUtils.dfX_3.format(this.getRefMD()));
+        log.info(" Beam Center (best) (pX pY) ="+FileUtils.dfX_3.format(this.getRefCX())+" "+FileUtils.dfX_3.format(this.getRefCY()));
+        log.info(" Detecctor rot. (ind) (deg) = "+FileUtils.dfX_2.format(this.getRefRotDeg()));                
+        log.info(" Detector tilt (deg) = "+FileUtils.dfX_3.format(this.getRefTiltDeg()));    
+        log.info("=================================");
     }
         
     private void fitCircle(Point2D.Float[] points){
@@ -1134,7 +1102,7 @@ public class Calib_dialog extends JDialog {
     }
 
     public static void setSearchElliLimitFactor(float searchElliLimitFactor) {
-        Calib_dialog.searchElliLimitFactor = searchElliLimitFactor;
+        Calibration.searchElliLimitFactor = searchElliLimitFactor;
     }
 
     public ArrayList<EllipsePars> getElliCerques(){
@@ -1151,51 +1119,12 @@ public class Calib_dialog extends JDialog {
     }
     
     protected void do_btnWriteCalFile_actionPerformed(ActionEvent e) {
-        File calfile = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null,null);
+        File calfile = FileUtils.fchooserSaveAsk(calibDialog,new File(D2Dplot_global.getWorkdir()), null,"cal");
         if (calfile != null){
-            this.writeCALfile(calfile);
+            calfile = ImgFileUtils.writeCALfile(calfile,this.getIPanel().getPatt2D(),this,false); //extensio forçada al fchooser
             D2Dplot_global.setWorkdir(calfile);
         }
     }
-    
-    public void writeCALfile(File calfile){
-        
-        String tm = D2Dplot_global.getStringTimeStamp("yyyy-MM-dd 'at' HH:mm");
-        
-        try {
-            PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(calfile)));
-            output.println(String.format("# Calibration for %s on %s", patt2D.getImgfileString(),tm));
-            output.println(String.format("CALFIL = %s [d2Dplot]", patt2D.getImgfile().getAbsolutePath()));
-            output.println(String.format("X-BEAM CENTRE = %.2f", this.getRefCX()));
-            output.println(String.format("Y-BEAM CENTRE = %.2f", this.getRefCY()));
-            output.println(String.format("DISTANCE = %.3f", this.getRefMD()));
-            output.println(String.format("WAVELENGTH = %.5f", patt2D.getWavel()));
-            output.println(String.format("TILT ROTATION = %.2f", this.getRefRotDeg()));
-            output.println(String.format("ANGLE OF TILT = %.3f", this.getRefTiltDeg()));
-            output.println();
-            output.println(String.format("SUBADU = %.1f", -9.5f));
-            output.println(String.format("START AZIMUTH = %.1f", 0.f));
-            output.println(String.format("END AZIMUTH = %.1f", 360.f));
-            output.println(String.format("INNER RADIUS = %d", 0));
-            output.println(String.format("OUTER RADIUS = %d", (int)(patt2D.getDimX()/2)-1));
-            output.println(String.format("AZIMUTH BINS = %d", 1));
-            output.println(String.format("RADIAL BINS = %d", (int)(patt2D.getDimX()/2)-1));
-            output.println();
-            output.println(String.format("#MASK FILE = %s", D2Dplot_global.getWorkdir()+D2Dplot_global.separator+"MASK.bin"));
-            output.println("#Mask file is a zero-intensity image with mask pixels at -1 intensity");
-            output.close();
-        }catch(Exception ex){
-            if (D2Dplot_global.isDebug())ex.printStackTrace();
-            log.info(String.format("Error writting output CAL file: %s",calfile.toString()));
-        }
-    }
-    
-//    protected void do_comboCalib_itemStateChanged(ItemEvent e) {
-//        if (e.getStateChange() == ItemEvent.SELECTED) {
-//            CalibOps.setCal_d(CalibOps.getCalibrants().get(comboCalib.getSelectedIndex()).getDsp());
-//            log.config("selected index="+comboCalib.getSelectedIndex());
-//         }
-//    }
 
     public float[] getCal_d() {
         return cal_d;

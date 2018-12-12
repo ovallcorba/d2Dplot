@@ -16,6 +16,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
 import javax.swing.JLabel;
@@ -24,7 +25,6 @@ import javax.swing.SwingUtilities;
 
 import com.vava33.d2dplot.auxi.ImgFileUtils;
 import com.vava33.d2dplot.auxi.OrientSolucio;
-import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.d2dplot.auxi.PuntSolucio;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
@@ -48,15 +48,17 @@ import java.awt.event.KeyEvent;
 
 import javax.swing.ListSelectionModel;
 
-public class Dinco_frame extends JFrame {
+public class IncoPlot {
 
-    private static final long serialVersionUID = 1L;
+    private JDialog dincoDialog;
     private JPanel contentPane;
+    private JFrame parent;
     private JCheckBox chckbxOnTop;
     private JList<OrientSolucio> listSol;
     private JList<PuntSolucio> listEdit;
     private JCheckBox chckbxAddPeaks;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(Dinco_frame.class.getName());
+    private static final String className = "INCO";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
     private JButton btnExtractIntensities;
     private JCheckBox chckbxShowHkl;
     private JCheckBox chckbxShowSpots;
@@ -64,24 +66,23 @@ public class Dinco_frame extends JFrame {
     private JPanel panel;
     private JPanel panel_1;
 
-    private Pattern2D patt2D;
+//    private Pattern2D patt2D;
     private ImagePanel ip;
     private JLabel lblFsol;
     
     /**
      * Create the frame.
      */
-    public Dinco_frame(ImagePanel ip) {
+    public IncoPlot(JFrame parent, ImagePanel ip) {
         this.ip=ip;
-        this.setPatt2D(ip.getPatt2D());
-
-        setTitle("tts_INCO");
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Dinco_frame.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setBounds(100, 100, 450, 440);
+        this.parent=parent;
+        dincoDialog = new JDialog(parent,"tts_INCO",false);
+        dincoDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(IncoPlot.class.getResource("/img/Icona.png")));
+        dincoDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        dincoDialog.setBounds(100, 100, 450, 440);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-        setContentPane(contentPane);
+        dincoDialog.setContentPane(contentPane);
         contentPane.setLayout(new MigLayout("fill, insets 5", "[][][grow]", "[][][grow][]"));
         
         JButton btnLoadSol = new JButton("Load PXY/SOL file");
@@ -218,7 +219,7 @@ public class Dinco_frame extends JFrame {
         for (MouseListener ml : mls)
             listEdit.addMouseListener(ml);
         
-        this.setAlwaysOnTop(chckbxOnTop.isSelected());
+        dincoDialog.setAlwaysOnTop(chckbxOnTop.isSelected());
 
         this.inicia();
     }
@@ -233,18 +234,9 @@ public class Dinco_frame extends JFrame {
     
     
     public void inicia(){
-        this.setPatt2D(ip.getPatt2D());
+//        this.setPatt2D(ip.getPatt2D());
         this.addSolutionsToList();
         this.loadPeakList();
-    }
-    
-    @Override
-    public void dispose() {
-        this.chckbxShowSpots.setSelected(false);
-        this.chckbxShowHkl.setSelected(false);
-        this.chckbxAddPeaks.setSelected(false);
-        getIPanel().actualitzarVista();
-        super.dispose();
     }
     
     protected void do_btnClose_actionPerformed(ActionEvent e) {
@@ -256,16 +248,16 @@ public class Dinco_frame extends JFrame {
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[2];
         filter[0] = new FileNameExtensionFilter("DINCO SOL/PXY files (*.SOL *.PXY)","SOL","sol","PXY","pxy");
         filter[1] = new FileNameExtensionFilter("XDS files (SPOT.XDS)","XDS","xds");
-        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+        File fsol = FileUtils.fchooserOpen(dincoDialog,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if (fsol!=null){
-            this.getPatt2D().clearSolutions();
+            this.getIPanel().getPatt2D().clearSolutions();
             if (FileUtils.getExtension(fsol).equalsIgnoreCase("XDS")){
-                fsol = ImgFileUtils.readXDS(fsol,patt2D);
+                fsol = ImgFileUtils.readXDS(fsol,this.getIPanel().getPatt2D());
             }else{
-                fsol = ImgFileUtils.readSOL(fsol,patt2D);
+                fsol = ImgFileUtils.readSOL(fsol,this.getIPanel().getPatt2D());
             }
             if (fsol == null) {
-                log.debug("No SOL file opened");
+                log.info("No SOL file opened");
             }else{
                 this.addSolutionsToList();
                 changeFSOLlabel(fsol);
@@ -276,8 +268,8 @@ public class Dinco_frame extends JFrame {
     
     public void loadSOLFileDirectly(File fsol){
         if (fsol!=null){
-            this.getPatt2D().clearSolutions();
-            fsol = ImgFileUtils.readSOL(fsol, this.getPatt2D());
+            this.getIPanel().getPatt2D().clearSolutions();
+            fsol = ImgFileUtils.readSOL(fsol, this.getIPanel().getPatt2D());
             this.addSolutionsToList();
             changeFSOLlabel(fsol);
             D2Dplot_global.setWorkdir(fsol);
@@ -289,16 +281,16 @@ public class Dinco_frame extends JFrame {
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[2];
         filter[0] = new FileNameExtensionFilter("INCO SOL/PXY files (*.SOL *.PXY)","SOL","sol","PXY","pxy");
         filter[1] = new FileNameExtensionFilter("INCO/D2DPlot PCS files (*.PCS *.PXY)","PCS","pcs");
-        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+        File fsol = FileUtils.fchooserOpen(dincoDialog,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if (fsol!=null){
-            this.getPatt2D().clearSolutions();
+            this.getIPanel().getPatt2D().clearSolutions();
             if (FileUtils.getExtension(fsol).equalsIgnoreCase("PCS")){
-                fsol = ImgFileUtils.readPCSasSOL(fsol,patt2D);
+                fsol = ImgFileUtils.readPCSasSOL(fsol,this.getIPanel().getPatt2D());
             }else{
-                fsol = ImgFileUtils.readSOL(fsol, this.getPatt2D());
+                fsol = ImgFileUtils.readSOL(fsol, this.getIPanel().getPatt2D());
             }
             if (fsol == null) {
-                log.debug("No SOL file opened");
+                log.info("No SOL file opened");
             }else{
                 this.addSolutionsToList();
                 changeFSOLlabel(fsol);
@@ -310,12 +302,12 @@ public class Dinco_frame extends JFrame {
     public void openXDS(){
         FileNameExtensionFilter[] filter = new FileNameExtensionFilter[1];
         filter[0] = new FileNameExtensionFilter("XDS files (SPOT.XDS)","XDS","xds");
-        File fsol = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+        File fsol = FileUtils.fchooserOpen(dincoDialog,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if (fsol!=null){
-            this.getPatt2D().clearSolutions();
-            fsol = ImgFileUtils.readXDS(fsol, this.getPatt2D());
+            this.getIPanel().getPatt2D().clearSolutions();
+            fsol = ImgFileUtils.readXDS(fsol, this.getIPanel().getPatt2D());
             if (fsol == null) {
-                log.debug("No XDS file opened");
+                log.info("No XDS file opened");
             }else{
                 this.addSolutionsToList();
                 changeFSOLlabel(fsol);
@@ -332,8 +324,8 @@ public class Dinco_frame extends JFrame {
         // afegim les solucions a la llista
         DefaultListModel<OrientSolucio> lm = new DefaultListModel<OrientSolucio>();
         // ordenem arraylist ---> EL SOL JA ESTA ORDENAT A LA DARRERA VERSIO DE INCO, NO CAL
-        Collections.sort(this.getPatt2D().getSolucions(),Collections.reverseOrder());
-        Iterator<OrientSolucio> iteros = this.getPatt2D().getSolucions().iterator();
+        Collections.sort(this.getIPanel().getPatt2D().getSolucions(),Collections.reverseOrder());
+        Iterator<OrientSolucio> iteros = this.getIPanel().getPatt2D().getSolucions().iterator();
         while (iteros.hasNext()){
             lm.addElement(iteros.next());
         }
@@ -385,15 +377,6 @@ public class Dinco_frame extends JFrame {
         listEdit.setModel(lm);
         getIPanel().actualitzarVista();
     }
-
-    
-    public Pattern2D getPatt2D() {
-        return patt2D;
-    }
-
-    public void setPatt2D(Pattern2D patt2d) {
-        patt2D = patt2d;
-    }
     
     public boolean isAddPeaks(){
         return chckbxAddPeaks.isSelected();
@@ -424,7 +407,7 @@ public class Dinco_frame extends JFrame {
                 if (oos == null) return;
                 for (int i=0;i<oos.length;i++){
                     OrientSolucio os = (OrientSolucio)oos[i];
-                    this.getPatt2D().removeSolucio(os);
+                    this.getIPanel().getPatt2D().removeSolucio(os);
                 }
                 this.addSolutionsToList();
             }
@@ -461,10 +444,10 @@ public class Dinco_frame extends JFrame {
         }
     }
     protected void do_chckbxOnTop_itemStateChanged(ItemEvent e) {
-        this.setAlwaysOnTop(chckbxOnTop.isSelected());
+    	dincoDialog.setAlwaysOnTop(chckbxOnTop.isSelected());
     }
     protected void do_btnExtractIntensities_actionPerformed(ActionEvent arg0) {
-        PKsearch_frame pksframe = new PKsearch_frame(ip,true,this);
+        PeakSearch pksframe = new PeakSearch(parent,ip,true,this);
         ip.setPKsearch(pksframe);
         pksframe.setVisible(true);
     }
@@ -476,5 +459,16 @@ public class Dinco_frame extends JFrame {
     }
     protected void do_listEdit_valueChanged(ListSelectionEvent e) {
         getIPanel().actualitzarVista();
+    }
+    public void setVisible(boolean vis) {
+    	dincoDialog.setVisible(vis);
+    	if (vis==true) this.chckbxShowSpots.setSelected(true);
+    }
+    public void dispose() {
+        this.chckbxShowSpots.setSelected(false);
+        this.chckbxShowHkl.setSelected(false);
+        this.chckbxAddPeaks.setSelected(false);
+        getIPanel().actualitzarVista();
+        dincoDialog.dispose();
     }
 }

@@ -28,7 +28,8 @@ public class TSDfile {
     
     private boolean successfulRead = false;
     
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(TSDfile.class.getName());
+    private static final String className = "TSDfile";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     //creates a TSD file via reading it
     public TSDfile(String pathToFile){
@@ -68,7 +69,7 @@ public class TSDfile {
                         gamma = Float.parseFloat(spars[5]);
                     }catch(Exception e){
                         e.printStackTrace();
-                        log.debug("error reading cell parameters");
+                        log.warning("Error reading cell parameters");
                     }
                     continue;
                 }
@@ -90,7 +91,7 @@ public class TSDfile {
                         laue = Integer.parseInt(scTSDfile.nextLine().trim());    
                     }catch(Exception e){
                         e.printStackTrace();
-                        log.debug("error reading laue");
+                        log.warning("Error reading LAUE");
                     }
                     continue;
                 }
@@ -132,7 +133,7 @@ public class TSDfile {
                             if (item2[0].equalsIgnoreCase("SPIN"))this.aspin=Float.parseFloat(item2[1]);
                         }catch(Exception e){
                             e.printStackTrace();
-                            log.debug("error getting item "+item2[0]);
+                            log.warning("Error getting item "+item2[0]);
                         }
                         continue;
                     }
@@ -163,7 +164,7 @@ public class TSDfile {
             scTSDfile.close();
         }catch(Exception e){
             e.printStackTrace();
-            log.debug("error reading TSD file");
+            log.warning("Error reading TSD file");
             return false;
         }
         return true;

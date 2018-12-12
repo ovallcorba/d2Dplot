@@ -5,6 +5,7 @@ import java.awt.FlowLayout;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -26,17 +27,16 @@ import java.io.File;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
-public class Subtract_dialog extends JDialog {
+public class SubtractImages {
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1213037389106923612L;
-    private final JPanel contentPanel = new JPanel();
+    private JDialog subDialog;
+    private JPanel contentPanel;
     private JTextField txtImage;
     private JTextField txtFactor;
     private JTextField txtImage_1;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(Subtract_dialog.class.getName());
+    private boolean cancelpressed;
+    private static final String className = "Subtract";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     /**
      * Launch the application.
@@ -54,13 +54,14 @@ public class Subtract_dialog extends JDialog {
     /**
      * Create the dialog.
      */
-    public Subtract_dialog() {
-        setModal(true);
-        setTitle("Subtract Images");
-        setBounds(100, 100, 450, 220);
-        getContentPane().setLayout(new BorderLayout());
+    public SubtractImages(JFrame parent) {
+    	this.contentPanel=new JPanel();
+    	subDialog = new JDialog(parent,"Subtract Images",true);
+    	subDialog.setBounds(100, 100, 450, 220);
+    	subDialog.getContentPane().setLayout(new BorderLayout());
+    	subDialog.setLocationRelativeTo(parent);
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(contentPanel, BorderLayout.CENTER);
+        subDialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[][grow][]", "[grow][][][]"));
         {
             JLabel lblImageFactorimage = new JLabel("Image1 - factor*Image2");
@@ -118,7 +119,7 @@ public class Subtract_dialog extends JDialog {
         {
             JPanel buttonPane = new JPanel();
             buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            subDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 JButton okButton = new JButton("OK");
                 okButton.addActionListener(new ActionListener() {
@@ -128,17 +129,31 @@ public class Subtract_dialog extends JDialog {
                 });
                 okButton.setActionCommand("OK");
                 buttonPane.add(okButton);
-                getRootPane().setDefaultButton(okButton);
+                subDialog.getRootPane().setDefaultButton(okButton);
+            }
+            {
+            	JButton btnNewButton = new JButton("Cancel");
+            	btnNewButton.addActionListener(new ActionListener() {
+            		public void actionPerformed(ActionEvent e) {
+            			do_btnNewButton_actionPerformed(e);
+            		}
+            	});
+            	buttonPane.add(btnNewButton);
             }
         }
+        cancelpressed=true;
     }
     
     public File getImage(){
         File f = null;
         try{
             f = new File(txtImage.getText().trim());
+            if (!f.exists()) {
+            	log.warning("Error locating image1 file (check path)");
+            	return null;
+            }
         }catch(Exception e){
-            log.warning("Error locating image1 file (check path)");
+            log.warning("Error reading file path");
         }
         return f;
     }
@@ -147,8 +162,12 @@ public class Subtract_dialog extends JDialog {
         File f = null;
         try{
             f = new File(txtImage_1.getText().trim());
+            if (!f.exists()) {
+            	log.warning("Error locating image2 file (check path)");
+            	return null;
+            }
         }catch(Exception e){
-            log.warning("Error locating image2 file (check path)");
+            log.warning("Error reading file path");
         }
         return f;
     }
@@ -165,7 +184,7 @@ public class Subtract_dialog extends JDialog {
 
     protected void do_btnSelect_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File d2File = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filt, filt.length-1);
+        File d2File = FileUtils.fchooserOpen(subDialog,new File(D2Dplot_global.getWorkdir()), filt, 0);
         if (d2File != null){
             txtImage.setText(d2File.toString());
             D2Dplot_global.setWorkdir(d2File);
@@ -173,13 +192,24 @@ public class Subtract_dialog extends JDialog {
     }
     protected void do_btnSelect_1_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File d2File = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filt, filt.length-1);
+        File d2File = FileUtils.fchooserOpen(subDialog,new File(D2Dplot_global.getWorkdir()), filt, 0);
         if (d2File != null){
             txtImage_1.setText(d2File.toString());
             D2Dplot_global.setWorkdir(d2File);
         }
     }
     protected void do_okButton_actionPerformed(ActionEvent e) {
-        this.dispose();
+    	cancelpressed=false;
+    	subDialog.dispose();
     }
+    public void setVisible(boolean vis) {
+    	subDialog.setVisible(vis);
+    }
+	protected void do_btnNewButton_actionPerformed(ActionEvent e) {
+		cancelpressed=true;
+		subDialog.dispose();
+	}
+	protected boolean isCancel() {
+		return cancelpressed;
+	}
 }

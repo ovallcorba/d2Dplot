@@ -22,7 +22,8 @@ public class Patt2Dzone implements Comparable<Patt2Dzone>{
 	float azimAngle;
 	Point2D.Float centralPoint;
 	Pattern2D patt2d; //referencia a quin pattern es la zona
-	ArrayList<Point2D.Float> pixelList; //afegit el 25/4/2017
+//	ArrayList<Point2D.Float> pixelList; //afegit el 25/4/2017
+	ArrayList<Pixel> pixelList;
 	
 	//new zone
 	public Patt2Dzone(int npix, int ysum, int ymax, float ymean, float ymeandesv, float ybkg, float ybkgdesv){
@@ -38,7 +39,8 @@ public class Patt2Dzone implements Comparable<Patt2Dzone>{
 	
 	//new empty zone
 	public Patt2Dzone(){
-	    pixelList = new ArrayList<Point2D.Float>();
+//	    pixelList = new ArrayList<Point2D.Float>();
+	    pixelList = new ArrayList<Pixel>();
 	    this.intradPix=-1;
 	    this.azimAngle=-1;
 	    this.centralPoint=null;
@@ -140,11 +142,19 @@ public class Patt2Dzone implements Comparable<Patt2Dzone>{
         this.patt2d = patt2d;
     }
 
-    public ArrayList<Point2D.Float> getPixelList() {
+//    public ArrayList<Point2D.Float> getPixelList() {
+//        return pixelList;
+//    }
+//
+//    public void setPixelList(ArrayList<Point2D.Float> pixelList) {
+//        this.pixelList = pixelList;
+//    }
+    
+    public ArrayList<Pixel> getPixelList() {
         return pixelList;
     }
 
-    public void setPixelList(ArrayList<Point2D.Float> pixelList) {
+    public void setPixelList(ArrayList<Pixel> pixelList) {
         this.pixelList = pixelList;
     }
 

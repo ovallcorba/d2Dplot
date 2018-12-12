@@ -1,12 +1,14 @@
 package com.vava33.d2dplot.tts;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Desktop;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.HyperlinkEvent;
@@ -18,7 +20,7 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 
 import com.vava33.d2dplot.D2Dplot_global;
-import com.vava33.d2dplot.TTS_frame;
+import com.vava33.d2dplot.TTS;
 import com.vava33.jutils.FileUtils;
 
 import java.awt.Insets;
@@ -27,29 +29,29 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 import javax.swing.JTextPane;
 
-public class Settings_dialog extends JDialog {
+public class Settings_dialog {
 
-    private static final long serialVersionUID = 6559780431082342309L;
-    private final JPanel contentPanel = new JPanel();
+    private JDialog ttsSettingsdialog;
+    private JPanel contentPanel;
     private JTextField txtTxteditor;
     private JTextField txtTtsfolder;
     private JLabel lblInco;
     private JLabel lblTtsmerge;
     private JLabel lblTtscelref;
-    private TTS_frame parent;
+    private TTS parent;
 
     /**
      * Create the dialog.
      */
-    public Settings_dialog(TTS_frame pare) {
+    public Settings_dialog(JFrame parent, TTS pare) {
         this.parent = pare;
-        setModal(true);
-        this.setIconImage(new ImageIcon(getClass().getResource("/img/tts_icon120x120.png")).getImage());
-        setTitle("TTS software settings");
-        setBounds(100, 100, 450, 280);
-        getContentPane().setLayout(new BorderLayout());
+        contentPanel = new JPanel();
+        ttsSettingsdialog = new JDialog(parent, "TTS software settings",true);
+        ttsSettingsdialog.setIconImage(new ImageIcon(getClass().getResource("/img/tts_icon120x120.png")).getImage());
+        ttsSettingsdialog.setBounds(100, 100, 450, 280);
+        ttsSettingsdialog.getContentPane().setLayout(new BorderLayout());
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(contentPanel, BorderLayout.CENTER);
+        ttsSettingsdialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("insets 0", "[][grow][]", "[][grow][][][][][grow]"));
         {
             JLabel lblTextEditor = new JLabel("Text editor");
@@ -136,7 +138,7 @@ public class Settings_dialog extends JDialog {
             }
             contentPanel.add(okButton, "cell 0 6 3 1,alignx center,aligny bottom");
             okButton.setActionCommand("OK");
-            getRootPane().setDefaultButton(okButton);
+            ttsSettingsdialog.getRootPane().setDefaultButton(okButton);
         }
         
         inicia();
@@ -144,12 +146,12 @@ public class Settings_dialog extends JDialog {
 
     //inicialitzacions extres
     private void inicia(){
-        this.setVisible(false); //per defecte no ho mostrarem al crear-lo
+    	ttsSettingsdialog.setVisible(false); //per defecte no ho mostrarem al crear-lo
         this.updateTxtFields();
     }
     
     protected void do_btnTxt_actionPerformed(ActionEvent e) {
-        File f = FileUtils.fchooserOpen(this, new File(D2Dplot_global.getWorkdir()), null, 0);
+        File f = FileUtils.fchooserOpen(ttsSettingsdialog, new File(D2Dplot_global.getWorkdir()), null, 0);
         if (f!=null){
             txtTxteditor.setText(f.getAbsolutePath());
             D2Dplot_global.setTxtEditPath(f.getAbsolutePath());
@@ -157,10 +159,12 @@ public class Settings_dialog extends JDialog {
     }
     
     protected void do_btnTTSfolder_actionPerformed(ActionEvent e) {
-        File dir = FileUtils.fchooserOpenDir(this, new File(D2Dplot_global.getWorkdir()), "Select tts_software FOLDER");
+        File dir = FileUtils.fchooserOpenDir(ttsSettingsdialog, new File(D2Dplot_global.getWorkdir()), "Select tts_software FOLDER");
         if (dir!=null){
             txtTtsfolder.setText(dir.getAbsolutePath());
             D2Dplot_global.setTTSsoftwareFolder(dir.getAbsolutePath());
+            parent.checkTTSDependencies();
+            updateTxtFields();
         }
     }
     
@@ -176,28 +180,36 @@ public class Settings_dialog extends JDialog {
         }else {
             this.txtTtsfolder.setText(D2Dplot_global.getTTSsoftwareFolder());
             //we try to detect the executables now...
-            if (!TTS_frame.getIncoExec().trim().isEmpty()) {
+            if (!TTS.getIncoExec().trim().isEmpty()) {
+            	lblInco.setForeground(Color.GREEN);
                 lblInco.setText("tts_inco FOUND!");
             }else {
+            	lblInco.setForeground(Color.RED);
                 lblInco.setText("tts_inco NOT FOUND!");
             }
-            if (!TTS_frame.getMergeExec().trim().isEmpty()) {
+            if (!TTS.getMergeExec().trim().isEmpty()) {
+            	lblTtsmerge.setForeground(Color.GREEN);
                 lblTtsmerge.setText("tts_merge FOUND!");
             }else {
+            	lblTtsmerge.setForeground(Color.RED);
                 lblTtsmerge.setText("tts_merge NOT FOUND!");
             }
-            if (!TTS_frame.getCelrefExec().trim().isEmpty()) {
+            if (!TTS.getCelrefExec().trim().isEmpty()) {
+            	lblTtscelref.setForeground(Color.GREEN);
                 lblTtscelref.setText("tts_celref FOUND!");
             }else {
+            	lblTtscelref.setForeground(Color.RED);
                 lblTtscelref.setText("tts_celref NOT FOUND!");
             }
         }
     }
     
     protected void do_okButton_actionPerformed(ActionEvent e) {
-        this.setVisible(false);
-        parent.checkTTSDependencies();
+    	ttsSettingsdialog.setVisible(false);
+//        parent.checkTTSDependencies();
     }
-
+    public void setVisible(boolean vis) {
+    	ttsSettingsdialog.setVisible(vis);
+    }
 
 }

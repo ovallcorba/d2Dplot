@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Locale;
@@ -24,16 +25,16 @@ import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.d2dplot.MainFrame;
-import com.vava33.d2dplot.PKsearch_frame;
-import com.vava33.d2dplot.Param_dialog;
+import com.vava33.d2dplot.PeakSearch;
+import com.vava33.d2dplot.auxi.ImgFileUtils.EdfHeaderPatt2D;
+import com.vava33.d2dplot.auxi.ImgFileUtils.SupportedWriteExtensions;
 import com.vava33.d2dplot.auxi.PDDatabase.searchDBWorker;
 import com.vava33.d2dplot.auxi.Pattern1D.PointPatt1D;
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 /*
- * Operacions sobre imatges (sostracci� fons, correccions, etc...)
+ * Operacions sobre imatges (sostracció fons, correccions, etc...)
  */
 public final class ImgOps {
 	
@@ -43,21 +44,27 @@ public final class ImgOps {
     static sumImagesFileWorker sumwk =  null;
     static Pattern2D pattSum = null;
     
-	private static VavaLogger log = D2Dplot_global.getVavaLogger(ImgOps.class.getName());
+    private static final String className = "ImgOps";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
 	public static Pattern2D firstBkgPass(Pattern2D dataIn){
 		
 		Pattern2D dataOut = new Pattern2D(dataIn,false);
+		
 		bkgIter=0; //inicialitzem iter
 		int Imin=Integer.MAX_VALUE;
 		int Imean=0;
 		long Iacum=0;
 		int countPoints=0;
-		for(int i=0; i<dataOut.getDimY();i++){
-			for(int j=0; j<dataOut.getDimX();j++){
-				if(dataIn.getInten(j, i)<0)continue;
-				if(dataIn.getInten(j, i)<Imin)Imin=dataIn.getInten(j, i);
-				Iacum=Iacum+dataIn.getInten(j, i);
+		for(int j=0; j<dataOut.getDimY();j++){
+			for(int i=0; i<dataOut.getDimX();i++){
+				if(dataIn.isExcluded(i, j))continue;
+				if(dataIn.getInten(i, j)>0) {   //TODO: afegit Dec2018
+					if(dataIn.getInten(i, j)<Imin) {
+						Imin=dataIn.getInten(i, j);
+					}
+				}
+				Iacum=Iacum+dataIn.getInten(i, j);
 				countPoints++;
 			}
 		}
@@ -68,20 +75,63 @@ public final class ImgOps {
 		if(Imean<0)return dataOut;
 		
 		//corregim els punts (els mascara ja es mantenen a -1)
-		for(int i=0; i<dataOut.getDimY();i++){
-			for(int j=0; j<dataOut.getDimX();j++){
-				if(dataIn.getInten(j, i)>(Imean+2*(Imean-Imin))){
-					dataOut.setInten(j, i, (Imean+2*(Imean-Imin)));
+        for(int j=0; j<dataOut.getDimY();j++){
+            for(int i=0; i<dataOut.getDimX();i++){
+				if(dataIn.getInten(i, j)>(Imean+2*(Imean-Imin))){
+					dataOut.setInten(i, j, (Imean+2*(Imean-Imin)));
 				}else{
-					dataOut.setInten(j, i, dataIn.getInten(j, i));
+					dataOut.setInten(i, j, dataIn.getInten(i, j));
 				}
 			}
 		}
-		
+        
 		return dataOut;
 	}
 	
-	public static Pattern2D calcIterAvsq(Pattern2D dataIn,int N,LogJTextArea txtOut,JProgressBar progress) throws InterruptedException{
+	   public static Pattern2D firstBkgPassStronger(Pattern2D dataIn){
+	        bkgIter=0;
+	        float t2 = 0f;
+//	        float tstep = dataIn.calcMinStepsizeBy2Theta4Directions();
+	        float tstep = dataIn.calcMinStepsizeEstimateWithPixSizeAndDistMD();
+	        float t2max = dataIn.getMax2Tdeg();
+	        int n = FastMath.round((t2max - t2)/tstep);
+	        log.writeNameNumPairs("config", true, "n", n);
+	        float[] t2list = new float[n+1];
+	        int i = 0;
+	        while (t2<t2max) {
+	            t2list[i]=t2;
+	            t2 = t2 + tstep;
+	            i = i+1;
+	        }
+	       
+	        float[] intens = radialIntegrationVarious2th(dataIn, t2list,tstep,false,false,true,null);
+	        log.debug(Arrays.toString(intens));
+	        
+	        Pattern2D dataOut = new Pattern2D(dataIn,false);
+	        
+	        //corregim els punts (els mascara ja es mantenen a -1)
+	        for(int j=0; j<dataOut.getDimY();j++){
+	            for(i=0; i<dataOut.getDimX();i++){
+	            	if (dataIn.isExcluded(i, j))continue;
+	                //posicio del vector intens
+	                double t2i = dataIn.calc2T(i, j , true);
+	                if (t2i>t2max) {
+	                	log.debug("t2i>t2max");
+	                }
+	                n = (int) FastMath.round(t2i/tstep);
+	                float Imean = intens[n];
+	                if(dataIn.getInten(i, j)>(Imean+1.5*(FastMath.sqrt(Imean)))){
+	                    dataOut.setInten(i, j, (int) (Imean));
+	                }else{
+	                    dataOut.setInten(i, j, dataIn.getInten(i, j));
+	                }
+	            }
+	        }
+	        
+	        return dataOut;
+	    }
+	
+	public static Pattern2D calcIterAvsq(Pattern2D dataIn,int N,JProgressBar progress) throws InterruptedException{
 		long startTime = System.currentTimeMillis();
 		//PROGRESS BAR:
 //		if(txtOut!=null){
@@ -89,27 +139,28 @@ public final class ImgOps {
 //		}
 		bkgIter=bkgIter+1;
 		Pattern2D dataOut = new Pattern2D(dataIn,false);
-		for(int i=0; i<dataOut.getDimY();i++){
-			for(int j=0; j<dataOut.getDimX();j++){
+        for(int j=0; j<dataOut.getDimY();j++){
+            for(int i=0; i<dataOut.getDimX();i++){
 	            //comprovem si el punt es una mascara, i si es aixi el saltem donant-li
 	            //el valor de la iteracio anterior (suposadament -1)
-				if(dataIn.getInten(j, i)<0){
-					dataOut.setInten(j, i, dataIn.getInten(j, i));
+				if(dataIn.isExcluded(i, j)){
+					dataOut.setInten(i, j, dataIn.getInten(i, j));
+					dataOut.getPixel(i, j).setExcluded(true); //tot i que ja ho deu ser perque hem copiat exz de dataIn a dataOut
 					continue;
 				}
 				int sumI=0;
 				int nMaskP=0;
 				//el quadrat al voltant del punt
-				for(int k=i-N;k<=i+N;k++){ //k files al voltant del punt
-					for(int l=j-N;l<=j+N;l++){ //L columnes al voltant del punt
+				for(int k=j-N;k<=j+N;k++){ //k files al voltant del punt
+					for(int l=i-N;l<=i+N;l++){ //L columnes al voltant del punt
 						if((k>=0)&&(k<dataIn.getDimY())&&(l>=0)&&(l<dataIn.getDimX())){
 							//estem dins la imatge
 							//el propi punt no el considerem
-							if((k==i)&&(l==j))continue;
+							if((k==j)&&(l==i))continue;
 							//comprovem si el punt es mascara, si es aix� el "restem" (no el
 							//tenim en compte) i saltem al seguent
 //							if(dataIn.getInten(l, k)<0){
-							if(dataIn.isInExZone(l,k)){
+							if(dataIn.isExcluded(l,k)){
 								nMaskP++;
 								continue;
 							}
@@ -137,7 +188,7 @@ public final class ImgOps {
 	                        if(k>=dataIn.getDimY())newK=dataIn.getDimY()-dataIn.getExz_margin()-1;
 //	                          !comprovem que newL,newK no sigui mascara, si es mascara no el considerem (el restem)
 //	                        if(dataIn.getInten(newL,newK)<0){
-	                        if(dataIn.isInExZone(newL,newK)){
+	                        if(dataIn.isExcluded(newL,newK)){
 	                            nMaskP++;
 	                            continue;
 	                        }
@@ -152,16 +203,16 @@ public final class ImgOps {
 				}
 //				int Inew= sumI/((2*N+1)*(2*N+1)-1-nMaskP); //restem els nMaskP ja que NO han contribuit
 				//si el valor de Inew es menor del que hi havia actualitzem, sino el deixem
-	            if(Inew<dataIn.getInten(j,i)){
-	                dataOut.setInten(j,i, Inew);
+	            if(Inew<dataIn.getInten(i,j)){
+	                dataOut.setInten(i,j, Inew);
 	            }else{
-	                dataOut.setInten(j,i,dataIn.getInten(j, i));
+	                dataOut.setInten(i,j,dataIn.getInten(i, j));
 	            }
 			}//dimX
 			//PROGRESS BAR:
 			if(progress!=null){
 				long elapTime = (System.currentTimeMillis() - startTime)/1000;
-				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float percent = ((float)j/(float)dataOut.getDimY())*100;
 				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
 				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %% (est. time %6.2f min.)",bkgIter,percent,estTime));
 			}
@@ -176,9 +227,7 @@ public final class ImgOps {
 		if(progress!=null){
 			progress.setString("Iteration finished!");
 		}
-		if(txtOut!=null){
-			txtOut.addtxt(true, true, "fi iter. "+bkgIter+" (time: "+totalTime+" s)");
-		}
+        log.info("fi iter. "+bkgIter+" (time: "+totalTime+" s)");
 		return dataOut;
 	}
 	
@@ -186,74 +235,74 @@ public final class ImgOps {
 		Pattern2D dataSub = new Pattern2D(dataIn,false);
 		dataSub.setMaxI(0);
 		dataSub.setMinI(9999999);
-		for(int i=0; i<dataSub.getDimY();i++){
-			for(int j=0; j<dataSub.getDimX();j++){
-				//si la intensitat �s zero saltem
-				if(dataIn.getInten(j, i)<0){
-					dataSub.setInten(j, i, dataIn.getInten(j, i));
+		for(int j=0; j<dataSub.getDimY();j++){
+			for(int i=0; i<dataSub.getDimX();i++){
+				//si és exclos mantenim valor
+				if(dataIn.isExcluded(i,j)){
+					dataSub.setInten(i,j, dataIn.getInten(i,j));
+					dataSub.getPixel(i,j).setExcluded(true);
 					continue;
 				}
 				//si la intensitat es menor a LA FEM ZERO
-				if(dataIn.getInten(j, i)<dataToSubtract.getInten(j, i)){
-					dataSub.setInten(j, i, 0);
+				if(dataIn.getInten(i,j)<dataToSubtract.getInten(i,j)){
+					dataSub.setInten(i,j, 0);
 					continue;
 				}
-				dataSub.setInten(j, i, (dataIn.getInten(j, i)-dataToSubtract.getInten(j, i)));
-				if(dataSub.getInten(j, i)>dataSub.getMaxI())dataSub.setMaxI(dataSub.getInten(j, i));
-				if(dataSub.getInten(j, i)<dataSub.getMinI())dataSub.setMinI(dataSub.getInten(j, i));
+				dataSub.setInten(i,j, (dataIn.getInten(i,j)-dataToSubtract.getInten(i,j)));
+				if(dataSub.getInten(i,j)>dataSub.getMaxI())dataSub.setMaxI(dataSub.getInten(i,j));
+				if(dataSub.getInten(i,j)<dataSub.getMinI())dataSub.setMinI(dataSub.getInten(i,j));
 			}
 		}
 		return dataSub;
 	}
 	
 	//return [0] dataSubtracted and [1] dataMask
-	public static Pattern2D[] subtractBKG_v2(Pattern2D dataIn, Pattern2D dataToSubtract,float factor,LogJTextArea out){
+	public static Pattern2D[] subtractBKG_v2(Pattern2D dataIn, Pattern2D dataToSubtract,float factor){
 		Pattern2D[] dataSub = {new Pattern2D(dataIn,false),new Pattern2D(dataIn,false)};
 		dataSub[0].setMaxI(0);
 		dataSub[1].setMaxI(0);
 		dataSub[0].setMinI(9999999);
 		dataSub[1].setMinI(9999999);
 		int nover = 0;
-		for(int i=0; i<dataSub[0].getDimY();i++){
-			for(int j=0; j<dataSub[0].getDimX();j++){
+		for(int j=0; j<dataSub[0].getDimY();j++){
+			for(int i=0; i<dataSub[0].getDimX();i++){
 				//dataMask comen�a amb el pixel a zero
-				dataSub[1].setInten(j, i, 0);
+				dataSub[1].setInten(i,j,0);
 				//si la intensitat �s zero saltem
-				if(dataIn.getInten(j, i)<0){
-					dataSub[0].setInten(j, i, dataIn.getInten(j, i));
+				if(dataIn.getInten(i,j)<0){ //TODO: POTSER HAURIEM DE POSAR A ZERO LA INTENSITAT DE LES ZONES EXCLOSES?
+					dataSub[0].setInten(i, j, dataIn.getInten(i,j));
+                    dataSub[0].getPixel(i,j).setExcluded(true);
 					continue;
 				}
 				//si la intensitat es menor a LA FEM ZERO
-				if(dataIn.getInten(j, i)<(dataToSubtract.getInten(j, i)*factor)){
-					dataSub[0].setInten(j, i, 0);
-					dataSub[1].setInten(j, i, FastMath.abs(dataIn.getInten(j, i)-dataToSubtract.getInten(j, i)));
+				if(dataIn.getInten(i,j)<(dataToSubtract.getInten(i,j)*factor)){
+					dataSub[0].setInten(i,j, 0);
+					dataSub[1].setInten(i,j, FastMath.abs(dataIn.getInten(i,j)-dataToSubtract.getInten(i,j)));
 					nover=nover+1;
 					continue;
 				}
-				dataSub[0].setInten(j, i, (int) (dataIn.getInten(j, i) - (dataToSubtract.getInten(j, i)*factor)));
-				if(dataSub[0].getInten(j, i)>dataSub[0].getMaxI())dataSub[0].setMaxI(dataSub[0].getInten(j, i));
-				if(dataSub[0].getInten(j, i)<dataSub[0].getMinI())dataSub[0].setMinI(dataSub[0].getInten(j, i));
+				dataSub[0].setInten(i,j, (int) (dataIn.getInten(i,j) - (dataToSubtract.getInten(i,j)*factor)));
+				if(dataSub[0].getInten(i,j)>dataSub[0].getMaxI())dataSub[0].setMaxI(dataSub[0].getInten(i,j));
+				if(dataSub[0].getInten(i,j)<dataSub[0].getMinI())dataSub[0].setMinI(dataSub[0].getInten(i,j));
 			}
 		}
-		if(out!=null){
-            String linia = String.format(Locale.ENGLISH, "  No. of pixels with Ybkg>Ydata = %d (%.1f%%)",
-            		nover,((float)(nover)/(float)(dataSub[0].getDimX()*dataSub[0].getDimY())*100));
-			out.ln(linia);
-            linia = String.format(Locale.ENGLISH, "  Factor = %.5f",factor);
-			out.ln(linia);
-		}
+		String linia = String.format(Locale.ENGLISH, "  No. of pixels with Ybkg>Ydata = %d (%.1f%%)",
+				nover,((float)(nover)/(float)(dataSub[0].getDimX()*dataSub[0].getDimY())*100));
+		log.info(linia);
+		linia = String.format(Locale.ENGLISH, "  Factor = %.5f",factor);
+		log.info(linia);
 		return dataSub;
 	}
 	
 	public static float calcGlassScale(Pattern2D data, Pattern2D glass){
 		float scale = 10000000;
 		float tol = 0.025f;
-		for(int i=0; i<data.getDimY();i++){
-			for(int j=0; j<data.getDimX();j++){
+		for(int j=0; j<data.getDimY();j++){
+			for(int i=0; i<data.getDimX();i++){
 				//no considerem I=0 o mascara
-				if (data.getInten(j, i)<0)continue;
-				if (glass.getInten(j, i)<0)continue;
-			    float sc = (float) ((data.getInten(j, i))-(float)tol*FastMath.sqrt((float)data.getInten(j, i)))/(float)(glass.getInten(j, i));
+				if (data.isExcluded(i,j))continue;
+				if (glass.isExcluded(i,j))continue;
+			    float sc = (float) ((data.getInten(i,j))-(float)tol*FastMath.sqrt((float)data.getInten(i,j)))/(float)(glass.getInten(i,j));
 				if (sc<scale&&sc!=0)scale=sc;
 			}
 		}
@@ -269,22 +318,22 @@ public final class ImgOps {
 		float t2p, criteri;
 		int pos;
 		
-		if (!glass.checkIfDistMD()){
-		    Param_dialog p = new Param_dialog(null,glass);
-		    p.setVisible(true);
-		    while (p.isVisible()){
-		        try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    if(D2Dplot_global.isDebug())e.printStackTrace();
-                    log.warning("Error in correct glass");
-                }
-		    }
-		}
+//		if (!glass.checkIfDistMD()){
+//		    Param_dialog p = new Param_dialog(null,glass);
+//		    p.setVisible(true);
+//		    while (p.isVisible()){
+//		        try {
+//                    Thread.sleep(2000);
+//                } catch (InterruptedException e) {
+//                    if(D2Dplot_global.isDebug())e.printStackTrace();
+//                    log.warning("Error in correct glass");
+//                }
+//		    }
+//		}
 		
 		if (!glass.checkIfDistMD()){
-		    log.warning("Missing instrumental parameters, aborting");
-		    return null;
+		    log.warning("Missing instrumental parameters in glass file, skipping corrections");
+		    return glass;
 		}
 		
 		//primer integrem la imatge
@@ -292,12 +341,12 @@ public final class ImgOps {
 
 		//per cada pixel mirarem la intensitat mitjana a l'anell que es troba i si aquesta intensitat es
         //mes gran que ymean+2*desv el considerem pic espuri
-		for(int i=0; i<glass.getDimY();i++){
-			for(int j=0; j<glass.getDimX();j++){
+		for(int j=0; j<glass.getDimY();j++){
+			for(int i=0; i<glass.getDimX();i++){
 				//s'haurien d'haver aplicat les zones excloses al vidre
-				if(glass.isInExZone(j, i))continue;
+				if(glass.isExcluded(i,j))continue;
 				//2Theta pixel imatge per determinar amplada i angle
-				t2p = (float) glass.calc2T(j, i, true);
+				t2p = (float) glass.calc2T(i, j, true);
 				//ara hem de mirar a quina posicio del vector desv es troba aquesta 2t
 				pos = FastMath.round(t2p/stepsize)-FastMath.round(t2ini/stepsize);
 	            //ara hem de decidir si es pic espuri o no
@@ -306,39 +355,19 @@ public final class ImgOps {
 				float npix = (float)intrad.getPoint(pos).getNpix();
 				criteri= ysum/npix + (ysum/npix)*percent; //factDesv*desv(p)
 				//criteri=(real(ysum(p))/real(npix(p)))+factDesv*desv(p)		
-	            if(glass.getInten(j,i)>criteri)glass.setInten(j,i, FastMath.round(ysum/npix));
+	            if(glass.getInten(i,j)>criteri)glass.setInten(i,j, FastMath.round(ysum/npix));
 			}
 		}
 		return glass;
 	}
+
 	
-//    !pixel a pixel mira la diferencia d'intensitats entre dades i fons
-//    !retorna la minima diferencia i el pixel en questio
-	//es pot canviar per retornar int[3] si es necessari amb el pixel
-	@SuppressWarnings("unused")
-    public static int minDif(Pattern2D dataIn, Pattern2D dataBkg){
-		int col_X,row_Y,minDiff,diff;
-		minDiff=99999999;
-		for(int i=0; i<dataIn.getDimY();i++){
-			for(int j=0; j<dataIn.getDimX();j++){
-				if(dataIn.isInExZone(j, i))continue;
-				diff=dataIn.getInten(j, i)-dataBkg.getInten(j, i);
-				if(diff<minDiff){
-					minDiff=diff;
-					col_X=j;
-					row_Y=i;
-				}
-			}
-		}
-		return minDiff;
-	}
-	
-//    !calcula una nova iteraci� del fons a partir de l'anterior
+//    !calcula una nova iteració del fons a partir de l'anterior
 //    !utilitza integracio RADIAL
 //    !parametres: -dataIn: iteracio anterior de referencia
 //    !            -stepsize: ...
 //    !return: nova iteracio
-    public static Pattern2D calcIterAvcirc(Pattern2D dataIn, float stepsize,LogJTextArea txtOut,JProgressBar progress) throws InterruptedException{
+    public static Pattern2D calcIterAvcirc(Pattern2D dataIn, float stepsize,JProgressBar progress) throws InterruptedException{
   		long startTime = System.currentTimeMillis();
    		//PROGRESS BAR:
    		bkgIter=bkgIter+1;
@@ -353,26 +382,27 @@ public final class ImgOps {
    		float t2p,ysum,npix;
    		int pos;
    		//dataOut sera el promig de la integracio radial de dataIn
-   		for(int i=0; i<dataOut.getDimY();i++){
-   			for(int j=0; j<dataOut.getDimX();j++){
-   				if(dataIn.isInExZone(j, i)){
-   					dataOut.setInten(j, i, dataIn.getInten(j, i));
+   		for(int j=0; j<dataOut.getDimY();j++){
+   			for(int i=0; i<dataOut.getDimX();i++){
+   				if(dataIn.isExcluded(i, j)){
+   					dataOut.setInten(i, j, dataIn.getInten(i, j));
+   					dataOut.getPixel(i,j).setExcluded(true);
    					continue;
    				}
-   				t2p = (float) dataOut.calc2T(j, i, true);
+   				t2p = (float) dataOut.calc2T(i, j, true);
    				//pos al vector
 				pos = FastMath.round(t2p/stepsize)-FastMath.round(0.0f/stepsize);
 	            //ara hem de decidir si es pic espuri o no
 	            //dos opcions, amb la mitjana+% o amb la fact*desviacio
 				ysum = (float)intrad.getPoint(pos).getCounts();
 				npix = (float)intrad.getPoint(pos).getNpix();
-				dataOut.setInten(j, i, (int) (ysum/npix));
+				dataOut.setInten(i, j, (int) (ysum/npix));
    			}
    			
 			//PROGRESS BAR:
 			if(progress!=null){
 				long elapTime = (System.currentTimeMillis() - startTime)/1000;
-				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float percent = ((float)j/(float)dataOut.getDimY())*100;
 				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
 				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %% (est. time %6.2f min.)",bkgIter,percent,estTime));
 			}
@@ -387,53 +417,52 @@ public final class ImgOps {
 		if(progress!=null){
 			progress.setString("Iteration finished!");
 		}
-		if(txtOut!=null){
-			txtOut.addtxt(true, true, "fi iter. "+bkgIter+" (time: "+totalTime+" s)");
-		}
+		log.info("fi iter. "+bkgIter+" (time: "+totalTime+" s)");
 		return dataOut;
     }
     
-//    !calcula una nova iteraci� del fons a partir de l'anterior
+//    !calcula una nova iteració del fons a partir de l'anterior
 //    !parametres: -it0: iteracio anterior de referencia
 //    !            -it1: nova iteracio
 //    !            -N: pixels de la regio rectangular
 //    !els valors de -1 (mascara) els deixarem tal qual (no calcularem fons) i
 //    !tambe farem que no contribueixin a promitjar el fons d'altres punts. Per
-//    !aix� emmagatzemarem a una variable int (nMaskP) el nombre de punts d'aquests
-//    !que hagu�ssin contribuit i ho restarem al fer el promig
-    public static Pattern2D calcIterAvarc(Pattern2D dataIn,float ampladaArc, float oberturaArc, LogJTextArea txtOut,JProgressBar progress) throws InterruptedException{
+//    !això emmagatzemarem a una variable int (nMaskP) el nombre de punts d'aquests
+//    !que haguéssin contribuit i ho restarem al fer el promig
+    public static Pattern2D calcIterAvarc(Pattern2D dataIn,float ampladaArc, float oberturaArc, JProgressBar progress) throws InterruptedException{
   		long startTime = System.currentTimeMillis();
 
    		bkgIter=bkgIter+1;
    		Pattern2D dataOut = new Pattern2D(dataIn,false);
    		
    		//ara a cada pixel de la imatge calcularem el promig dels del voltant de l'arc
-   		for(int i=0; i<dataOut.getDimY();i++){
-   			for(int j=0; j<dataOut.getDimX();j++){
-   				if(dataIn.isInExZone(j, i)){
-   					dataOut.setInten(j, i, dataIn.getInten(j, i));
+        for(int j=0; j<dataOut.getDimY();j++){
+            for(int i=0; i<dataOut.getDimX();i++){
+   				if(dataIn.isExcluded(i, j)){
+   					dataOut.setInten(i, j, dataIn.getInten(i, j));
+   					dataOut.getPixel(i,j).setExcluded(true);
    					continue;
    				}
    				//per cada pixel mirem el promig (iteracio anterior)
-   				float[] fact = dataIn.getFactAngleAmplada(j, i);
+   				float[] fact = dataIn.getFactAngleAmplada(i, j);
    				float obertura = oberturaArc * fact[0];
    				float amplada = ampladaArc * fact[1];
-   				Patt2Dzone arc = YarcTilt(dataIn, j, i, amplada, obertura, false, 0, false);
+   				Patt2Dzone arc = YarcTilt(dataIn, i, j, amplada, obertura, false, 0, false);
    				
 //   	        assignem al pixel la intensitat mitjana (fitxer de fons que despres restarem)
 //   	        nomes si la intensitat anterior es superior
    				//TODO: aqui es podria introduir la intensitat del fons calculada a Yarc en comptes de Ymean     
-   				if(dataIn.getInten(j, i)>arc.getYmean()){
-   					dataOut.setInten(j, i, (int) arc.getYmean());
+   				if(dataIn.getInten(i, j)>arc.getYmean()){
+   					dataOut.setInten(i, j, (int) arc.getYmean());
    				}else{
-   					dataOut.setInten(j, i, dataIn.getInten(j, i));
+   					dataOut.setInten(i, j, dataIn.getInten(i, j));
    				}
    			}
    			
 			//PROGRESS BAR:
 			if((progress!=null)){
 				long elapTime = (System.currentTimeMillis() - startTime)/1000;
-				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float percent = ((float)j/(float)dataOut.getDimY())*100;
 				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
 				progress.setString(String.format(Locale.ENGLISH, "Iter. %d -> %6.2f %% (est. time %6.2f min.)",bkgIter,percent,estTime));
 			}
@@ -449,14 +478,13 @@ public final class ImgOps {
 		if(progress!=null){
 			progress.setString("Iteration finished!");
 		}
-		if(txtOut!=null){
-			txtOut.addtxt(true, true, "fi iter. "+bkgIter+" (time: "+totalTime+" s)");
-		}
+        log.info("fi iter. "+bkgIter+" (time: "+totalTime+" s)");
+		
 		return dataOut;   		
     }
     
     //metode flip
-    public static Pattern2D bkgMin(Pattern2D dataIn, int fhor, int fver, int fhorver, int aresta,float oberturaArc, float ampladaArc,boolean minarc,LogJTextArea txtOut,JProgressBar progress) throws InterruptedException{
+    public static Pattern2D bkgMin(Pattern2D dataIn, int fhor, int fver, int fhorver, int aresta,float oberturaArc, float ampladaArc,boolean minarc,JProgressBar progress) throws InterruptedException{
   		long startTime = System.currentTimeMillis();
 
     	boolean hor = (fhor == 1) ? true:false;
@@ -465,64 +493,65 @@ public final class ImgOps {
     	
    		Pattern2D dataOut = new Pattern2D(dataIn,false);
    		
-   		int v0,v1,v2,v3; //valor pixel,valor flip hor, valor flip vert, valor fliphor-flipvert
+   		float v0,v1,v2,v3; //valor pixel,valor flip hor, valor flip vert, valor fliphor-flipvert
    		int newj,newi;
    		Patt2Dzone zone;
 
    		//ara a cada pixel de la imatge calcularem el promig dels del voltant de l'arc
-   		for(int i=0; i<dataOut.getDimY();i++){
-   			for(int j=0; j<dataOut.getDimX();j++){
+        for(int j=0; j<dataOut.getDimY();j++){
+            for(int i=0; i<dataOut.getDimX();i++){
    				//exzone
-   				if(dataIn.isInExZone(j, i)){
-   					dataOut.setInten(j, i, dataIn.getInten(j, i));
+   				if(dataIn.isExcluded(i, j)){
+   					dataOut.setInten(i, j, dataIn.getInten(i, j));
+   					dataOut.getPixel(i,j).setExcluded(true);
    					continue;
    				}
    				//punt central (normalment mascara)
    				if(i==(int)(dataIn.getCentrX())&&j==(int)(dataIn.getCentrY())){
-   					dataOut.setInten(j, i, dataIn.getInten(j, i));
+   					dataOut.setInten(i, j, dataIn.getInten(i, j));
    					continue;
    				}
    				//calcul de v0,v1,v2,v3
    				float obertura = 1,amplada = 1;
    				if(minarc){
-   	   				float[] fact = dataIn.getFactAngleAmplada(j, i);
+   	   				float[] fact = dataIn.getFactAngleAmplada(i, j);
    	   				obertura = oberturaArc * fact[0];
    	   				amplada = ampladaArc * fact[1];
-   					zone = YarcTilt(dataIn, j, i, amplada, obertura, true, 0, false);
+   					zone = YarcTilt(dataIn, i, j, amplada, obertura, true, 0, false);
    					v0 = FastMath.round(zone.getYmean());
    				}else{
-   					v0 = dataIn.calcIntSquare(j, i, aresta, true);
+   					v0 = dataIn.calcIntSquare(i, j, aresta, true);
    				}
    				//inicialitzem v1,v2 i v3 igual a v0 en cas que no s'assignin despres perque queden fora
    				v1=v0;
    				v2=v0;
    				v3=v0;
-   				newj=(int)(dataIn.getCentrX()+(dataIn.getCentrX()-j));
-   				newi=(int)(dataIn.getCentrY()+(dataIn.getCentrY()-i));
+   				newi=(int)(dataIn.getCentrX()+(dataIn.getCentrX()-i));
+   				newj=(int)(dataIn.getCentrY()+(dataIn.getCentrY()-j));
    				
    				if (minarc){
    					//prova amb integracio arc
    					if(hor){
-   						zone = YarcTilt(dataIn, newj, i, amplada, obertura, true, 0, false);
+   						zone = YarcTilt(dataIn, newi, j, amplada, obertura, true, 0, false);
    						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    					if(ver){
-   						zone = YarcTilt(dataIn, j, newi, amplada, obertura, true, 0, false);
+   						zone = YarcTilt(dataIn, i, newj, amplada, obertura, true, 0, false);
    						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    					if(horver){
-   						zone = YarcTilt(dataIn,newj, newi, amplada, obertura, true, 0, false);
+   						zone = YarcTilt(dataIn,newi, newj, amplada, obertura, true, 0, false);
    						if(zone.getNpix()>0)v1=FastMath.round(zone.getYmean());
    					}
    				}else{
    					if(hor){
-   						v1 = dataIn.calcIntSquare(newj, i, aresta, true);
+   						v1 = dataIn.calcIntSquare(newi, j, aresta, true);
    					}
    					if(ver){
-   						v2 = dataIn.calcIntSquare(j, newi, aresta, true);
+   						v2 = dataIn.calcIntSquare(i, newj, aresta, true);
    					}
    					if(horver){
-   						v3 = dataIn.calcIntSquare(newj, newi, aresta, true);
+   						v3 = dataIn.calcIntSquare(newi, newj, aresta, true);
    					}
    				}
    				
@@ -537,12 +566,12 @@ public final class ImgOps {
    				}
    				
    				//cas normal agafem el minim
-   				dataOut.setInten(j, i, (int) ImgOps.findMin(v0,v1,v2,v3));
+   				dataOut.setInten(i, j, (int) ImgOps.findMin(v0,v1,v2,v3));
    			}
 			//PROGRESS BAR:
 			if(progress!=null){
 				long elapTime = (System.currentTimeMillis() - startTime)/1000;
-				float percent = ((float)i/(float)dataOut.getDimY())*100;
+				float percent = ((float)j/(float)dataOut.getDimY())*100;
 				float estTime = (((100-percent)*elapTime)/percent)/60; //en minuts
 				progress.setString(String.format(Locale.ENGLISH, "Bkg sub. -> %6.2f %% (est. time %6.2f min.)",percent,estTime));
 			}
@@ -557,9 +586,7 @@ public final class ImgOps {
 		if(progress!=null){
 			progress.setString("Bkg subtraction finished!");
 		}
-		if(txtOut!=null){
-			txtOut.addtxt(true, true, "Bkg subtraction finished (time: "+totalTime+" s)");
-		}
+		log.info("Bkg subtraction finished (time: "+totalTime+" s)");
 		return dataOut; 
     }
     
@@ -576,9 +603,9 @@ public final class ImgOps {
     //RETURNS A VECTOR: [INTENSITY CORRECTED FOR LP, Lfactor, Pfactor] --- son factors, vol dir que s'han de multiplicar
     public static double[] corrLP(Pattern2D dataIn, int pX, int pY, int iPol, int iLor, int iosc, boolean debug){
         
-        double pixsA = dataIn.pixSx*10000000;
-        double distA = dataIn.distMD*10000000;
-        double fact = pixsA / (1 + dataIn.wavel * distA); //cal convertir wave ang to mm
+        double pixsA = dataIn.getPixSx()*10000000;
+        double distA = dataIn.getDistMD()*10000000;
+        double fact = pixsA / (1 + dataIn.getWavel() * distA); //cal convertir wave ang to mm
         if(iosc==-1) iosc = 2; //EIX D'OSCILACIO 1=horitzontal, 2=Vertical
         if(iLor==-1) iLor = 2;
         if(iPol==-1) iPol = 1;
@@ -589,7 +616,7 @@ public final class ImgOps {
         
         double[] nothingdone = {dataIn.getInten(pX, pY),1,1};
         //zona exclosa saltem
-        if (dataIn.isInExZone(pX, pY))return nothingdone;
+        if (dataIn.isExcluded(pX, pY))return nothingdone;
         //el punt central el saltem
         if ((pY == (int)(dataIn.getCentrY()))&&(pX == (int)(dataIn.getCentrX())))return nothingdone;
         
@@ -599,17 +626,17 @@ public final class ImgOps {
             dataIn.setMaxI(12500);
         }
         
-        double vecCPx = (pX-dataIn.getCentrX())*dataIn.pixSx; //en mm
-        double vecCPy = (dataIn.getCentrY()-pY)*dataIn.pixSy; //en mm
+        double vecCPx = (pX-dataIn.getCentrX())*dataIn.getPixSx(); //en mm
+        double vecCPy = (dataIn.getCentrY()-pY)*dataIn.getPixSy(); //en mm
         double t2 = dataIn.calc2T(pX, pY, false);
 
         
         //lorentz
         double rloren = 1.0f;
         if (iLor==1){
-            double xkug = fact * (pX-dataIn.centrX) * FastMath.cos(t2);
-            double ykug = fact * (pY-dataIn.centrY) * FastMath.cos(t2);
-            double zkug = 2.0 / dataIn.wavel * FastMath.pow(FastMath.sin(t2/2.0),2); //he canviat waveMM per wavel per igualar amb el jordi PERO no se què esta be...
+            double xkug = fact * (pX-dataIn.getCentrX()) * FastMath.cos(t2);
+            double ykug = fact * (pY-dataIn.getCentrY()) * FastMath.cos(t2);
+            double zkug = 2.0 / dataIn.getWavel() * FastMath.pow(FastMath.sin(t2/2.0),2); //he canviat waveMM per wavel per igualar amb el jordi PERO no se què esta be...
             double dkug = FastMath.sqrt(xkug*xkug+ykug*ykug+zkug*zkug);
             
             double phi = 1;
@@ -633,7 +660,7 @@ public final class ImgOps {
         if (iPol==1){
             double xdist2 = vecCPx*vecCPx;
             double ydist2 = vecCPy*vecCPy;
-            double sepOD2 = dataIn.distMD*dataIn.distMD;
+            double sepOD2 = dataIn.getDistMD()*dataIn.getDistMD();
             if (iosc==1) pol = (sepOD2 + xdist2) / (sepOD2 + xdist2 + ydist2);
             if (iosc==2) pol = (sepOD2 + ydist2) / (sepOD2 + xdist2 + ydist2);
         }
@@ -662,19 +689,19 @@ public final class ImgOps {
 //      per cada pixel s'ha de calcular l'angle azimutal (entre la normal
 //      (al pla de polaritzacio *i* el vector del centre de la imatge (xc,yc)
 //      al pixel (x,y) en questi�). Tamb� s'ha de calcular l'angle 2T del pixel
-        for(int i=0; i<dataIn.getDimY();i++){
-            for(int j=0; j<dataIn.getDimX();j++){
+        for(int j=0; j<dataIn.getDimY();j++){
+            for(int i=0; i<dataIn.getDimX();i++){
 
-                double[] lpfac = corrLP(dataIn,j,i,iPol,iLor,iosc,false);
+                double[] lpfac = corrLP(dataIn,i,j,iPol,iLor,iosc,false);
                 
                 //debug: tots els punts amb intensitat 12500 (per veure efectes)
                 if(debug){
-                    dataOut.setInten(j, i, FastMath.round(12500*(float)lpfac[1]*(float)lpfac[2]));
+                    dataOut.setInten(i, j, FastMath.round(12500*(float)lpfac[1]*(float)lpfac[2]));
                 }else{
-                    dataOut.setInten(j, i, FastMath.round((float)lpfac[0]));    
+                    dataOut.setInten(i, j, FastMath.round((float)lpfac[0]));    
                 }
                 //mirem si superem els limits (per escalar despres)
-                if (dataOut.getInten(j, i)>maxVal) maxVal = dataOut.getInten(j, i);
+                if (dataOut.getInten(i, j)>maxVal) maxVal = dataOut.getInten(i, j);
             }
         }
         
@@ -683,14 +710,15 @@ public final class ImgOps {
         if(maxVal>dataOut.getSaturValue()){
             fscale = (float)(dataOut.getSaturValue())/(float)maxVal;
         }
-        for(int i=0; i<dataOut.getDimY();i++){
-            for(int j=0; j<dataOut.getDimX();j++){
+        for(int j=0; j<dataOut.getDimY();j++){
+            for(int i=0; i<dataOut.getDimX();i++){
                 //mascara el deixem tal qual
-                if(dataIn.isInExZone(j, i)){
-                    dataOut.setInten(j, i, dataOut.getInten(j, i));
+                if(dataIn.isExcluded(i, j)){
+                    dataOut.setInten(i, j, dataOut.getInten(i, j));
+                    dataOut.getPixel(i,j).setExcluded(true);
                     continue;
                 }
-                dataOut.setInten(j, i, FastMath.round((float)dataOut.getInten(j, i)*fscale));
+                dataOut.setInten(i, j, FastMath.round((float)dataOut.getInten(i, j)*fscale));
             }
         }
         return dataOut;
@@ -727,23 +755,23 @@ public final class ImgOps {
         int sumaInt=0;
         
         //mirem nearmask, saturats i determinem millor el centre
-        for(int i=iy-zoneRadius; i<iy+(zoneRadius*2);i++){
-            for(int j=ix-zoneRadius; j<ix+(zoneRadius*2);j++){
-                if (elli.contains(j, i)){
-                    if (!patt2d.isInside(j, i)){
+        for(int j=iy-zoneRadius; j<iy+(zoneRadius*2);j++){
+            for(int i=ix-zoneRadius; i<ix+(zoneRadius*2);i++){
+                if (elli.contains(i, j)){
+                    if (!patt2d.isInside(i, j)){
                         pic.setNearMask(true);
                         continue;
                     }
-                    if (patt2d.isInExZone(j, i)){
+                    if (patt2d.isExcluded(i, j)){
                         pic.setNearMask(true);
                         continue;
                     }
-                    if (patt2d.getInten(j, i)>=(patt2d.getSaturValue()-1)){
+                    if (patt2d.getInten(i, j)>=(patt2d.getSaturValue()-1)){
                         pic.setnSatur(pic.getnSatur()+1);
                     }
-                    sumaX = sumaX + patt2d.getInten(j, i)*j;
-                    sumaY = sumaY + patt2d.getInten(j, i)*i;
-                    sumaInt = sumaInt + patt2d.getInten(j, i);
+                    sumaX = sumaX + patt2d.getInten(i, j)*i;
+                    sumaY = sumaY + patt2d.getInten(i, j)*j;
+                    sumaInt = sumaInt + patt2d.getInten(i, j);
                 }
             }
             float xpond = (float)sumaX/(float)sumaInt;
@@ -759,17 +787,16 @@ public final class ImgOps {
     
     public static ArrayList<Peak> findPeaks(Pattern2D patt2d, float delsig, int zoneRadius, int minpix, boolean roundToInt,boolean estimBKG, boolean pond){
         
-        int maxPeakCandidates=1500;
+        int maxPeakCandidates=2500;
         
         //1r busquem candidats
         ArrayList<Peak> pkCandidates = patt2d.findPeakCandidates(delsig, minpix,estimBKG);
+        log.debug("====> N initial candidates="+pkCandidates.size());
         if (pkCandidates.size()<=0)return null;
         if (pkCandidates.size()>maxPeakCandidates) {
             boolean yes = FileUtils.YesNoDialog(null, "Too many candidates, it will take long unless you reduce the ESD factor, continue anyway?");
             if (!yes) return null;
         }
-
-        log.debug("====> N initial candidates="+pkCandidates.size());
 
 //        if (pkCandidates.size()>0)return pkCandidates;
         
@@ -807,7 +834,7 @@ public final class ImgOps {
             int x = (int)(pkCandidates.get(0).getPixelCentre().x);
             int y = (int)(pkCandidates.get(0).getPixelCentre().y);
 
-            log.fine("saturated peak "+x+" "+y);
+            if(D2Dplot_global.isDebug())log.fine("saturated peak "+x+" "+y);
             //busquem el centre de la saturacio dins un quadrat força gran 5*zoneRadius horitzontal 15*zoneRadius vertical...
             //millor busquem els limits nosaltres!!
 
@@ -890,7 +917,7 @@ public final class ImgOps {
 //            Rectangle2D.Float rect = new Rectangle2D.Float(leftLim, topLim, rightLim-leftLim, botLim-topLim); 
             //PROVO d'Incrementar-ho perque tecnicament hauriem de considerar zoneRadius... i aixi treure espuris
             Rectangle2D.Float rect = new Rectangle2D.Float(leftLim-zoneRadius, topLim-zoneRadius, rightLim-leftLim+2*zoneRadius, botLim-topLim+2*zoneRadius);
-            log.fine("rectangle "+leftLim+" "+topLim+" "+(rightLim-leftLim)+" "+(botLim-topLim));
+            if(D2Dplot_global.isDebug())log.fine("rectangle "+leftLim+" "+topLim+" "+(rightLim-leftLim)+" "+(botLim-topLim));
 
             itrpk = pkCandidates.iterator();
             while (itrpk.hasNext()){
@@ -901,7 +928,7 @@ public final class ImgOps {
             }
             Peak newPk = new Peak((float)rect.getCenterX(),(float)rect.getCenterY());
             newPk.setYmax(patt2d.getSaturValue()); //el torno a posar saturat pero com que estara al final de la llista no afectara
-            log.fine("substituted by "+(float)rect.getCenterX()+" "+(float)rect.getCenterY());
+            if(D2Dplot_global.isDebug())log.fine("substituted by "+(float)rect.getCenterX()+" "+(float)rect.getCenterY());
             
             processedpks = processedpks + 1;
             pkCandidates.add(newPk);
@@ -963,7 +990,7 @@ public final class ImgOps {
                     pkinten = pkinten + pk2inten;
                     niguals = niguals +1;
                     toRemove.add(pk2); //l'eliminarem al sortir del bucle
-                    log.writeNameNums("fine", true, "removed candidate (x,y)=", pk2.getPixelCentre().x,pk2.getPixelCentre().y);
+                    if(D2Dplot_global.isDebug())log.writeNameNums("fine", true, "removed candidate (x,y)=", pk2.getPixelCentre().x,pk2.getPixelCentre().y);
                     continue;
                 }
             }
@@ -985,8 +1012,10 @@ public final class ImgOps {
                     yf = FastMath.round(yf);
                 }
                 toAdd.add(new Peak(new Point2D.Float(xf,yf)));
-                log.writeNameNums("fine", true, "removed candidate (x,y)=", pk.getPixelCentre().x,pk.getPixelCentre().y);
-                log.writeNameNums("fine", true, "added new candidate (from merging) (x,y)=", xf,yf);
+                if(D2Dplot_global.isDebug()) {
+                    log.writeNameNums("fine", true, "removed candidate (x,y)=", pk.getPixelCentre().x,pk.getPixelCentre().y);
+                    log.writeNameNums("fine", true, "added new candidate (from merging) (x,y)=", xf,yf);
+                }
             }else{
                 //hem de tornar a afegir el pic que hem eliminat!
                 toAdd.add(new Peak(new Point2D.Float(pk.getPixelCentre().x,pk.getPixelCentre().y)));
@@ -1003,7 +1032,7 @@ public final class ImgOps {
         //tambe identifiquem pics propers a mascara
         ArrayList<Peak> realPeaks = new ArrayList<Peak>();
         finished = false;
-        float llindarGeneral = patt2d.meanI + (delsig/2)*patt2d.sdevI;
+        float llindarGeneral = patt2d.getMeanI() + (delsig/2)*patt2d.getSdevI();
         log.debug("llindarGeneral="+llindarGeneral);
         while (!finished){
             if (pkCandidates.isEmpty()){
@@ -1086,14 +1115,14 @@ public final class ImgOps {
             int minX = FastMath.round(findMin(xs)-pixelTolerance);
             int maxY = FastMath.round(findMax(ys)+pixelTolerance);
             int minY = FastMath.round(findMin(ys)-pixelTolerance);
-            maxX = FastMath.min(maxX,patt2d.dimX-1);
-            maxY = FastMath.min(maxY,patt2d.dimY-1);
+            maxX = FastMath.min(maxX,patt2d.getDimX()-1);
+            maxY = FastMath.min(maxY,patt2d.getDimY()-1);
             minX = FastMath.max(minX,0);
             minY = FastMath.max(minY,0);
             
             for (int i=0; i<pkCandidates.size();i++){ //que passa amb l'ultim pic? s'ha d'afegir tal cual
                 Peak pk2 = pkCandidates.get(i);
-                if (pk.equals(pk2))continue; //no hauria de passar ja que l'he eliminat...
+                if (pk.equals(pk2.getPixelCentre()))continue; //no hauria de passar ja que l'he eliminat...
                 if (!(pk2.getPixelCentre().x>minX && pk2.getPixelCentre().x<maxX && pk2.getPixelCentre().y>minY && pk2.getPixelCentre().y<maxY)){
                     continue;
                 }
@@ -1107,7 +1136,7 @@ public final class ImgOps {
                    for (int k=minX;k<=maxX;k++){
                        //si esta fora la imatge o es mascara el saltem
                        if(!patt2d.isInside(k, j))continue;
-                       if(patt2d.isInExZone(k, j))continue;
+                       if(patt2d.isExcluded(k, j))continue;
                        t2p = (float)patt2d.calc2T(k, j, true);
                        if((t2p<t2min)||(t2p>t2max))continue;
                        if (azimMax>360){
@@ -1125,7 +1154,7 @@ public final class ImgOps {
                                
                                nEixam = nEixam+1;
                                toRemove.add(pkCandidates.get(i)); //l'eliminarem al sortir del bucle
-                               log.fine("eixam found");
+                               if(D2Dplot_global.isDebug())log.fine("eixam found");
                                trobat = true;
                                break;
                            }
@@ -1138,7 +1167,7 @@ public final class ImgOps {
                            }else{ //l'afegim com a eixam
                                nEixam = nEixam+1;
                                toRemove.add(pkCandidates.get(i)); //l'eliminarem al sortir del bucle
-                               log.fine("eixam found");
+                               if(D2Dplot_global.isDebug())log.fine("eixam found");
                                trobat = true;
                                break;
                            }
@@ -1158,18 +1187,18 @@ public final class ImgOps {
             x = (int)(pic.getPixelCentre().x);
             y = (int)(pic.getPixelCentre().y);
             
-            for(int i=y-zoneRadius; i<y+(zoneRadius*2);i++){
-                for(int j=x-zoneRadius; j<x+(zoneRadius*2);j++){
-                    if (elli.contains(j, i)){
-                        if (!patt2d.isInside(j, i)){
+            for(int j=y-zoneRadius; j<y+(zoneRadius*2);j++){
+                for(int i=x-zoneRadius; i<x+(zoneRadius*2);i++){
+                    if (elli.contains(i, j)){
+                        if (!patt2d.isInside(i, j)){
                             pic.setNearMask(true);
                             continue;
                         }
-                        if (patt2d.isInExZone(j, i)){
+                        if (patt2d.isExcluded(i, j)){
                             pic.setNearMask(true);
                             continue;
                         }
-                        if (patt2d.getInten(j, i)>=(patt2d.getSaturValue()-1)){
+                        if (patt2d.getInten(i, j)>=(patt2d.getSaturValue()-1)){
                             pic.setnSatur(pic.getnSatur()+1);
                         }
                     }
@@ -1182,7 +1211,7 @@ public final class ImgOps {
             int sumaInt=0;
             for (int ii=y-1;ii<y+2;ii++){
                 for (int jj=x-1;jj<x+2;jj++){
-                    if (patt2d.isInExZone(jj, ii))continue;
+                    if (patt2d.isExcluded(jj, ii))continue;
                     sumaX = sumaX + patt2d.getInten(jj, ii)*jj;
                     sumaY = sumaY + patt2d.getInten(jj, ii)*ii;
                     sumaInt = sumaInt + patt2d.getInten(jj, ii);
@@ -1236,7 +1265,7 @@ public final class ImgOps {
 //                double dist = pk.getPixelCentre().distance(dpeak.getPixelCentre()); //in pixels
                 //ARA HEM DE MIRAR SI la llista de pixels dpeak i pk tenen algun en comú.
                 boolean trobat = false;
-                for (Point2D.Float p1 : pk.getZona().getPixelList()){
+                for (Pixel p1 : pk.getZona().getPixelList()){ //TODO:revisar si funciona, canvi Point2Dfloat per Pixel
                     if (dpeak.getZona().getPixelList().contains(p1)){
                         trobat = true;
                         break;
@@ -1444,9 +1473,10 @@ public final class ImgOps {
         float t2p = (float) patt2D.calc2T(px, py, true);
         float t2max = (float) FastMath.min(t2p + tol2tDeg/2.,patt2D.getMax2TdegCircle());
         float t2min = (float) FastMath.max(0.1, t2p - tol2tDeg/2.);
-        log.writeNameNumPairs("FINE", true, "t2p,t2max,t2min,pixelTolerance,step",t2p,t2max,t2min,pixelTolerance,step);
-        log.writeNameNumPairs("FINE", true, "azimAngle,azimMax,azimMin", azimAngle,azimMax,azimMin);
-
+        if(D2Dplot_global.isDebug()) {
+            log.writeNameNumPairs("FINE", true, "t2p,t2max,t2min,pixelTolerance,step",t2p,t2max,t2min,pixelTolerance,step);
+            log.writeNameNumPairs("FINE", true, "azimAngle,azimMax,azimMin", azimAngle,azimMax,azimMin);
+        }
         //busquem el maxX, minX, maxY, minY de l'arc
         float[] xs = new float[pixelsArc.size()];
         float[] ys = new float[pixelsArc.size()];
@@ -1462,11 +1492,11 @@ public final class ImgOps {
         int minX = FastMath.round(findMin(xs)-pixelTolerance);
         int maxY = FastMath.round(findMax(ys)+pixelTolerance);
         int minY = FastMath.round(findMin(ys)-pixelTolerance);
-        maxX = FastMath.min(maxX,patt2D.dimX-1);
-        maxY = FastMath.min(maxY,patt2D.dimY-1);
+        maxX = FastMath.min(maxX,patt2D.getDimX()-1);
+        maxY = FastMath.min(maxY,patt2D.getDimY()-1);
         minX = FastMath.max(minX,0);
         minY = FastMath.max(minY,0);
-        log.writeNameNumPairs("FINE", true, "minX,maxX,minY,maxY", minX,maxX,minY,maxY);
+        if(D2Dplot_global.isDebug())log.writeNameNumPairs("FINE", true, "minX,maxX,minY,maxY", minX,maxX,minY,maxY);
 
         //iniciacions valors
         int npix=0;
@@ -1484,14 +1514,14 @@ public final class ImgOps {
             minint.add(patt2D.getSaturValue());
         }
         
-        ArrayList<Point2D.Float> pixelList = new ArrayList<Point2D.Float>();
+        ArrayList<Pixel> pixelList = new ArrayList<Pixel>(); //TODO canvi point2D.float per Pixel
         
         //ara ja tenim el quadrat on hem de buscar
         for (int j=minY;j<=maxY;j++){
            for (int i=minX;i<=maxX;i++){
                //si esta fora la imatge o es mascara el saltem
                if(!patt2D.isInside(i, j))continue;
-               if(patt2D.isInExZone(i, j))continue;
+               if(patt2D.isExcluded(i, j))continue;
                //ell mateix?
                if ((i==px)&&(j==py)&&(!self))continue;             
                
@@ -1522,7 +1552,7 @@ public final class ImgOps {
                intensitats.add(patt2D.getInten(i, j));
                
                //afegit el 25/4/2017
-               pixelList.add(new Point2D.Float(i,j));
+               pixelList.add(patt2D.getPixel(i,j));
                
                //debug
                if(debug)patt2D.setInten(i, j, -1);
@@ -1633,8 +1663,8 @@ public final class ImgOps {
         int minX = FastMath.round(findMin(xs)-pixelTolerance);
         int maxY = FastMath.round(findMax(ys)+pixelTolerance);
         int minY = FastMath.round(findMin(ys)-pixelTolerance);
-        maxX = FastMath.min(maxX,patt2D.dimX-1);
-        maxY = FastMath.min(maxY,patt2D.dimY-1);
+        maxX = FastMath.min(maxX,patt2D.getDimX()-1);
+        maxY = FastMath.min(maxY,patt2D.getDimY()-1);
         minX = FastMath.max(minX,0);
         minY = FastMath.max(minY,0);
         
@@ -1644,7 +1674,7 @@ public final class ImgOps {
            for (int i=minX;i<=maxX;i++){
                //si esta fora la imatge o es mascara el saltem
                if(!patt2D.isInside(i, j))continue;
-               if(patt2D.isInExZone(i, j))continue;
+               if(patt2D.isExcluded(i, j))continue;
                t2p = (float)patt2D.calc2T(i, j, true);
                if((t2p<t2min)||(t2p>t2max))continue;
                if (azimMax>360){
@@ -1665,7 +1695,7 @@ public final class ImgOps {
         float azimAngle = patt2D.getAzimAngle(ipx, ipy, true); //azimut des del zero
         Point2D.Float central = elli.getEllipsePoint(azimAngle);
         
-        log.fine(String.format("haurien de coincidir px,py= %f,%f entrats amb CentralSegonsAzimut %f,%f",px,py,central.x,central.y));
+        if(D2Dplot_global.isDebug())log.fine(String.format("haurien de coincidir px,py= %f,%f entrats amb CentralSegonsAzimut %f,%f",px,py,central.x,central.y));
         
         //farem com amb intrad
         int maxPixels = 150;
@@ -1685,7 +1715,7 @@ public final class ImgOps {
         float currentAzimut = azimAngle;
         boolean finished = false;
         while (!finished){
-            log.fine("countLeft="+pixcount+" currentAzim="+currentAzimut);
+        	if(D2Dplot_global.isDebug())log.fine("countLeft="+pixcount+" currentAzim="+currentAzimut);
             
             currentAzimut = currentAzimut + azimStep;
             Point2D.Float newPoint = elli.getEllipsePoint(currentAzimut);
@@ -1738,7 +1768,7 @@ public final class ImgOps {
         currentAzimut = azimAngle;
         finished = false;
         while (!finished){
-            log.fine("countRight="+pixcount+" currentAzim="+currentAzimut);
+        	if(D2Dplot_global.isDebug())log.fine("countRight="+pixcount+" currentAzim="+currentAzimut);
             
             currentAzimut = currentAzimut - azimStep;
             Point2D.Float newPoint = elli.getEllipsePoint(currentAzimut);
@@ -1810,7 +1840,7 @@ public final class ImgOps {
         int countdown = 0;
         boolean finished = false;
         while (!finished){
-            log.fine("count="+pixcount+" passades="+passades);
+        	if(D2Dplot_global.isDebug())log.fine("count="+pixcount+" passades="+passades);
             float fpx = (int)(vPCx * (modul-passades)); //new pixel x float
             float fpy = (int)(vPCy * (modul-passades));
             
@@ -1933,19 +1963,19 @@ public final class ImgOps {
 	    Pattern1D out = new Pattern1D(t2ini,t2fin,step);
 
 	    //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
-	    for (int i = rowIni; i < rowFin; i++) { // per cada fila (Y)
-	        for (int j = colIni; j < colFin; j++) { // per cada columna (X)
+	    for (int j = rowIni; j < rowFin; j++) { // per cada fila (Y)
+	        for (int i = colIni; i < colFin; i++) { // per cada columna (X)
 	            //mask o zero el descartem
-	            if(patt2D.isInExZone(j, i))continue;
+	            if(patt2D.isExcluded(i, j))continue;
 
 	            //HEM DE MIRAR SI EL VECTOR ESTA DINTRE EL CAKE
 	            if (!fullCake){
-	                float azim = patt2D.getAzimAngle(j, i, true);
+	                float azim = patt2D.getAzimAngle(i, j, true);
 	                //debug
-	                if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()-100)log.fine("x,y,azim="+j+","+i+","+azim);
-	                if(j==patt2D.getCentrXI() && i==patt2D.getCentrYI()+100)log.fine("x,y,azim="+j+","+i+","+azim);
-	                if(j==patt2D.getCentrXI()+100 && i==patt2D.getCentrYI())log.fine("x,y,azim="+j+","+i+","+azim);
-	                if(j==patt2D.getCentrXI()-100 && i==patt2D.getCentrYI())log.fine("x,y,azim="+j+","+i+","+azim);
+//	                if(i==patt2D.getCentrXI() && j==patt2D.getCentrYI()-100)log.fine("x,y,azim="+i+","+j+","+azim);
+//	                if(i==patt2D.getCentrXI() && j==patt2D.getCentrYI()+100)log.fine("x,y,azim="+i+","+j+","+azim);
+//	                if(i==patt2D.getCentrXI()+100 && j==patt2D.getCentrYI())log.fine("x,y,azim="+i+","+j+","+azim);
+//	                if(i==patt2D.getCentrXI()-100 && j==patt2D.getCentrYI())log.fine("x,y,azim="+i+","+j+","+azim);
 
 	                if (cakeOut<cakeIn){
 	                    //va al reves
@@ -1955,15 +1985,15 @@ public final class ImgOps {
 	                }
 	            }
 	            //2theta del pixel en la imatge
-	            double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+	            double t2p = patt2D.calc2T(new Point2D.Float(i,j), true);
 
 	            if(t2p<t2ini||t2p>t2fin)continue;
 
 	            //position to the vector
 	            int p=(int) (t2p/step - t2ini/step);
 	            float facIAng = 1;
-	            if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
-	            float inten = (float) (patt2D.getInten(j,i) * patt2D.getScale() * facIAng + subadu);
+	            if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, i, j)[1];
+	            float inten = (float) (patt2D.getInten(i,j) * patt2D.getScale() * facIAng + subadu);
 	            out.sumPoint(p, FastMath.round(inten), 1);
 	        }
 	    }
@@ -2008,22 +2038,22 @@ public final class ImgOps {
 	    float t2fin = t2 + tol2tdeg;
 
 	    //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
-	    for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-	        for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+	    for (int j = 0; j < patt2D.getDimY(); j++) { // per cada fila (Y)
+	        for (int i = 0; i < patt2D.getDimX(); i++) { // per cada columna (X)
 	            //mask o zero el descartem
-	            if(patt2D.isInExZone(j, i))continue;
-	            double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+	            if(patt2D.isExcluded(i, j))continue;
+	            double t2p = patt2D.calc2T(new Point2D.Float(i,j), true);
 	            if(t2p<t2ini||t2p>t2fin)continue;
 	            double facLor = 1;
 	            double facPol = 1;
 	            float facIAng = 1;
 	            if (corrLP) {
-	                double[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, 2, false);
+	                double[] facLP = ImgOps.corrLP(patt2D, i, j, 1, 2, 2, false);
 	                facLor = facLP[1];
 	                facPol = facLP[2];
 	            }
-	            if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
-	            float inten = (float) (patt2D.getInten(j,i) * patt2D.getScale() * facLor * facPol * facIAng);
+	            if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, i, j)[1];
+	            float inten = (float) (patt2D.getInten(i,j) * patt2D.getScale() * facLor * facPol * facIAng);
 	            sum = sum + inten;
 	            npix = npix +1;
 	        }
@@ -2035,7 +2065,7 @@ public final class ImgOps {
 
 	//Retorna els promitjos d'intensitat d'anells centrats en diverses t2[] i considerant una amplada tol2t
     //considera tilt/rot. Aixo es per evitar fer moltes passades si es volen varies t2.
-    public static float[] radialIntegrationVarious2th(Pattern2D patt2D, float[] t2,float tol2tdeg,boolean corrLP, boolean corrIAng,searchDBWorker sw){
+    public static float[] radialIntegrationVarious2th(Pattern2D patt2D, float[] t2,float tol2tdeg,boolean corrLP, boolean corrIAng,boolean normNpix, searchDBWorker sw){
         if (tol2tdeg < 0) { //default value
             tol2tdeg = 0.1f;
         }
@@ -2056,11 +2086,11 @@ public final class ImgOps {
         }
 
         //ara anirem pixel a pixel i mirarem la 2theta a la qual correspon
-        for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-            for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna (X)
+        for (int j = 0; j < patt2D.getDimY(); j++) { // per cada fila (Y)
+            for (int i = 0; i < patt2D.getDimX(); i++) { // per cada columna (X)
                 //mask o zero el descartem
-                if(patt2D.isInExZone(j, i))continue;
-                double t2p = patt2D.calc2T(new Point2D.Float(j,i), true);
+                if(patt2D.isExcluded(i, j))continue;
+                double t2p = patt2D.calc2T(new Point2D.Float(i,j), true);
                 
                 //mirem si està dins d'algun rang dels buscats
                 int npeak = -1;
@@ -2075,28 +2105,32 @@ public final class ImgOps {
                 double facPol = 1;
                 float facIAng = 1;
                 if (corrLP) {
-                    double[] facLP = ImgOps.corrLP(patt2D, j, i, 1, 2, 2, false);
+                    double[] facLP = ImgOps.corrLP(patt2D, i, j, 1, 2, 2, false);
                     facLor = facLP[1];
                     facPol = facLP[2];
                 }
-                if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, j, i)[1];
-                float inten = (float) (patt2D.getInten(j,i) * patt2D.getScale() * facLor * facPol * facIAng);
+                if (corrIAng) facIAng = ImgOps.corrIncidentAngle(patt2D, i, j)[1];
+                float inten = (float) (patt2D.getInten(i,j) * patt2D.getScale() * facLor * facPol * facIAng);
                 sum[npeak] = sum[npeak] + inten;
                 npix[npeak] = npix[npeak] +1;
                 
                 //en cas que hi hagi un progres
                 if (sw!=null){
-                    if ((i % 100) == 0){
-                        float percent = ((float)i/(float)patt2D.getDimY())*100.f;
+                    if ((j % 100) == 0){
+                        float percent = ((float)j/(float)patt2D.getDimY())*100.f;
                         sw.mySetProgress((int) percent);
                         log.debug(String.valueOf(percent));
                     }                    
                 }
             }
         }
-        //normalitzem pel nombre de pixels
-        for (int i=0;i<t2.length;i++){
-            sum[i] = sum[i] / npix[i];
+        if (normNpix) {
+            //normalitzem pel nombre de pixels
+            for (int i=0;i<t2.length;i++){
+                if (sum[i]==0)continue;
+                if (npix[i]==0)continue;
+                sum[i] = sum[i] / npix[i];            
+            }
         }
         return sum;
     }
@@ -2160,12 +2194,10 @@ public final class ImgOps {
     public static EllipsePars getElliPars(Pattern2D patt2D, double twothRad){
 
         double distPix = patt2D.getDistMD()/patt2D.getPixSx();        
-//        double tantth = FastMath.tan(twothRad);
         double tiltrad = -FastMath.toRadians(patt2D.getTiltDeg());
         double cosTilt = FastMath.cos(tiltrad);
-//        double sinTilt = FastMath.sin(tiltrad);
         double tanTilt = FastMath.tan(tiltrad);
-        double rotRad = FastMath.toRadians(patt2D.getRotDeg()); 
+        double rotRad = FastMath.toRadians(patt2D.getRotDeg());
         double sintth = FastMath.sin(twothRad);
         
        
@@ -2182,60 +2214,30 @@ public final class ImgOps {
         double zdis = (fmes-fmenys)/2;
 
         double ellicentX = patt2D.getCentrX()+zdis * FastMath.cos(rotRad);
-        double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad); 
-
+        double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
         
         return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
-//        return new EllipsePars(rM, rm, eX, eY,rotRad);
     }
     
-    public static EllipsePars getElliParsBOOO(Pattern2D patt2D, double twothRad){
-
-        double rotRad = FastMath.toRadians(patt2D.getRotDeg()); //amb negativa funcionava
-        double sintth = FastMath.sin(twothRad);
-        double tiltrad = -FastMath.toRadians(patt2D.getTiltDeg());
-        double tanTilt = FastMath.tan(tiltrad);
-        double cosTilt = FastMath.cos(tiltrad);
-        double tmenys = FastMath.tan((twothRad-tiltrad)/2);
-        double tmes = FastMath.tan((twothRad+tiltrad)/2);
-        double distPix = patt2D.getDistMD()/patt2D.getPixSx();
-
-        double fmes = distPix*tanTilt*sintth/(cosTilt+sintth);
-        double fmenys = distPix*tanTilt*sintth/(cosTilt-sintth);
-
-        double vmes = distPix*(tanTilt+(1+tmenys)/(1-tmenys))*sintth/(cosTilt+sintth);
-        double vmenys = distPix*(tanTilt+(1-tmes)/(1+tmes))*sintth/(cosTilt-sintth);
-
-        double rMaj = (vmes+vmenys)/2;
-        double rMen = FastMath.sqrt((vmes+vmenys)*(vmes+vmenys) - (fmes+fmenys)*(fmes+fmenys))/2;
-        double zdis = (fmes-fmenys)/2;
-
-        double ellicentX = patt2D.getCentrX()+zdis * FastMath.cos(rotRad);
-        double ellicentY = patt2D.getCentrY()+zdis * FastMath.sin(rotRad); //cal considerar que direccio Y està "invertida"?? (+ cap avall)
-
-        return new EllipsePars(rMaj, rMen, ellicentX, ellicentY,rotRad);
-    }
     
     public static class sumImagesFileWorker extends SwingWorker<Integer,Integer> {
 
         private File[] files;
         private boolean stop;
         Pattern2D pattsum;
-        LogJTextArea taOut;
         boolean doSubtract = false;
         Pattern2D pattFons;
         float aini,afin,ctime;
 
-        public sumImagesFileWorker(File[] files, LogJTextArea textAreaOut){//, Pattern2D patt) {
+        public sumImagesFileWorker(File[] files){//, Pattern2D patt) {
             this.files = files;
             this.stop = false;
-            this.taOut = textAreaOut;
             this.aini=0;
             this.afin=0;
             this.ctime=0;
         }
-        public sumImagesFileWorker(File[] files, LogJTextArea textAreaOut,float ain, float afi, float ctim){//, Pattern2D patt) {
-            this(files,textAreaOut);
+        public sumImagesFileWorker(File[] files,float ain, float afi, float ctim){//, Pattern2D patt) {
+            this(files);
             this.aini=ain;
             this.afin=afi;
             this.ctime=ctim;
@@ -2263,8 +2265,7 @@ public final class ImgOps {
             int dimX = patt.getDimX();
             
             pattsum = new Pattern2D(patt,false); //copiem dades instr de les originals
-            pattsum.setB4inten(true);//ens assegurem que treballem amb I4
-            Pattern2D dataI4temp = new Pattern2D(dimX,dimY,true);
+            Pattern2D dataI4temp = new Pattern2D(dimX,dimY);
             //inicialitzem a zero les dades SUMA
             for(int i=0; i<dimY;i++){
                 for(int j=0; j<dimX;j++){
@@ -2272,15 +2273,14 @@ public final class ImgOps {
                 }
             }
             
-            int maxVal=0;
+//            int maxVal=0;
             
             //sumem
             for(int k=0;k<files.length;k++){
                 //obrim el pattern i sumem
                 patt = ImgFileUtils.readPatternFile(files[k],false);
                 if (patt == null){
-                    if (taOut!=null)taOut.stat("Error reading "+files[k].getName()+" ... skipping");
-                    log.warning("could not read "+files[k].getName()+" ... skiping");
+                	log.warning("Error reading "+files[k].getName()+" ... skipping");
                     continue;
                 }
                 if (doSubtract){
@@ -2289,44 +2289,30 @@ public final class ImgOps {
                     }
                 }
                 
-                for(int i=0; i<dimY;i++){
-                    for(int j=0; j<dimX;j++){
+                for(int j=0; j<dimY;j++){
+                    for(int i=0; i<dimX;i++){
                         //zona exclosa saltem
-                        if (patt.isInExZone(j, i))continue;
-                        int s = dataI4temp.getInten(j, i) + patt.getInten(j, i);
-                        dataI4temp.setInten(j, i, s);
+                        if (patt.isExcluded(i, j))continue;
+                        int s = dataI4temp.getInten(i, j) + patt.getInten(i, j);
+                        dataI4temp.setInten(i, j, s);
                     }
                 }
                 float percent = ((float)k/(float)totalfiles)*100.f;
                 setProgress((int) percent);
                 log.fine(String.valueOf(percent));
-                if (taOut!=null)taOut.stat("File added: "+files[k].getName());
+                log.info("File added: "+files[k].getName());
                 if (stop) break;
             }
 
-            //escala
-            for(int i=0; i<dimY;i++){
-                for(int j=0; j<dimX;j++){
-                    //mirem si superem els limits (per escalar despres)
-                    if (dataI4temp.getInten(j, i)>maxVal) maxVal=dataI4temp.getInten(j, i);
-                }
-            }
-            
-            //si ens hem passat del maxim calculem el factor d'escala i escalem
-            float fscale=1.0f;
-            log.debug("maxVal= "+maxVal+"  satur="+pattsum.getSaturValue());
-            if(maxVal>pattsum.getSaturValue()){
-                fscale = (float)maxVal/(float)(pattsum.getSaturValue()-1); // -1 per assegurar-nos que entra
-            }
-            
-            for(int i=0; i<dimY;i++){
-                for(int j=0; j<dimX;j++){
-                    pattsum.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)/fscale));
+            //antigament escalava les intensitats, ara no ho faig, es fa al guardar en un format concret
+            for(int j=0; j<dimY;j++){
+                for(int i=0; i<dimX;i++){
+                    pattsum.setInten(i, j, dataI4temp.getInten(i, j));
                 }
             }
             this.setProgress(100);
-            pattsum.setScale(fscale);
-            log.writeNameNumPairs("info", true, "aini(swk), afin(swk)", aini,afin);
+            pattsum.setScale(1.0f);
+            log.writeNameNumPairs("config", true, "aini(swk), afin(swk)", aini,afin);
             pattsum.setScanParameters(this.aini, this.afin, this.ctime);
             return 0;            
 
@@ -2337,7 +2323,6 @@ public final class ImgOps {
     SwingWorker<Integer, Integer> {
 
         private File[] flist;
-        LogJTextArea taOut;
         float delsig, angDeg;
         boolean autoBkgPt, autoTol2T, autoAngD, lorCorr,estimbkg,pond;
         int zoneR,minPix,bkgpt,iosc,tol2tpix;
@@ -2345,7 +2330,7 @@ public final class ImgOps {
 
         // distMD & wavel -1 to take the ones from the original image,
         // exzfile=null for the same.
-        public PkIntegrateFileWorker(File[] files, LogJTextArea textAreaOutput,
+        public PkIntegrateFileWorker(File[] files,
                 float delsig, int zoneR, int minPix, int bkgpt, 
                 boolean autoBkgPt, int tol2tpix, boolean autoTol2t, float angDeg, 
                 boolean autoAngDeg, boolean lorCorr, int iosc,boolean estimbkg,boolean pond,MainFrame d2Dmain) {
@@ -2359,7 +2344,6 @@ public final class ImgOps {
             this.autoTol2T=autoTol2t;
             this.angDeg=angDeg;
             this.autoAngD=autoAngDeg;
-            this.taOut = textAreaOutput;
             this.lorCorr=lorCorr;
             this.iosc=iosc;
             this.estimbkg=estimbkg;
@@ -2380,18 +2364,17 @@ public final class ImgOps {
                 float percent = ((float)i/(float)totalfiles)*100.f;
                 setProgress((int) percent);
 
-                taOut.stat(String.format("Reading image: %s",flist[i].getName()));
+                log.info(String.format("Reading image: %s",flist[i].getName()));
                 Pattern2D in = ImgFileUtils.readPatternFile(flist[i],false);
                 if (in==null){
-                    if (this.taOut!=null) taOut.stat("Error reading file "+flist[i].getName()+" ...skipping");
-                    log.info("Error reading file "+flist[i].getName()+" ...skipping");
+                	log.warning("Error reading file "+flist[i].getName()+" ...skipping");
                     continue;
                 }
                 if(d2Dmain!=null) {
                     d2Dmain.updatePatt2D(in, false,true);
                 }
                 
-                taOut.stat("   Finding peaks...");
+                log.info("   Finding peaks...");
                 in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false,estimbkg,pond));
                 Iterator<Peak> itrpks = in.getPkSearchResult().iterator();
                 if(d2Dmain!=null) {
@@ -2399,15 +2382,15 @@ public final class ImgOps {
                         d2Dmain.getpksearchframe().updateTable();
                     }
                 }
-                taOut.stat("   Integrating...");
+                log.info("   Integrating...");
                 while (itrpks.hasNext()){
                     Peak pk = (Peak)itrpks.next();
                     Point2D.Float pxc = pk.getPixelCentre();
                     if (autoBkgPt){
                         int npix = ImgOps.ArcNPix(in, (int)(pxc.x), (int)(pxc.y), tol2tpix, angDeg);
                         //agafem un 5% dels pixels com a fons
-                        bkgpt = FastMath.round(npix*PKsearch_frame.def_bkgPxAutoPercent);
-                        if (bkgpt<PKsearch_frame.def_minbkgPx)bkgpt=PKsearch_frame.def_minbkgPx;
+                        bkgpt = FastMath.round(npix*PeakSearch.def_bkgPxAutoPercent);
+                        if (bkgpt<PeakSearch.def_minbkgPx)bkgpt=PeakSearch.def_minbkgPx;
                         log.debug("bkgPT="+bkgpt);
                     }
                     if (autoTol2T){
@@ -2446,15 +2429,14 @@ public final class ImgOps {
                     if (!owrite)continue;
                 }
                 
-                File f = ImgFileUtils.writePCS(in,out,delsig,angDeg,autoTol2T,zoneR,minPix,bkgpt,autoBkgPt,autoAngD);
+                File f = ImgFileUtils.writePCS(in,out,delsig,angDeg,autoTol2T,zoneR,minPix,bkgpt,autoBkgPt,autoAngD,false);
                 
-                if (f != null) {
-                    if (this.taOut!=null) taOut.stat("   "+f.toString()+" written!");
-                    log.info(f.toString()+" written!");
-                }else{
-                    if (this.taOut!=null) taOut.stat("   Error writting "+out.toString());
-                    log.warning("Error writting "+out.toString());
+                if (f!=null) {
+                	log.info(f.toString()+" written!");	
+                }else {
+                	log.warning("Error writting "+out.toString());	
                 }
+                
             }
             this.setProgress(100);
             return 0;
@@ -2467,14 +2449,13 @@ public final class ImgOps {
     SwingWorker<Integer, Integer> {
 
         private File[] flist;
-        LogJTextArea taOut;
         float delsig, angDeg;
         boolean autoBkgPt, autoTol2T, autoAngD, lorCorr,estimbkg,pond;
         int zoneR,minPix,bkgpt,iosc,tol2tpix;
 
         // distMD & wavel -1 to take the ones from the original image,
         // exzfile=null for the same.
-        public PkSCIntegrateFileWorker(File[] files, LogJTextArea textAreaOutput,
+        public PkSCIntegrateFileWorker(File[] files,
                 float delsig, int zoneR, int minPix, int bkgpt, 
                 boolean autoBkgPt, int tol2tpix, boolean autoTol2t, float angDeg, 
                 boolean autoAngDeg, boolean lorCorr, int iosc, boolean estimbkg,boolean pond) {
@@ -2488,7 +2469,6 @@ public final class ImgOps {
             this.autoTol2T=autoTol2t;
             this.angDeg=angDeg;
             this.autoAngD=autoAngDeg;
-            this.taOut = textAreaOutput;
             this.lorCorr=lorCorr;
             this.iosc=iosc;
             this.estimbkg=estimbkg;
@@ -2517,11 +2497,10 @@ public final class ImgOps {
                     float percent = ((float)i/(float)totalfiles)*100.f;
                     setProgress((int) percent);
 
-                    taOut.stat(String.format("Reading image: %s",flist[i].getName()));
+                    log.info(String.format("Reading image: %s",flist[i].getName()));
                     Pattern2D in = ImgFileUtils.readPatternFile(flist[i],false);
                     if (in==null){
-                        if (this.taOut!=null) taOut.stat("Error reading file "+flist[i].getName()+" ...skipping");
-                        log.info("Error reading file "+flist[i].getName()+" ...skipping");
+                        log.warning("Error reading file "+flist[i].getName()+" ...skipping");
                         continue;
                     }
                     
@@ -2575,19 +2554,19 @@ public final class ImgOps {
                         in.copyInstrParamFromOtherPatt(first);
                     }
                     
-                    taOut.stat("   Finding peaks...");
+                    log.info("   Finding peaks...");
                     in.setPkSearchResult(ImgOps.findPeaks(in, delsig, zoneR, minPix, false,estimbkg,pond));
                     if (in.getPkSearchResult()==null)continue;
                     Iterator<Peak> itrpks = in.getPkSearchResult().iterator();
-                    taOut.stat("   Integrating...");
+                    log.info("   Integrating...");
                     while (itrpks.hasNext()){
                         Peak pk = (Peak)itrpks.next();
                         Point2D.Float pxc = pk.getPixelCentre();
                         if (autoBkgPt){
                             int npix = ImgOps.ArcNPix(in, (int)(pxc.x), (int)(pxc.y), tol2tpix, angDeg);
                             //agafem un 5% dels pixels com a fons
-                            bkgpt = FastMath.round(npix*PKsearch_frame.def_bkgPxAutoPercent);
-                            if (bkgpt<PKsearch_frame.def_minbkgPx)bkgpt=PKsearch_frame.def_minbkgPx;
+                            bkgpt = FastMath.round(npix*PeakSearch.def_bkgPxAutoPercent);
+                            if (bkgpt<PeakSearch.def_minbkgPx)bkgpt=PeakSearch.def_minbkgPx;
                             log.debug("bkgPT="+bkgpt);
                         }
                         if (autoTol2T){
@@ -2625,13 +2604,11 @@ public final class ImgOps {
                 output.println("NOMBRE TOTAL DE PICS 2D = "+totalNpks);
                 output.close();
             } catch (Exception e) {
-                log.warning("Error writting OUT file");
-                taOut.stat("Error writting OUT file");
+            	log.warning("Error writting OUT file");
                 if(D2Dplot_global.isDebug())e.printStackTrace();
                 this.setProgress(100);
             }
-            log.printmsg("INFO", String.format("OUT file written! [%s]",fout.toString()));
-            taOut.stat(String.format("OUT file written! [%s]",fout.toString()));
+            log.info(String.format("OUT file written! [%s]",fout.toString()));
             this.setProgress(100);
             return 0;
         }
@@ -2643,7 +2620,6 @@ public final class ImgOps {
         private File[] files;
         private boolean stop;
         Pattern2D pattsum;
-        LogJTextArea taOut;
         boolean doSubtract = false;
         Pattern2D pattFons = null;
         float inco_aini,inco_afin,inco_aacq, inco_aincr;
@@ -2652,10 +2628,9 @@ public final class ImgOps {
         File outdir;
         
 
-        public sumImagesIncoFileWorker(File[] files, File bkgfile, float bkgscale, float scAngleIni, float scAngleStep, float incoAngleIni, float incoAngleFin, float incoAngleAcq, float incoAngleIncr, boolean removeBkg, String baseFilename, File outDir, LogJTextArea textAreaOut){//, Pattern2D patt) {
+        public sumImagesIncoFileWorker(File[] files, File bkgfile, float bkgscale, float scAngleIni, float scAngleStep, float incoAngleIni, float incoAngleFin, float incoAngleAcq, float incoAngleIncr, boolean removeBkg, String baseFilename, File outDir){//, Pattern2D patt) {
             this.files = files;
             this.stop = false;
-            this.taOut = textAreaOut;
             this.sc_aini=scAngleIni;
             this.sc_astep=scAngleStep;
             this.inco_aini=incoAngleIni;
@@ -2670,7 +2645,7 @@ public final class ImgOps {
                 try {
                     this.pattFons=ImgFileUtils.readPatternFile(bkgfile, false);    
                 }catch(Exception ex) {
-                    log.info("background file not found");
+                    log.warning("background file not found");
                     this.pattFons=null;
                 }
                 
@@ -2683,28 +2658,24 @@ public final class ImgOps {
             log.debug(String.format("images from %d to %d comprises angles %.3f to %.3f",n,nfin,aini,afin));
             
             //llegeixo primera imatge header pels parametres
-//            Pattern2D first = ImgFileUtils.readPatternFile(this.files[n],false);
-            Pattern2D patt = ImgFileUtils.readEDFheaderOnly(this.files[n]);
-            int dimY = patt.getDimY();
-            int dimX = patt.getDimX();
-            Pattern2D pattsum = new Pattern2D(patt,false);
-            pattsum.setB4inten(true);//ens assegurem que treballem amb I4
-            Pattern2D dataI4temp = new Pattern2D(dimX,dimY,true);
+            EdfHeaderPatt2D pattH = ImgFileUtils.readEDFheaderOnly(this.files[n]); //TODO: canvi per EdfHeaderPatt2D
+            int dimY = pattH.getPatt2D().getDimY();
+            int dimX = pattH.getPatt2D().getDimX();
+            Pattern2D pattsum = new Pattern2D(pattH.getPatt2D(),false);
+            Pattern2D dataI4temp = new Pattern2D(dimX,dimY);
             //inicialitzem a zero les dades SUMA
             for(int i=0; i<dimY;i++){
                 for(int j=0; j<dimX;j++){
                     dataI4temp.setInten(j, i, 0);
                 }
             }
-            int maxVal=0;
             
             //sumem
             for(int k=n;k<nfin;k++){
                 //obrim el pattern i sumem
-                patt = ImgFileUtils.readPatternFile(files[k],false);
+                Pattern2D patt = ImgFileUtils.readPatternFile(files[k],false);
                 if (patt == null){
-                    if (taOut!=null)taOut.stat("Error reading "+files[k].getName()+" ... skipping");
-                    log.warning("could not read "+files[k].getName()+" ... skiping");
+                	log.warning("Error reading "+files[k].getName()+" ... skipping");
                     continue;
                 }
                 if (doSubtract){
@@ -2713,14 +2684,14 @@ public final class ImgOps {
                             bkgScale = ImgOps.calcGlassScale(patt, pattFons);
                         }
                         log.fine("bkgScale="+bkgScale);
-                        patt = ImgOps.subtractBKG_v2(patt, pattFons,bkgScale,null)[0];                        
+                        patt = ImgOps.subtractBKG_v2(patt, pattFons,bkgScale)[0];                        
                     }
                 }
                 
                 for(int i=0; i<dimY;i++){
                     for(int j=0; j<dimX;j++){
                         //zona exclosa saltem
-                        if (patt.isInExZone(j, i))continue;
+                        if (patt.isExcluded(j, i))continue;
                         int s = dataI4temp.getInten(j, i) + patt.getInten(j, i);
                         dataI4temp.setInten(j, i, s);
                     }
@@ -2728,42 +2699,37 @@ public final class ImgOps {
                 float percent = ((float)k/(float)files.length)*100.f; //files is totalfiles
                 setProgress((int) percent);
                 log.fine(String.valueOf(percent));
-                if (taOut!=null)taOut.stat("File added: "+files[k].getName());
+                log.info("File added: "+files[k].getName());
                 if (stop) break;
             }
             
-            //escala
+            //l'escala la farà el write edf, no cal fer-la aquí
             for(int i=0; i<dimY;i++){
                 for(int j=0; j<dimX;j++){
-                    //mirem si superem els limits (per escalar despres)
-                    if (dataI4temp.getInten(j, i)>maxVal) maxVal=dataI4temp.getInten(j, i);
-                }
-            }
-            
-            //si ens hem passat del maxim calculem el factor d'escala i escalem
-            float fscale=1.0f;
-            log.fine("maxVal= "+maxVal+"  satur="+pattsum.getSaturValue());
-            if(maxVal>pattsum.getSaturValue()){
-                fscale = (float)maxVal/(float)(pattsum.getSaturValue()-1); // -1 per assegurar-nos que entra
-            }
-            
-            for(int i=0; i<dimY;i++){
-                for(int j=0; j<dimX;j++){
-                    pattsum.setInten(j, i, FastMath.round((float)dataI4temp.getInten(j, i)/fscale));
+                    pattsum.setInten(j, i, dataI4temp.getInten(j, i));
                 }
             }
 //            this.setProgress(100);
-            pattsum.setScale(fscale);
+            pattsum.setScale(1.0f);
             log.writeNameNumPairs("fine", true, "aini(swk), afin(swk)", aini,afin);
             pattsum.setScanParameters(aini, afin, 0);
             log.writeNameNumPairs("fine", true, "pattsum.omeini, omefin", pattsum.getOmeIni(),pattsum.getOmeFin());
             //escribim pattsum
-            ImgFileUtils.writeEDF(outf, pattsum);
+            ImgFileUtils.writePatternFile(outf, pattsum,false); //ja porta el format de la seleccio anterior 
         }
         
         @Override
         protected Integer doInBackground() throws Exception {
 
+            //PREGUNTEM EL FORMAT DE SORTIDA (aixo pot anar aqui o a maniframe)
+            //this line returns the FORMAT in the ENUM or NULL
+            SupportedWriteExtensions[] possibilities = SupportedWriteExtensions.values();
+            SupportedWriteExtensions format = (SupportedWriteExtensions)JOptionPane.showInputDialog(null, "Output format:", "Save Files",
+                    JOptionPane.PLAIN_MESSAGE, null, possibilities, possibilities[0]);
+            if (format == null) {
+                return -1;
+            }
+        	
             float currOme = this.inco_aini;
             int index = 0;
             
@@ -2771,7 +2737,8 @@ public final class ImgOps {
                 String outfname = this.outdir.getAbsolutePath()+D2Dplot_global.separator+this.base_fname+"_";
                 //num
                 outfname = String.format("%s%04d", outfname,index);
-                log.fine("outfname="+outfname+".edf");
+                outfname = outfname + "." + format.toString().toLowerCase();
+                log.fine("outfname="+outfname);
                 log.fine("currome="+currOme+" inco_aacq="+inco_aacq+" inco_aincr="+inco_aincr+" inco_afin="+inco_afin);
 
                 //GENERATE PATTERN

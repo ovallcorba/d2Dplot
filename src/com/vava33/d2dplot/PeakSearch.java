@@ -14,7 +14,7 @@ import com.vava33.d2dplot.auxi.Patt2Dzone;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.d2dplot.auxi.Peak;
 import com.vava33.d2dplot.auxi.PuntSolucio;
-import com.vava33.d2dplot.auxi.findPksTableRenderer;
+import com.vava33.d2dplot.auxi.FindPksTableRenderer;
 import com.vava33.d2dplot.auxi.ImgOps.PkIntegrateFileWorker;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
@@ -22,6 +22,7 @@ import com.vava33.jutils.VavaLogger;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 
 import java.awt.event.ItemListener;
@@ -71,19 +72,17 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.border.LineBorder;
 
-public class PKsearch_frame extends JFrame {
-    /**
-     * 
-     */
-    private static final long serialVersionUID = -3599627105512682021L;
+public class PeakSearch {
 
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(PKsearch_frame.class.getName());
-
+    private static final String className = "PKsearch";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
+    
+    private JDialog pksearchDialog;
+    private JFrame parent;
     private JPanel contentPane;
 
-    private Pattern2D patt2d;
     private boolean fromInco;
-    private Dinco_frame dincoFrame;
+    private IncoPlot dincoFrame;
     private ImagePanel iPanel;
 
     private JCheckBox chckbxOnTop;
@@ -167,19 +166,19 @@ public class PKsearch_frame extends JFrame {
     /**
      * Create the frame.
      */
-    public PKsearch_frame(ImagePanel ip, boolean fromInco, Dinco_frame dframe) {
-        setAlwaysOnTop(true);
+    public PeakSearch(JFrame parent, ImagePanel ip, boolean fromInco, IncoPlot dframe) {
+    	pksearchDialog = new JDialog(parent,"Peak Search and Integrate",false);
+    	this.parent=parent;
+    	pksearchDialog.setAlwaysOnTop(true);
         this.fromInco=fromInco;
         this.dincoFrame = dframe;
         this.iPanel=ip;
-        this.patt2d=ip.getPatt2D();
-        setTitle("Peak Search and Integrate");
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Dinco_frame.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setBounds(100, 100, 860, 600);
+        pksearchDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(IncoPlot.class.getResource("/img/Icona.png")));
+        pksearchDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        pksearchDialog.setBounds(100, 100, 860, 600);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-        setContentPane(contentPane);
+        pksearchDialog.setContentPane(contentPane);
         contentPane.setLayout(new MigLayout("fill, insets 3", "[grow]", "[grow][]"));
         
         JSplitPane splitPane = new JSplitPane();
@@ -391,9 +390,9 @@ public class PKsearch_frame extends JFrame {
             
         });
         table.setFillsViewportHeight(true);
-        table.setDefaultRenderer(Float.class, new findPksTableRenderer());
-        table.setDefaultRenderer(Integer.class, new findPksTableRenderer());
-        table.setDefaultRenderer(String.class, new findPksTableRenderer());
+        table.setDefaultRenderer(Float.class, new FindPksTableRenderer());
+        table.setDefaultRenderer(Integer.class, new FindPksTableRenderer());
+        table.setDefaultRenderer(String.class, new FindPksTableRenderer());
         table.setAutoCreateRowSorter(true);
         table.getTableHeader().setReorderingAllowed(false);
         
@@ -489,18 +488,12 @@ public class PKsearch_frame extends JFrame {
         this.inicia(fromInco);
     }
     
-    @Override
-    public void dispose() {
-        this.chckbxShowPoints.setSelected(false);
-        super.dispose();
-    }
-    
     public void inicia(boolean fromINCO){
         this.fromInco=fromINCO;
-        this.patt2d=this.iPanel.getPatt2D();
+//        this.patt2d=this.iPanel.getPatt2D();
         
         //resetejem si hi ha peaksearch previ (de l'inco o wherever)
-        if(this.patt2d.getPkSearchResult()!=null)this.patt2d.getPkSearchResult().clear();
+        if(this.getPatt2D().getPkSearchResult()!=null)this.getPatt2D().getPkSearchResult().clear();
         
         if(fromInco){
             lblDelsig.setEnabled(false);
@@ -524,8 +517,19 @@ public class PKsearch_frame extends JFrame {
         this.iPanel.actualitzarVista();
     }
     
+    public void setIpanel(ImagePanel ipanel){
+        this.iPanel = ipanel;
+    }
+    
+    public ImagePanel getIPanel() {
+        return this.iPanel;
+    }
+    public Pattern2D getPatt2D() {
+        return this.getIPanel().getPatt2D();
+    }
+    
     protected void do_chckbxOnTop_itemStateChanged(ItemEvent arg0) {
-        this.setAlwaysOnTop(chckbxOnTop.isSelected());
+    	pksearchDialog.setAlwaysOnTop(chckbxOnTop.isSelected());
     }
     
     public boolean isShowPoints(){
@@ -540,28 +544,28 @@ public class PKsearch_frame extends JFrame {
 //        boolean t2dep = chckbxAutodelsig.isSelected();
         this.readSearchOptions();
 //        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, t2dep, nzonesFindPeaks, minpix, false);
-        ArrayList<Peak> pks = ImgOps.findPeaks(patt2d, delsig, zoneR, minpix, false,estimbkg,pondmerging);
+        ArrayList<Peak> pks = ImgOps.findPeaks(this.getPatt2D(), delsig, zoneR, minpix, false,estimbkg,pondmerging);
         
 //        if(chckbxAvoidDiamonds.isSelected()){
 //            
 //        }
         //if noSaturated //TODO
         
-        patt2d.setPkSearchResult(pks);
+        this.getPatt2D().setPkSearchResult(pks);
         this.iPanel.actualitzarVista();
     }
     
     protected void do_btnRemoveSaturated_actionPerformed(ActionEvent arg0) {
-        int removed = ImgOps.removeSaturPeaks(patt2d.getPkSearchResult());
+        int removed = ImgOps.removeSaturPeaks(this.getPatt2D().getPkSearchResult());
         log.info(String.format("Removed %d saturated peaks",removed));
-        lblNpks.setText(String.format("%d Peaks!", patt2d.getPkSearchResult().size()));
+        lblNpks.setText(String.format("%d Peaks!", this.getPatt2D().getPkSearchResult().size()));
         this.iPanel.actualitzarVista();
     }
     
     protected void do_btnRemoveDiamonds_actionPerformed(ActionEvent e) {
-        int removed = ImgOps.removeDiamondPeaks(patt2d.getPkSearchResult());
+        int removed = ImgOps.removeDiamondPeaks(this.getPatt2D().getPkSearchResult());
         log.info(String.format("Removed %d diamond (guessed) peaks",removed));
-        lblNpks.setText(String.format("%d Peaks!", patt2d.getPkSearchResult().size()));
+        lblNpks.setText(String.format("%d Peaks!", this.getPatt2D().getPkSearchResult().size()));
         this.iPanel.actualitzarVista(); 
     }
     
@@ -592,11 +596,12 @@ public class PKsearch_frame extends JFrame {
         boolean autoTol = chckbxAutointrad.isSelected();
         boolean autoazim = chckbxAutoazim.isSelected();
         boolean autobkgpt = chckbxAutobkgpt.isSelected();
+        Pattern2D patt2d = this.getPatt2D();
         
         this.readIntegrateOptions();
         
         if (patt2d.getPkSearchResult()==null){
-            log.info("no peaks found");
+            log.info("No peaks found");
             return;
         }
         Iterator<Peak> itrpks = patt2d.getPkSearchResult().iterator();
@@ -629,6 +634,7 @@ public class PKsearch_frame extends JFrame {
     }
     
     protected void do_btnCalculate_actionPerformed(ActionEvent arg0) {
+        Pattern2D patt2d = this.getPatt2D();
         if(fromInco)log.debug("CALCULATE CALLED FROM INCO");
         if(!fromInco){ //busquem els pics amb els parametres entrats
             this.searchPeaks();
@@ -645,7 +651,7 @@ public class PKsearch_frame extends JFrame {
                     Iterator<PuntSolucio> itrS = oos[i].getSol().iterator();
                     while (itrS.hasNext()) {
                         PuntSolucio s = itrS.next();
-                        Peak pic = ImgOps.addPeakFromCoordinates(patt2d, new Point2D.Float(s.getCoordX(),s.getCoordY()), PKsearch_frame.zoneR);
+                        Peak pic = ImgOps.addPeakFromCoordinates(patt2d, new Point2D.Float(s.getCoordX(),s.getCoordY()), PeakSearch.zoneR);
                         dincoSolPunts.add(pic);
                     }
                 }
@@ -658,6 +664,7 @@ public class PKsearch_frame extends JFrame {
     }
     
     public void integratePk(Peak pic){
+        Pattern2D patt2d = this.getPatt2D();
         this.readIntegrateOptions();
         //afegim comprovacio "autos"
         boolean autoTol = chckbxAutointrad.isSelected();
@@ -681,8 +688,8 @@ public class PKsearch_frame extends JFrame {
         }
         pic.setZona(ImgOps.YarcTilt(patt2d, (int)(pic.getPixelCentre().x), (int)(pic.getPixelCentre().y), tol2tpix, angDeg, true, bkgpt, false));
         pic.calculate(chckbxLpCorrection.isSelected());
-        if (this.patt2d.getPkSearchResult()==null)this.patt2d.setPkSearchResult(new ArrayList<Peak>()); //in case it is not initialized
-        this.patt2d.getPkSearchResult().add(pic);
+        if (patt2d.getPkSearchResult()==null)patt2d.setPkSearchResult(new ArrayList<Peak>()); //in case it is not initialized
+        patt2d.getPkSearchResult().add(pic);
         this.updateTable();
     }
     
@@ -716,11 +723,12 @@ public class PKsearch_frame extends JFrame {
         if (val.contains("V")){
             iosc = 2;
         }
-        patt2d.setIscan(iosc);
+        this.getPatt2D().setIscan(iosc);
     }
 
     
     public void updateTable(){
+        Pattern2D patt2d = this.getPatt2D();
         ((DefaultTableModel)table.getModel()).setRowCount(0);
         
         //mostrarem els pics
@@ -776,7 +784,7 @@ public class PKsearch_frame extends JFrame {
             try{
                 float px = (Float)table.getModel().getValueAt(modelRow, 0);
                 float py = (Float)table.getModel().getValueAt(modelRow, 1);
-                pk = patt2d.getPeakFromCoordinates(new Point2D.Float(px,py));
+                pk = this.getPatt2D().getPeakFromCoordinates(new Point2D.Float(px,py));
             }catch(Exception e){
                 log.debug("error getting selected point coordinates");
             }
@@ -820,7 +828,7 @@ public class PKsearch_frame extends JFrame {
             if (selpeaks!=null){
                 for (int i=0;i<selpeaks.length;i++){
                     log.writeNameNums("CONFIG", true, "remove peak",selpeaks[i].getPixelCentre().x,selpeaks[i].getPixelCentre().y);
-                    this.patt2d.removePeak(selpeaks[i]);
+                    this.getPatt2D().removePeak(selpeaks[i]);
                 }
             }
             this.updateTable();
@@ -828,22 +836,21 @@ public class PKsearch_frame extends JFrame {
     }
     
     protected void removePeak(Peak pk){
-        patt2d.removePeak(pk);
+        this.getPatt2D().removePeak(pk);
         this.updateTable();
     }
     
     protected void do_btnExportPeakList_actionPerformed(ActionEvent arg0) {
-        File f = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null,"PCS");
+        File f = FileUtils.fchooserSaveAsk(pksearchDialog,new File(D2Dplot_global.getWorkdir()), null,"PCS");
         if (f==null) return;
         D2Dplot_global.setWorkdir(f);
-//        f = FileUtils.canviExtensio(f, "PCS");
-        ImgFileUtils.writePCS(patt2d,f,delsig,angDeg,chckbxAutointrad.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),chckbxAutoazim.isSelected());
+        ImgFileUtils.writePCS(this.getPatt2D(),f,delsig,angDeg,chckbxAutointrad.isSelected(),zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),chckbxAutoazim.isSelected(),false);
         
     }
     
 
     protected void do_btnExportTable_actionPerformed(ActionEvent arg0) {
-        File f = FileUtils.fchooserSaveAsk(this,new File(D2Dplot_global.getWorkdir()), null,null);
+        File f = FileUtils.fchooserSaveAsk(pksearchDialog,new File(D2Dplot_global.getWorkdir()), null,null);
         if (f==null) return;
         D2Dplot_global.setWorkdir(f);
         this.exportTable(f);
@@ -891,14 +898,14 @@ public class PKsearch_frame extends JFrame {
                 pz.setAzimAngle(pic.getAzimAper());
                 pz.setBkgpt(pic.getNbkgpix());
                 pz.setCentralPoint(pic.getPixelCentre());
-                pz.setPatt2d(this.patt2d);
+                pz.setPatt2d(this.getPatt2D());
                 pic.setZona(pz);
                 
                 pic.setIntegrated(true);
                 
                 realPeaks.add(pic);
             }
-            patt2d.setPkSearchResult(realPeaks);
+            this.getPatt2D().setPkSearchResult(realPeaks);
             scPCSfile.close();
             this.updateTable();
         } catch (Exception e) {
@@ -910,7 +917,7 @@ public class PKsearch_frame extends JFrame {
     private File exportTable(File txtFile){
         String eqLine="===========================================================================================================================================================================";
         String minLine="---------------------------------------------------------------------------------------------------------------------------------------------------------------------------";
-     
+        Pattern2D patt2d = this.getPatt2D();
         // creem un printwriter amb el fitxer file (el que estem escribint)
         try {
             //preparem les files (ho he mogut aqui perque em fan falta alguns calculs per la capçalera
@@ -946,7 +953,7 @@ public class PKsearch_frame extends JFrame {
             }
             output.println(String.format("Saturated pixels= %d (sat. value= %d)",patt2d.getnSatur(),patt2d.getSaturValue()));
             output.println(String.format("Saturated peaks= %d",patt2d.getnPkSatur())); 
-            output.println(String.format("MeanI= %d Sigma(I)= %.3f",patt2d.getMeanI(),patt2d.getSdevI()));
+            output.println(String.format("MeanI= %.1f Sigma(I)= %.3f",patt2d.getMeanI(),patt2d.getSdevI()));
             output.println(String.format("ESD factor= %.2f",angDeg));    
             if (chckbxAutoazim.isSelected()){
                 output.println(String.format("Auto azim aperture of the integration (º) in the range %.2f to %.2f",minAzim,maxAzim));
@@ -981,21 +988,21 @@ public class PKsearch_frame extends JFrame {
             log.warning("Error writting PCS file");
             return null;
         }
-        log.printmsg("INFO", "Full info table exported in text format!");
+        log.info("Full info table exported in text format!");
         return txtFile;
     }
         
     protected void do_btnMaskbin_actionPerformed(ActionEvent e) {
-        if (this.patt2d != null) {
+        if (this.getPatt2D() != null) {
             // tanquem calibracio en cas que estigui obert
-            ExZones_dialog exZones = new ExZones_dialog(this.iPanel);
+            ExZones exZones = new ExZones(parent,this.iPanel);
             exZones.setVisible(true);
             this.iPanel.setExZones(exZones);
         }
     }
     protected void do_btnBatch_actionPerformed(ActionEvent arg0) {
         //obrir un fchoser multiple i seleccionar imatges
-        FileUtils.InfoDialog(this, "Selected images will be integrated with current options \nand PCS files with the same filename generated." , "batch pk search and integrate");
+        FileUtils.InfoDialog(pksearchDialog, "Selected images will be integrated with current options \nand PCS files with the same filename generated." , "batch pk search and integrate");
         
         //integrar amb les opcions actuals
         this.readSearchOptions();
@@ -1004,7 +1011,7 @@ public class PKsearch_frame extends JFrame {
         //carregar imatge, integrar, escriure PCS amb el mateix nom 
         //i tal s'encarrega el swingworker de imgops
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to process");
+        File[] flist = FileUtils.fchooserMultiple(pksearchDialog,new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to process");
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         
@@ -1012,7 +1019,7 @@ public class PKsearch_frame extends JFrame {
                 "Peak Search and Integrate on several images in progress...",
                 "", 0, 100);
         pm.setProgress(0);
-        convwk = new ImgOps.PkIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
+        convwk = new ImgOps.PkIntegrateFileWorker(flist,delsig,
                 zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
                 angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging,this.iPanel.getMainFrame());
         
@@ -1029,9 +1036,9 @@ public class PKsearch_frame extends JFrame {
                         Toolkit.getDefaultToolkit().beep();
                         if (pm.isCanceled()) {
                             convwk.cancel(true);
-                            log.debug("Pk Search and Integrate stopped by user");
+                            log.info("Peak Search and Integrate stopped by user");
                         } else {
-                            log.debug("Pk Search and Integrate finished!!");
+                            log.info("Peak Search and Integrate finished!!");
                         }
                         pm.close();
                     }
@@ -1041,7 +1048,7 @@ public class PKsearch_frame extends JFrame {
         convwk.execute();
     }
     protected void do_btnImport_actionPerformed(ActionEvent arg0) {
-        File f = FileUtils.fchooserOpen(this, new File(D2Dplot_global.getWorkdir()), null, 0);
+        File f = FileUtils.fchooserOpen(pksearchDialog, new File(D2Dplot_global.getWorkdir()), null, 0);
         if (f==null)return;
         if (FileUtils.getExtension(f).equalsIgnoreCase("OUT")){
             fileout = f;
@@ -1055,9 +1062,25 @@ public class PKsearch_frame extends JFrame {
         return this.fileout;
     }
     
+    public void setVisible(boolean vis) {
+    	pksearchDialog.setVisible(vis);
+    	if(vis==true)this.chckbxShowPoints.setSelected(true);
+    }
+    
+    public void dispose() {
+        this.chckbxShowPoints.setSelected(false);
+        this.stopProcesses();
+        pksearchDialog.dispose();
+    }
+    
+    private void stopProcesses() {
+    	if (convwk!=null)convwk.cancel(true);
+    	if (pkscwk!=null)pkscwk.cancel(true);
+    }
+
     public void importOUT(File outFile){
         boolean singleImg = false;
-        int inum = patt2d.getFileNameNumber();
+        int inum = this.getPatt2D().getFileNameNumber();
         log.debug("image Number="+inum);
         if (inum>=0)singleImg = true;
         
@@ -1165,7 +1188,7 @@ public class PKsearch_frame extends JFrame {
                 pz.setAzimAngle(pic.getAzimAper());
                 pz.setBkgpt(pic.getNbkgpix());
                 pz.setCentralPoint(pic.getPixelCentre());
-                pz.setPatt2d(this.patt2d);
+                pz.setPatt2d(this.getPatt2D());
                 pic.setZona(pz);
                 
                 pic.setIntegrated(true);
@@ -1179,7 +1202,7 @@ public class PKsearch_frame extends JFrame {
                     }
                 }
             }
-            patt2d.setPkSearchResult(realPeaks);
+            this.getPatt2D().setPkSearchResult(realPeaks);
             scOUTfile.close();
             this.updateTable();
         } catch (Exception e) {
@@ -1205,7 +1228,7 @@ public class PKsearch_frame extends JFrame {
     //TODO
     public void writeOUT(File outFile){
         boolean singleImg = false;
-        int inum = patt2d.getFileNameNumber();
+        int inum = this.getPatt2D().getFileNameNumber();
         log.debug("image Number="+inum);
         if (inum>=0)singleImg = true;
         
@@ -1311,7 +1334,7 @@ public class PKsearch_frame extends JFrame {
                 pz.setAzimAngle(pic.getAzimAper());
                 pz.setBkgpt(pic.getNbkgpix());
                 pz.setCentralPoint(pic.getPixelCentre());
-                pz.setPatt2d(this.patt2d);
+                pz.setPatt2d(this.getPatt2D());
                 pic.setZona(pz);
                 
                 pic.setIntegrated(true);
@@ -1325,7 +1348,7 @@ public class PKsearch_frame extends JFrame {
                     }
                 }
             }
-            patt2d.setPkSearchResult(realPeaks);
+            this.getPatt2D().setPkSearchResult(realPeaks);
             scOUTfile.close();
             this.updateTable();
         } catch (Exception e) {
@@ -1336,7 +1359,7 @@ public class PKsearch_frame extends JFrame {
    
     protected void do_btnBatchout_actionPerformed(ActionEvent arg0) {
         //obrir un fchoser multiple i seleccionar imatges
-        FileUtils.InfoDialog(this, "Selected images will be integrated with current options \nand a single OUT file will be generated." , "batch pk search and integrate");
+        FileUtils.InfoDialog(pksearchDialog, "Selected images will be integrated with current options \nand a single OUT file will be generated." , "batch pk search and integrate");
         
         //integrar amb les opcions actuals
         this.readSearchOptions();
@@ -1345,7 +1368,7 @@ public class PKsearch_frame extends JFrame {
         //carregar imatge, integrar, escriure PCS amb el mateix nom 
         //i tal s'encarrega el swingworker de imgops
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] flist = FileUtils.fchooserMultiple(this,new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to process");
+        File[] flist = FileUtils.fchooserMultiple(pksearchDialog,new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to process");
         if (flist==null) return;
         D2Dplot_global.setWorkdir(flist[0]);
         
@@ -1353,7 +1376,7 @@ public class PKsearch_frame extends JFrame {
                 "Peak Search and Integrate on several images in progress...",
                 "", 0, 100);
         pm.setProgress(0);
-        pkscwk = new ImgOps.PkSCIntegrateFileWorker(flist,this.iPanel.getMainFrame().gettAOut(),delsig,
+        pkscwk = new ImgOps.PkSCIntegrateFileWorker(flist,delsig,
                 zoneR,minpix,bkgpt,chckbxAutobkgpt.isSelected(),tol2tpix,chckbxAutointrad.isSelected(),
                 angDeg,chckbxAutoazim.isSelected(),chckbxLpCorrection.isSelected(),iosc,estimbkg,pondmerging);
         
@@ -1370,9 +1393,9 @@ public class PKsearch_frame extends JFrame {
                         Toolkit.getDefaultToolkit().beep();
                         if (pm.isCanceled()) {
                             pkscwk.cancel(true);
-                            log.debug("Pk Search and Integrate stopped by user");
+                            log.info("Peak Search and Integrate stopped by user");
                         } else {
-                            log.debug("Pk Search and Integrate finished!!");
+                            log.info("Peak Search and Integrate finished!!");
                         }
                         pm.close();
                     }

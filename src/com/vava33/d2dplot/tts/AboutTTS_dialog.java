@@ -14,6 +14,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -24,16 +25,16 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
 import com.vava33.d2dplot.D2Dplot_global;
-import com.vava33.d2dplot.TTS_frame;
+import com.vava33.d2dplot.TTS;
 import com.vava33.jutils.FileUtils;
 
 import net.miginfocom.swing.MigLayout;
 
-public class AboutTTS_dialog extends JDialog {
+public class AboutTTS_dialog {
 
-    private static final long serialVersionUID = -1952038531703806964L;
+    private JDialog aboutTTSdialog;
     private JButton btnUsersGuide;
-    private final JPanel contentPanel = new JPanel();
+    private JPanel contentPanel;
     private JLabel lblTalplogo;
     private JEditorPane textPane;
     private JScrollPane scrollPane;
@@ -54,21 +55,21 @@ public class AboutTTS_dialog extends JDialog {
     /**
      * Create the dialog.
      */
-    public AboutTTS_dialog() {
-        setModal(true);
-        this.setIconImage(new ImageIcon(getClass().getResource("/img/tts_icon120x120.png")).getImage());
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("About TTS software");
+    public AboutTTS_dialog(JFrame parent) {
+    	contentPanel=new JPanel();
+    	aboutTTSdialog = new JDialog(parent,"About TTS software",true);
+    	aboutTTSdialog.setIconImage(new ImageIcon(getClass().getResource("/img/tts_icon120x120.png")).getImage());
+    	aboutTTSdialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 680;
         int height = 780;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 680, 780);
-        this.setResizable(false);
-        getContentPane().setLayout(new BorderLayout());
+        aboutTTSdialog.setBounds(x, y, width, height);
+        aboutTTSdialog.setResizable(false);
+        aboutTTSdialog.getContentPane().setLayout(new BorderLayout());
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        aboutTTSdialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[grow]", "[64px][grow]"));
         {
             lblTalplogo = new JLabel("** LOGO **");
@@ -76,7 +77,7 @@ public class AboutTTS_dialog extends JDialog {
         }
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            aboutTTSdialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 {
                     this.btnUsersGuide = new JButton("User's Guide");
@@ -99,7 +100,7 @@ public class AboutTTS_dialog extends JDialog {
             });
             okButton.setActionCommand("OK");
             buttonPane.add(okButton, "cell 1 0,alignx right,aligny top");
-            getRootPane().setDefaultButton(okButton);
+            aboutTTSdialog.getRootPane().setDefaultButton(okButton);
         }
 
         // posem el logo escalat
@@ -159,7 +160,7 @@ public class AboutTTS_dialog extends JDialog {
 
     protected void do_btnUsersGuide_actionPerformed(ActionEvent arg0) {
         if (D2Dplot_global.getTTSsoftwareFolder().trim().isEmpty())return;
-        File userGuideFile = new File(D2Dplot_global.getTTSsoftwareFolder()+FileUtils.getSeparator()+TTS_frame.getUserguidefile());
+        File userGuideFile = new File(D2Dplot_global.getTTSsoftwareFolder()+FileUtils.getSeparator()+TTS.getUserguidefile());
         try{
             if(Desktop.isDesktopSupported()){ // s'obre amb el programa per defecte
                 Desktop.getDesktop().open(userGuideFile);
@@ -170,7 +171,7 @@ public class AboutTTS_dialog extends JDialog {
             }
         } catch (Exception ex) {
             if(D2Dplot_global.isDebug())ex.printStackTrace();
-            JOptionPane.showMessageDialog(this,
+            JOptionPane.showMessageDialog(aboutTTSdialog,
                     "Sorry, unable to open user's guide with default pdf viewer. \n"
                     + "Please open it manually from the program folder",
                     "TTS software User's Guide",
@@ -180,7 +181,9 @@ public class AboutTTS_dialog extends JDialog {
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
-        this.dispose();
+    	aboutTTSdialog.dispose();
     }
-
+    public void setVisible(boolean vis) {
+    	aboutTTSdialog.setVisible(vis);
+    }
 }

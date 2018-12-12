@@ -19,7 +19,8 @@ public class Pattern1D {
 	float step; //stepsize
 	ArrayList<PointPatt1D> points;
 	private String comment;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(Pattern1D.class.getName());
+    private static final String className = "Patt1D";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
 	public class PointPatt1D{
 		int counts;
@@ -65,6 +66,13 @@ public class Pattern1D {
 		}
 	}
 	
+//	public Pattern1D() {
+//	    //new pattern1D empty
+//	    this.points = new ArrayList<PointPatt1D>();
+//	}
+//	
+//	public addPoint()
+	
 	//suma en un punt existent del vector punts
 	public void sumPoint(int posicio, int counts, int npix){
 		this.getPoints().get(posicio).addCounts(counts);
@@ -97,7 +105,7 @@ public class Pattern1D {
             
         } catch (IOException e) {
             if(D2Dplot_global.isDebug())e.printStackTrace();
-            log.warning("error writting xy file");
+            log.warning("Error writting xy file");
         }
     }
     
@@ -124,7 +132,7 @@ public class Pattern1D {
             
         } catch (IOException e) {
             if(D2Dplot_global.isDebug())e.printStackTrace();
-            log.warning("error writting dat file");
+            log.warning("Error writting dat file");
         }
     }
     

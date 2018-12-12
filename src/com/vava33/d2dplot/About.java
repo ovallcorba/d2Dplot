@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Desktop;
@@ -24,16 +24,16 @@ import java.io.IOException;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JEditorPane;
+import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 
 import com.vava33.jutils.FileUtils;
 
-public class About_dialog extends JDialog {
+public class About {
 
-    private static final long serialVersionUID = 5573831371448966498L;
-
-    private JButton btnUsersGuide;
-    private final JPanel contentPanel = new JPanel();
+    private JDialog aboutDialog;
+	private JButton btnUsersGuide;
+    private JPanel contentPanel;
     private JLabel lblTalplogo;
     private JEditorPane textPane;
     private JScrollPane scrollPane;
@@ -55,19 +55,21 @@ public class About_dialog extends JDialog {
     /**
      * Create the dialog.
      */
-    public About_dialog() {
-        setIconImage(Toolkit.getDefaultToolkit().getImage(About_dialog.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("About d2Dplot");
+    public About(JFrame mainF) {
+    	aboutDialog = new JDialog(mainF);
+    	this.contentPanel=new JPanel();
+    	aboutDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(About.class.getResource("/img/Icona.png")));
+    	aboutDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+    	aboutDialog.setTitle("About d2Dplot");
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 680;
         int height = 780;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 680, 780);
-        getContentPane().setLayout(new BorderLayout());
+        aboutDialog.setBounds(x, y, width,height);
+        aboutDialog.getContentPane().setLayout(new BorderLayout());
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        aboutDialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[grow]", "[64px][grow][]"));
         {
             lblTalplogo = new JLabel("** LOGO **");
@@ -75,7 +77,7 @@ public class About_dialog extends JDialog {
         }
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            aboutDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 {
                     this.btnUsersGuide = new JButton("User's Guide");
@@ -98,11 +100,11 @@ public class About_dialog extends JDialog {
             });
             okButton.setActionCommand("OK");
             buttonPane.add(okButton, "cell 1 0,alignx right,aligny top");
-            getRootPane().setDefaultButton(okButton);
+            aboutDialog.getRootPane().setDefaultButton(okButton);
         }
 
         // posem el logo escalat
-        Image img = Toolkit.getDefaultToolkit().getImage(About_dialog.class.getResource("/img/Icona.png"));
+        Image img = Toolkit.getDefaultToolkit().getImage(About.class.getResource("/img/Icona.png"));
         Image newimg = img.getScaledInstance(-100, 64, java.awt.Image.SCALE_SMOOTH);
         ImageIcon logo = new ImageIcon(newimg);
         lblTalplogo.setText("");
@@ -143,10 +145,10 @@ public class About_dialog extends JDialog {
         });
         {
             lblLogoalba = new JLabel("");
-            lblLogoalba.setIcon(new ImageIcon(About_dialog.class.getResource("/img/ALBALogo.png")));
+            lblLogoalba.setIcon(new ImageIcon(About.class.getResource("/img/ALBALogo.png")));
             contentPanel.add(lblLogoalba, "cell 0 2,alignx center");
         }
-        java.net.URL aboutURL = About_dialog.class.getResource("/img/about.html");
+        java.net.URL aboutURL = About.class.getResource("/img/about.html");
         if (aboutURL != null) {
             try {
                 textPane.setPage(aboutURL);
@@ -158,7 +160,6 @@ public class About_dialog extends JDialog {
         }
         
         scrollPane.getViewport().setOpaque(false);
-       
     }
 
     protected void do_btnUsersGuide_actionPerformed(ActionEvent arg0) {
@@ -181,7 +182,7 @@ public class About_dialog extends JDialog {
         } catch (Exception e) {
             if(D2Dplot_global.isDebug())e.printStackTrace();
         }
-        JOptionPane.showMessageDialog(this,
+        JOptionPane.showMessageDialog(aboutDialog,
                 "Sorry, unable to open user's guide with default pdf viewer. \n"
                 + "Please open it manually from the program folder",
                 "D2Dplot User's Guide",
@@ -189,6 +190,24 @@ public class About_dialog extends JDialog {
     }
     
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
-        this.dispose();
+    	aboutDialog.dispose();
     }
+    
+	public JDialog getAboutDialog() {
+		return aboutDialog;
+	}
+
+	public void setAboutDialog(JDialog aboutDialog) {
+		this.aboutDialog = aboutDialog;
+	}
+	
+    public void dispose() {
+    	aboutDialog.dispose();
+    }
+    
+    public void setVisible(boolean vis) {
+    	aboutDialog.setVisible(vis);
+    }
+	
+	
 }

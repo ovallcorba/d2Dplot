@@ -42,7 +42,8 @@ public final class PDDatabase {
     private static boolean QLmodified = false;
     private static boolean DBmodified = false;
     
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(PDDatabase.class.getName());
+    private static final String className = "PDdatabase";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
     
     public static void resetDB(){
         DBcompList.clear();
@@ -183,30 +184,7 @@ public final class PDDatabase {
     //sets the QLDB modified (useful for the first run)
     public static boolean populateQuickList(final boolean setDBModified){
         
-        //first try to read LAT files in the current folder
-        try{
-            File folder = new File(new File(D2Dplot_global.userDir).getPath());
-            File[] flist = folder.listFiles();
-            for (int i=0; i<flist.length; i++){
-                if (FileUtils.getExtension(flist[i]).equalsIgnoreCase("lat")){
-                    //llegim el lat i l'afegim a la quicklist
-                    String name = FileUtils.getFNameNoExt(flist[i].getName());
-                    PDCompound p = ImgFileUtils.readLAT(name, flist[i]);
-                    if (p!=null){
-                        //calculem els dsp
-                        p.calcDSPfromHKL();
-                        addCompoundQL(p,true);    
-                    }else{
-                        log.warning("error reading LAT file to QuickList: "+flist[i]);
-                    }
-                }
-            }
-        }catch(Exception e){
-            //no passa res si hi ha hagut algun error
-            log.debug(e.toString());
-        }
-        
-        //ara llegirem la default QL db
+        //llegirem la default QL db
         File QLfile = new File(getDefaultQLpath());
         if (!QLfile.exists()){return false;}
         openDBfileWorker openDBFwk = new PDDatabase.openDBfileWorker(new File(getDefaultQLpath()),true);
@@ -463,7 +441,7 @@ public final class PDDatabase {
                                 
                             } catch (Exception e) {
                                 if(D2Dplot_global.isDebug())e.printStackTrace();
-                                log.warning("error reading compound: "+comp.getCompName());
+                                log.warning("Error reading compound: "+comp.getCompName());
                             }                        
                             
                         }
@@ -478,7 +456,7 @@ public final class PDDatabase {
                 scDBfile.close();
             }catch(Exception e){
                 if(D2Dplot_global.isDebug())e.printStackTrace();
-                log.warning("error reading DB file");
+                log.warning("Error reading DB file");
                 this.cancel(true);
                 return 1;
             }
@@ -598,7 +576,7 @@ public final class PDDatabase {
             }catch(Exception e){
                 e.printStackTrace();
                 this.cancel(true);
-                log.info("error writting compound DB: "+dbfile.toString());
+                log.info("Error writting compound DB: "+dbfile.toString());
                 return 1;
             }
             setProgress(100);
@@ -665,7 +643,7 @@ public final class PDDatabase {
                     n = n +1;
                 }
             }
-            float[] circleIntensities = ImgOps.radialIntegrationVarious2th(patt2D, t2deglist, -1, false, false,this);
+            float[] circleIntensities = ImgOps.radialIntegrationVarious2th(patt2D, t2deglist, -1, false, false,true, this);
             for (int i=0;i<circleIntensities.length;i++){
                 intList.add(circleIntensities[i]);    
             }

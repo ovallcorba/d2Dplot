@@ -12,22 +12,15 @@ import net.miginfocom.swing.MigLayout;
 import javax.swing.JButton;
 
 import com.vava33.d2dplot.auxi.ImgFileUtils;
-import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -36,12 +29,12 @@ import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.event.ChangeEvent;
 
-public class VideoImg extends JDialog {
+public class FastViewer {
 
-    private static final long serialVersionUID = 1L;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(VideoImg.class.getName());
+    private static final String className = "FastView";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
+    private JDialog fastViewerDialog;
     private JPanel contentPane;
-//    ArrayList<Pattern2D> patts = new ArrayList<Pattern2D>();
     ArrayList<File> files = new ArrayList<File>();
     private JSlider slider;
     private ImagePanel imgpanel;
@@ -49,22 +42,23 @@ public class VideoImg extends JDialog {
     private JButton button;
     private Timer timer;
     private JButton btnStop;
+    private JButton btnClose;
 
     /**
      * Create the frame.
      */
-    public VideoImg() {
-        setTitle("Fast Viewer");
-        setIconImage(Toolkit.getDefaultToolkit().getImage(VideoImg.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setBounds(100, 100, 842, 646);
+    public FastViewer(JFrame parent) {
+    	fastViewerDialog = new JDialog(parent,"Fast Viewer",false);
+    	fastViewerDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(FastViewer.class.getResource("/img/Icona.png")));
+    	fastViewerDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    	fastViewerDialog.setBounds(100, 100, 842, 646);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-        setContentPane(contentPane);
-        contentPane.setLayout(new MigLayout("", "[][][][grow]", "[grow][]"));
+        fastViewerDialog.setContentPane(contentPane);
+        contentPane.setLayout(new MigLayout("", "[][][][grow][]", "[grow][]"));
         
-        imgpanel = new ImagePanel(true);
-        contentPane.add(imgpanel, "cell 0 0 4 1,grow");
+        imgpanel = new ImagePanel();
+        contentPane.add(imgpanel.getIpanelMain(), "cell 0 0 5 1,grow");
         
         JButton btnOpenImgs = new JButton("Open Imgs");
         btnOpenImgs.addActionListener(new ActionListener() {
@@ -100,15 +94,22 @@ public class VideoImg extends JDialog {
         contentPane.add(btnStop, "cell 1 1");
         contentPane.add(button, "cell 2 1");
         contentPane.add(slider, "cell 3 1,growx");
+        
+        btnClose = new JButton("Close");
+        btnClose.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		do_btnClose_actionPerformed(e);
+        	}
+        });
+        contentPane.add(btnClose, "cell 4 1");
     }
     
-    @Override
     public void dispose() {
         if (timer!=null){
             timer.cancel();
             timer=null;
         }
-        super.dispose();
+        fastViewerDialog.dispose();
     }
     
     public void showOpenImgsDialog() {
@@ -117,7 +118,7 @@ public class VideoImg extends JDialog {
 
     protected void do_btnOpenImgs_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File[] fs = FileUtils.fchooserMultiple(this, new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to open");
+        File[] fs = FileUtils.fchooserMultiple(fastViewerDialog, new File(D2Dplot_global.getWorkdir()), filt, 0,"Select 2DXRD data files to open");
         files = new ArrayList<File>(Arrays.asList(fs));
         if (fs.length<=0)return;
         slider.setMinimum(0);
@@ -130,189 +131,13 @@ public class VideoImg extends JDialog {
     private void loadPattern(){
         log.debug("sliderValue="+slider.getValue());
         if (slider.getValue()==currentLoadedImage)return;
-        imgpanel.setImagePatt2D(this.fastEdfRead(files.get(slider.getValue())));
+//        imgpanel.setImagePatt2D(this.fastEdfRead(files.get(slider.getValue())));
+        imgpanel.setImagePatt2D(ImgFileUtils.readPatternFile(files.get(slider.getValue()), false));
     }
     
-    private Pattern2D fastEdfRead(File d2File){
-        Pattern2D patt2D = null;
-        long start = System.nanoTime(); // control temps
-        int headerSize = 0;
-        int binSize = 0;
-        float pixSizeX = 0, pixSizeY = 0;
-        float distOD = 0;
-        float beamCX = 0, beamCY = 0, wl = 0;
-        int dimX = 0, dimY = 0, maxI = 0, minI = 9999999;
-        float omeIni = 0, omeFin = 0, acqTime = -1;
-        float tilt = 0, rot = 0;
-
-        
-        // primer treiem la info de les linies de text
-        try {
-            Scanner scD2file = new Scanner(new BufferedReader(new FileReader(d2File)));
-//            log.debug(scD2file.toString());
-            for (int i = 0; i < 50; i++) {
-                if (scD2file.hasNextLine()) {
-                    String line = scD2file.nextLine();
-                    log.fine("edf line="+line);
-                    int iigual = line.indexOf("=") + 1;
-                    if (FileUtils.containsIgnoreCase(line, "Size =")) {
-                        binSize = Integer.parseInt(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "Dim_1")) {
-                        dimX = Integer.parseInt(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "Dim_2")) {
-                        dimY = Integer.parseInt(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "beam_center_x")) {
-                        beamCX = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "beam_center_y")) {
-                        beamCY = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "pixel_size_x")
-                            || FileUtils
-                                    .containsIgnoreCase(line, "pixelsize_x")) {
-                        pixSizeX = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                        pixSizeX = pixSizeX / 1000.f;
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "pixel_size_y")
-                            || FileUtils
-                                    .containsIgnoreCase(line, "pixelsize_y")) {
-                        pixSizeY = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                        pixSizeY = pixSizeY / 1000.f;
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "ref_distance")) {
-                        distOD = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "ref_wave")) {
-                        wl = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "ref_tilt")) {
-                        tilt = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-                    if (FileUtils.containsIgnoreCase(line, "ref_rot")) {
-                        rot = Float.parseFloat(line.substring(iigual,
-                                line.trim().length() - 1).trim());
-                    }
-//                    if (FileUtils.containsIgnoreCase(line, "ref_calfile")) {
-//                        String line2 = line.substring(iigual,line.trim().length() - 1).trim();
-//                        if (FileUtils.containsIgnoreCase(line2, "fit2d")){
-//                            fit2d = true;
-//                        } //else d2dplot convention
-//                    }
-
-                    try {
-                        // scan_type = mar_scan ('hp_som', -5.0, 5.0, 2.0) ;
-                        // scan_type = mar_ct (1.0,) ;
-                        if (FileUtils.containsIgnoreCase(line, "scan_type")) {
-                            String line2 = line.substring(iigual,
-                                    line.trim().length() - 1).trim();
-                            if (FileUtils.containsIgnoreCase(line2, "mar_scan")) {
-                                String[] values = line2.split(",");
-                                omeIni = Float.parseFloat(values[1]);
-                                omeFin = Float.parseFloat(values[2]);
-                                acqTime = Float.parseFloat(values[3]
-                                        .split("\\)")[0]);
-                            }
-                            if (FileUtils.containsIgnoreCase(line2, "mar_ct")) {
-                                omeIni = 0;
-                                omeFin = 0;
-                                String[] values = line2.split(",");
-                                acqTime = Float.parseFloat(values[0]
-                                        .split("\\(")[1]);
-                            }
-                        }
-
-                    } catch (Exception ex) {
-                        log.warning("Could not read the scan type from image header");
-                    }
-
-                }
-            }
-            headerSize = (int) (d2File.length() - binSize);
-
-            log.fine("EDF header size (bytes)=" + headerSize);
-            log.writeNameNumPairs("fine", true,
-                    "dimX,dimY,beamCX,beamCY,pixSizeX,distOD,wl", dimX, dimY,
-                    beamCX, beamCY, pixSizeX, distOD, wl);
-            log.writeNameNumPairs("fine", true, "binsize,d2fileLength",
-                    binSize, d2File.length());
-            // calculem el pixel central
-            // beamCX = beamCX / pixSize;
-            // beamCY = beamCY / pixSize;
-
-            scD2file.close();
-
-            // ARA LLEGIREM ELS BYTES
-            InputStream in = new BufferedInputStream(
-                    new FileInputStream(d2File));
-            byte[] buff = new byte[2];
-            byte[] header = new byte[headerSize];
-            patt2D = new Pattern2D(dimX, dimY, beamCX, beamCY, maxI, minI,
-                    -1.0f, false); //I2
-            int count = 0;
-            in.read(header);
-            patt2D.setScale(2);
-            
-            // ara aplico factor escala 2 per encabir a 2 bytes
-            for (int i = 0; i < patt2D.getDimY(); i++) { // per cada fila (Y)
-                for (int j = 0; j < patt2D.getDimX(); j++) { // per cada columna
-                                                             // (X)
-                    in.read(buff);
-                    int inten = (int) (FileUtils.B2toInt(buff) / patt2D.getScale());
-                    patt2D.setInten(j, i,inten);
-                
-                    if (inten >= 0) { // fem >= o > directament sense
-                        // considerar els zeros??!
-                        if (inten > patt2D.getMaxI()) {
-                            patt2D.setMaxI(inten);
-                        }
-                        if (inten < patt2D.getMinI()) {
-                            patt2D.setMinI(inten);
-                        }
-                    }
-                }
-            }
-
-            in.close();
-            long end = System.nanoTime();
-            patt2D.setMillis((float) ((end - start) / 1000000d));
-            patt2D.setPixCount(count);
-        } catch (Exception e) {
-            if (D2Dplot_global.isDebug()) e.printStackTrace();
-            log.warning("error reading EDF");
-            return null;
-        }
-
-        // parametres instrumentals
-        patt2D.setExpParam(pixSizeX, pixSizeY, distOD, wl);
-        patt2D.setTiltDeg(tilt);
-        patt2D.setRotDeg(rot);
-
-        // parametres adquisicio
-        patt2D.setScanParameters(omeIni, omeFin, acqTime);
-
-        return patt2D; // correcte
-    }
     
     protected void do_slider_stateChanged(ChangeEvent arg0) {
         this.loadPattern();
-        
-//
-//        if (!slider.getValueIsAdjusting()) {
-//            this.loadPattern();
-//        }
     }
     
     public class MyTimerTask extends TimerTask {
@@ -347,4 +172,10 @@ public class VideoImg extends JDialog {
             timer=null;
         }
     }
+    public void setVisible(boolean vis) {
+    	fastViewerDialog.setVisible(vis);
+    }
+	protected void do_btnClose_actionPerformed(ActionEvent e) {
+		this.dispose();
+	}
 }

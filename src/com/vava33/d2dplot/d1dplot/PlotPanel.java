@@ -32,7 +32,6 @@ import com.vava33.jutils.VavaLogger;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JButton;
-
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
@@ -40,9 +39,7 @@ import javax.swing.JLabel;
 
 import org.apache.commons.math3.util.FastMath;
 
-public class PlotPanel extends JPanel {
-
-    private static final long serialVersionUID = 7016088580538090346L;
+public class PlotPanel {
 
     private ArrayList<Pattern1D> patterns; //data to plot (series inside pattern1d)
 
@@ -87,8 +84,9 @@ public class PlotPanel extends JPanel {
     private static int div_SecPixSize = 4;
     private static boolean verticalYlabel = false;
 
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(PlotPanel.class.getName());
-
+    private static final String className = "PlotPanel1D";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
+    
     private double xMin = 0;
     private double xMax = 60;
     private double yMin = 0;
@@ -127,16 +125,17 @@ public class PlotPanel extends JPanel {
     private JLabel lblTthInten;
     private JButton btnResetView;
     private JLabel lblDsp;
+    private JPanel plotPanel;
 
     //especific d1Dplot azimuthal integration (label)
     boolean azIntegration = false;
-    
     /**
      * Create the panel.
      */
     public PlotPanel() {
-        setBackground(Color.WHITE);
-        setLayout(new MigLayout("insets 0", "[grow]", "[grow][]"));
+    	plotPanel = new JPanel();
+    	plotPanel.setBackground(Color.WHITE);
+    	plotPanel.setLayout(new MigLayout("insets 0", "[grow]", "[grow][]"));
         
         graphPanel = new Plot1d();
         graphPanel.setBackground(Color.WHITE);
@@ -169,10 +168,10 @@ public class PlotPanel extends JPanel {
             }
         });
         
-        add(graphPanel, "cell 0 0,grow");
+        plotPanel.add(graphPanel, "cell 0 0,grow");
         
         statusPanel = new JPanel();
-        add(statusPanel, "cell 0 1,grow");
+        plotPanel.add(statusPanel, "cell 0 1,grow");
         statusPanel.setLayout(new MigLayout("insets 2", "[][][grow][]", "[]"));
         
         lblTthInten = new JLabel("X,Y");
@@ -182,7 +181,7 @@ public class PlotPanel extends JPanel {
         lblDsp = new JLabel("dsp");
         statusPanel.add(lblDsp, "cell 1 0");
         btnResetView = new JButton("Reset View");
-        statusPanel.add(btnResetView, "cell 3 0");
+        statusPanel.add(btnResetView, "flowx,cell 3 0");
         btnResetView.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 do_btnResetView_actionPerformed(e);
@@ -218,9 +217,11 @@ public class PlotPanel extends JPanel {
     }
     
     protected void do_graphPanel_mouseDragged(MouseEvent e) {
-        log.fine("mouseDragged!!");
-        log.fine(Boolean.toString(this.mouseDrag));
-        log.fine(Boolean.toString(e.getButton() == MOURE));
+    	if (isDebug()) {
+            log.fine("mouseDragged!!");
+            log.fine(Boolean.toString(this.mouseDrag));
+            log.fine(Boolean.toString(e.getButton() == MOURE));
+    	}
 
         Point2D.Double currentPoint = new Point2D.Double(e.getPoint().x, e.getPoint().y);
 
@@ -268,7 +269,7 @@ public class PlotPanel extends JPanel {
             }
             zoomRect = new Rectangle2D.Double(xrect,yrect,rwidth,rheight);
         }
-        this.repaint();
+        plotPanel.repaint();
     }
 
     //es mouen en consonancia els limits de rang x i y
@@ -368,7 +369,7 @@ public class PlotPanel extends JPanel {
              this.zoomRect = null; //reiniciem rectangle
              this.setMouseBox(true);
         }
-        this.repaint();
+        plotPanel.repaint();
 
     }
 
@@ -449,7 +450,7 @@ public class PlotPanel extends JPanel {
             this.setXrangeMin(xrmin);
             this.setXrangeMax(xrmax);
             this.calcScaleFitX();
-            this.repaint();
+            plotPanel.repaint();
         }
     }
     
@@ -458,7 +459,7 @@ public class PlotPanel extends JPanel {
         Point2D.Double p = new Point2D.Double(e.getPoint().x, e.getPoint().y);
         boolean zoomIn = (e.getWheelRotation() < 0);
         this.zoomY(zoomIn, p);
-        this.repaint();
+        plotPanel.repaint();
     }
     
     public boolean arePatterns(){
@@ -527,7 +528,7 @@ public class PlotPanel extends JPanel {
         if (!checkIfDiv() || resetAxes){
             this.autoDivLines();
         }
-        this.repaint();
+        plotPanel.repaint();
     }
     
     //NOMES S'HAURIA DE CRIDAR QUAN OBRIM UN PATTERN (per aixo private)
@@ -617,7 +618,7 @@ public class PlotPanel extends JPanel {
             this.setYrangeMax(this.getYrangeMax()*(facZoom));
         }
         calcScaleFitY();
-        this.repaint();
+        plotPanel.repaint();
     }
 
     private void zoomX(boolean zoomIn, double inc) {
@@ -891,7 +892,7 @@ public class PlotPanel extends JPanel {
 
     public void setXlabel(String xlabel) {
         this.xlabel = xlabel;
-        this.repaint();
+        plotPanel.repaint();
     }
 
     public String getYlabel() {
@@ -900,7 +901,7 @@ public class PlotPanel extends JPanel {
 
     public void setYlabel(String ylabel) {
         this.ylabel = ylabel;
-        this.repaint();
+        plotPanel.repaint();
     }
     public boolean isShowLegend() {
         return showLegend;
@@ -1094,7 +1095,23 @@ public class PlotPanel extends JPanel {
     
     
     
-//  ------------------------------------ PANELL DE DIBUIX
+/**
+	 * @return the plotPanel
+	 */
+	public JPanel getPlotPanel() {
+		return plotPanel;
+	}
+
+	/**
+	 * @param plotPanel the plotPanel to set
+	 */
+	public void setPlotPanel(JPanel plotPanel) {
+		this.plotPanel = plotPanel;
+	}
+
+
+
+	//  ------------------------------------ PANELL DE DIBUIX
     class Plot1d extends JPanel {
 
         private static final long serialVersionUID = 1L;
@@ -1172,7 +1189,7 @@ public class PlotPanel extends JPanel {
         }
 
         private void drawAxes(Graphics2D g1, boolean grid){
-            log.fine("drawAxes entered");
+        	if(isDebug())log.fine("drawAxes entered");
 
             //provem de fer linia a 60 pixels de l'esquerra i a 60 pixels de baix (40 i 40 de dalt i a la dreta com a marges)
 
@@ -1361,11 +1378,11 @@ public class PlotPanel extends JPanel {
                 }
 
             }
-            log.fine("drawAxes exit");
+            if(isDebug())log.fine("drawAxes exit");
         }
 
         private void drawPatternLine(Graphics2D g1, DataSerie serie, Color col){
-            log.fine("drawPatternLine entered");
+        	if(isDebug())log.fine("drawPatternLine entered");
             g1.setColor(col);
             BasicStroke stroke = new BasicStroke(serie.getLineWidth());
             g1.setStroke(stroke);
@@ -1402,10 +1419,12 @@ public class PlotPanel extends JPanel {
                             }
                         }
                     }
-                    if (trobat) {
-                        log.fine("P1 redefinit");
-                    }else{
-                        log.fine("P1 NO redefinit");
+                    if (isDebug()) {
+                        if (trobat) {
+                            log.fine("P1 redefinit");
+                        }else{
+                            log.fine("P1 NO redefinit");
+                        }
                     }
                 }
 
@@ -1422,10 +1441,12 @@ public class PlotPanel extends JPanel {
                             }
                         }
                     }
-                    if (trobat){
-                        log.fine("P2 redefinit");
-                    }else{
-                        log.fine("P2 NO redefinit");
+                    if (isDebug()) {
+                        if (trobat){
+                            log.fine("P2 redefinit");
+                        }else{
+                            log.fine("P2 NO redefinit");
+                        }
                     }
                 }                
 
@@ -1434,12 +1455,12 @@ public class PlotPanel extends JPanel {
                 g1.draw(l);
 
             }
-            log.fine("drawPatternLine exit");
+            if(isDebug())log.fine("drawPatternLine exit");
         }
 
         //separo linia i punts per si volem canviar l'ordre de dibuix
         private void drawPatternPoints(Graphics2D g1, DataSerie serie, Color col){
-            log.fine("drawPatternPoints entered");
+        	if(isDebug())log.fine("drawPatternPoints entered");
             for (int i = 0; i < serie.getNpoints(); i++){
                 g1.setColor(col);
                 BasicStroke stroke = new BasicStroke(0.0f);
@@ -1453,7 +1474,7 @@ public class PlotPanel extends JPanel {
                     g1.drawOval((int)FastMath.round(p1.x-radiPunt), (int)FastMath.round(p1.y-radiPunt), FastMath.round(serie.getMarkerSize()), FastMath.round(serie.getMarkerSize()));
                 }
             }
-            log.fine("drawPatternPoints exit");
+            if(isDebug())log.fine("drawPatternPoints exit");
         }
 
         private void drawLegend(Graphics2D g1){
@@ -1596,8 +1617,10 @@ public class PlotPanel extends JPanel {
                     }
                 }
             } catch (Exception e) {
-                if(isDebug())e.printStackTrace();
-                log.debug("error writting legend");
+                if(isDebug()) {
+                	e.printStackTrace();
+                    log.debug("error writting legend");
+                }
                 legendX = legendX - 10;
                 repaint();
             }
@@ -1614,13 +1637,5 @@ public class PlotPanel extends JPanel {
         }
 
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
 }

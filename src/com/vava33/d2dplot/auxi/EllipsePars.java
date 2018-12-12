@@ -26,7 +26,8 @@ public class EllipsePars {
     private ArrayList<Point2D.Float> estimPoints;
     private boolean isFit;
     private int lab6ring;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(EllipsePars.class.getName());
+    private static final String className = "EllipsePars";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     public EllipsePars(){
         this.estimPoints = new ArrayList<Point2D.Float>();
@@ -84,10 +85,11 @@ public class EllipsePars {
         //ROTACIO
         float angr = (float) (0.5*Math.atan(b/(a-c)));
 //        float angr = (float) FastMath.atan2(2*b, a-c);
-        log.info("angr directe="+FastMath.toDegrees(angr));
+        log.debug("angr directe="+FastMath.toDegrees(angr));
+//        angr = angr*2;
         this.isFit = true;
         
-        log.writeNameNumPairs("INFO", true, "rH,rV", rH,rV);
+        log.writeNameNumPairs("debug", true, "rH,rV", rH,rV);
         
         /*
          * ATENCIO:
@@ -106,8 +108,7 @@ public class EllipsePars {
          * FIT2D: angle of Rmaj respecte eix X en ACW
          */
         
-        //realment rot es l'angle de l'eix de gir del detector, que coincideix amb Rmin de l'ellipse
-        
+       
         //ARA ROT ES L'ANGLE de EIX VERTICAL AMB CW +
         if (rH>rV){ //vol dir Rmaj es a les X, angr es l'angle CW des de les 3 respecte Rmaj, cal canviar-ho
             this.rmaj = rH;
@@ -121,7 +122,7 @@ public class EllipsePars {
         }
         
         
-        log.writeNameNumPairs("INFO", true, "rmaj,rmin,angrot", this.rmaj,this.rmin,FastMath.toDegrees(this.angrot));
+        log.writeNameNumPairs("debug", true, "rmaj,rmin,angrot", this.rmaj,this.rmin,FastMath.toDegrees(this.angrot));
     }
     
     public void logElliPars(String level){
@@ -180,7 +181,7 @@ public class EllipsePars {
     public void fitElli(){
         
         if (this.getEstimPoints().size()<=ElliFitMinPoints){
-            log.warning("no enougth points to fit ellipse");
+            log.warning("No enougth points to fit ellipse");
             return;
         }
         

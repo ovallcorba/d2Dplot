@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -16,44 +17,40 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.ExZones_dialog;
-
+import com.vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.ExZones;
 import com.vava33.jutils.VavaLogger;
 
-public class ExZ_ArcDialog extends JDialog {
+public class ExZ_ArcDialog {
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 5338913641078713831L;
-
-    private final JPanel contentPanel = new JPanel();
-
+    private JDialog exzArcDialog;
+    private JPanel contentPanel;
     private JTextField txtpx;
     private JTextField txtpy;
     private JTextField txthrw;
     private JTextField txthaw;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(ExZ_ArcDialog.class.getName());
+    private static final String className = "ExZ_ArcDialog";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     private boolean finishedOK;
     private int ipX=-1;
     private int ipY=-1;
     private int halfRadialWidthPx=-1;
     private int halfAzimAperDeg=-1; 
-    ExZones_dialog pare;
+    ExZones pare;
 
     
     /**
      * Create the dialog.
      */
-    public ExZ_ArcDialog(ExZones_dialog exzd) {
+    public ExZ_ArcDialog(JFrame parent, ExZones exzd) {
         this.pare=exzd;
-        setTitle("Add arc-shaped mask zone");
-        setBounds(100, 100, 344, 191);
-        getContentPane().setLayout(new BorderLayout());
+        contentPanel = new JPanel();
+        exzArcDialog = new JDialog(parent,"Add arc-shaped mask zone",false);
+        exzArcDialog.setBounds(100, 100, 344, 191);
+        exzArcDialog.getContentPane().setLayout(new BorderLayout());
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(contentPanel, BorderLayout.CENTER);
+        exzArcDialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
         {
             JLabel lblBSradi = new JLabel("Zone center px X");
@@ -94,7 +91,7 @@ public class ExZ_ArcDialog extends JDialog {
         {
             JPanel buttonPane = new JPanel();
             buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            exzArcDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 JButton okButton = new JButton("OK");
                 okButton.addActionListener(new ActionListener() {
@@ -104,7 +101,7 @@ public class ExZ_ArcDialog extends JDialog {
                 });
                 okButton.setActionCommand("OK");
                 buttonPane.add(okButton);
-                getRootPane().setDefaultButton(okButton);
+                exzArcDialog.getRootPane().setDefaultButton(okButton);
             }
             {
                 JButton cancelButton = new JButton("Cancel");
@@ -202,11 +199,27 @@ public class ExZ_ArcDialog extends JDialog {
     protected void do_okButton_actionPerformed(ActionEvent evt) {
         finishedOK = getInfoFromFields();
         if (finishedOK)pare.applyArcZoneParameters(ipX, ipY, halfRadialWidthPx, halfAzimAperDeg);
-        this.dispose();
+        exzArcDialog.dispose();
     }
     protected void do_cancelButton_actionPerformed(ActionEvent e) {
         finishedOK = false;
-        this.dispose();
+        exzArcDialog.dispose();
     }
+
+
+	/**
+	 * @return the exzArcDialog
+	 */
+	public JDialog getExzArcDialog() {
+		return exzArcDialog;
+	}
+
+
+	/**
+	 * @param exzArcDialog the exzArcDialog to set
+	 */
+	public void setExzArcDialog(JDialog exzArcDialog) {
+		this.exzArcDialog = exzArcDialog;
+	}
 
 }

@@ -14,7 +14,8 @@ import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.VavaLogger;
 
 public final class CalibOps {
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(CalibOps.class.getName());
+    private static final String className = "CalibOps";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
     
     
     public static ArrayList<Calibrant> calibrants = new ArrayList<Calibrant>();
@@ -293,7 +294,7 @@ public final class CalibOps {
                     sr.getN());
         } catch (Exception ex) {
             if (D2Dplot_global.isDebug()) ex.printStackTrace();
-            log.warning("error in regression");
+            log.warning("Error in regression");
             return null;
         }
 
@@ -316,7 +317,7 @@ public final class CalibOps {
                     sr.getN());
         } catch (Exception ex) {
             if (D2Dplot_global.isDebug()) ex.printStackTrace();
-            log.warning("error in regression");
+            log.warning("Error in regression");
             return null;
         }
 
@@ -404,7 +405,7 @@ public final class CalibOps {
                 int iy = (int)(pix.y);
                 // log.debug("calc SUM ring="+i+"pix="+ix+" "+iy);
                 if (!patt2d.isInside(ix, iy)) continue;
-                if (patt2d.isInExZone(ix, iy)) continue;
+                if (patt2d.isExcluded(ix, iy)) continue;
                 suma = (int) (suma + weight * patt2d.getInten(ix, iy));
             }
         }
@@ -428,7 +429,7 @@ public final class CalibOps {
     public static Pattern2D createLaB6Img(float xcen, float ycen,
             float distMDmm, float tiltD, float rotD, float wavel, float pixsizeMM, float[] cal_d) {
 
-        Pattern2D lab6 = new Pattern2D(2048, 2048, xcen, ycen, 5000, 0, 1, true);
+        Pattern2D lab6 = new Pattern2D(2048, 2048, xcen, ycen, 5000, 0, 1);
         lab6.setWavel(wavel);
         lab6.setDistMD(distMDmm);
         lab6.setTiltDeg(tiltD);
@@ -453,7 +454,7 @@ public final class CalibOps {
                 int iy = (int)(pix.y);
                 // log.debug("ring="+i+"pix="+ix+" "+iy);
                 if (!lab6.isInside(ix, iy)) continue;
-                if (lab6.isInExZone(ix, iy)) continue;
+                if (lab6.isExcluded(ix, iy)) continue;
                 lab6.setInten(ix, iy, maxInten);
                 Point2D.Float extr = getNeighbourRadialDir(lab6,new Point2D.Float(pix.x, pix.y), true);
                 Point2D.Float intr = getNeighbourRadialDir(lab6,new Point2D.Float(pix.x, pix.y), false);

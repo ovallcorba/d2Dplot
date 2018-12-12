@@ -1,4 +1,4 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.Toolkit;
 
@@ -8,10 +8,10 @@ import javax.swing.border.EmptyBorder;
 
 import com.vava33.jutils.VavaLogger;
 
-import vava33.d2dplot.auxi.Pattern2D;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.JLabel;
@@ -23,17 +23,13 @@ import java.awt.event.ActionEvent;
 import java.awt.Font;
 import java.awt.Color;
 
-public class HPtools_frame extends JFrame {
-    /**
-     * 
-     */
-    private static final long serialVersionUID = -3398509795601157936L;
+public class HPtools {
 
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(HPtools_frame.class.getName());
-
+    private static final String className = "HP";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
+    private JDialog hpDialog;
     private JPanel contentPane;
     private JTextField txtCellpar;
-    private Pattern2D patt2d;
     private JLabel lblresult;
     private ImagePanel ip;
 
@@ -41,16 +37,16 @@ public class HPtools_frame extends JFrame {
     /**
      * Create the frame.
      */
-    public HPtools_frame(ImagePanel ipanel) {
-        setAlwaysOnTop(true);
-        setTitle("HP tools (Cu pressure calc.) -- (IN DEVELOPMENT, USE WITH CAUTION))");
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Dinco_frame.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setBounds(100, 100, 480, 317);
+    public HPtools(JFrame parent, ImagePanel ipanel) {
+    	hpDialog = new JDialog(parent,"HP tools (Cu pressure calc.) -- (IN DEVELOPMENT, USE WITH CAUTION))",false);
+    	hpDialog.setAlwaysOnTop(true);
+    	hpDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(IncoPlot.class.getResource("/img/Icona.png")));
+    	hpDialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    	hpDialog.setBounds(100, 100, 480, 317);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-        setContentPane(contentPane);
-        contentPane.setLayout(new MigLayout("", "[][][grow]", "[grow][][][][]"));
+        hpDialog.setContentPane(contentPane);
+        contentPane.setLayout(new MigLayout("", "[][][grow]", "[grow][][][][][]"));
         
         JLabel lblInstructins = new JLabel("<html> \nCopper Calibration:<br>\n1) Remove all selected peaks<br>\n2) Select (click) the first two copper reflections:<br>\n&nbsp&nbsp&nbsp 1 1 1 (dspacing ~ 2.08)<br>\n&nbsp&nbsp&nbsp 2 0 0 (dspacing ~ 1.81)<br>\n3) Once selected, click on calculate<br>\n(an alternative is to give directly the cell parameter)<br>\n</html> ");
         contentPane.add(lblInstructins, "cell 0 0 3 1");
@@ -97,14 +93,22 @@ public class HPtools_frame extends JFrame {
         lblNewLabel.setFont(new Font("Dialog", Font.PLAIN, 11));
         contentPane.add(lblNewLabel, "cell 0 4 3 1");
         
+        JButton btnNewButton = new JButton("Close");
+        btnNewButton.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		do_btnNewButton_actionPerformed(e);
+        	}
+        });
+        contentPane.add(btnNewButton, "cell 0 5 3 1,alignx center");
+        
         this.ip = ipanel;
-        this.inicia();
+//        this.inicia();
     }
 
-    public void inicia(){
-        this.patt2d = ip.getPatt2D();
-        
-    }
+//    public void inicia(){
+//        this.patt2d = ip.getPatt2D();
+//        
+//    }
     public void setIpanel(ImagePanel ipanel){
         this.ip = ipanel;
     }
@@ -114,7 +118,7 @@ public class HPtools_frame extends JFrame {
     }
     
     protected void do_btnRemovePeaks_actionPerformed(ActionEvent arg0) {
-        patt2d.getPuntsCercles().clear();
+        this.getIPanel().getPatt2D().getPuntsCercles().clear();
         getIPanel().actualitzarVista();
     }
     
@@ -123,7 +127,7 @@ public class HPtools_frame extends JFrame {
         try{
             a = Double.parseDouble(txtCellpar.getText());
         }catch(Exception ex){
-            log.info("no cell parameter given, calculating from the peak selection");
+            log.info("No cell parameter given, calculating from the peak selection");
         }
         
         if(a>0){
@@ -142,12 +146,12 @@ public class HPtools_frame extends JFrame {
         }
     
         if (a<0){ //take from the selection
-            if (patt2d.getPuntsCercles().size()!=2) {
+            if (this.getIPanel().getPatt2D().getPuntsCercles().size()!=2) {
                 log.info("Select the first two Cu peaks");
                 return;
             }
-            float dsp1 = (float) patt2d.calcDsp(patt2d.getPuntsCercles().get(0).getT2rad());
-            float dsp2 = (float) patt2d.calcDsp(patt2d.getPuntsCercles().get(1).getT2rad());
+            float dsp1 = (float) this.getIPanel().getPatt2D().calcDsp(this.getIPanel().getPatt2D().getPuntsCercles().get(0).getT2rad());
+            float dsp2 = (float) this.getIPanel().getPatt2D().calcDsp(this.getIPanel().getPatt2D().getPuntsCercles().get(1).getT2rad());
             
             if (dsp1<dsp2){
                 float temp = dsp1;
@@ -191,4 +195,14 @@ public class HPtools_frame extends JFrame {
         lblresult.setText(Double.toString(p));
         getIPanel().actualitzarVista();
     }
+    public void dispose() {
+    	hpDialog.dispose();
+    }
+    
+    public void setVisible(boolean vis) {
+    	hpDialog.setVisible(vis);
+    }
+	protected void do_btnNewButton_actionPerformed(ActionEvent e) {
+		this.dispose();
+	}
 }

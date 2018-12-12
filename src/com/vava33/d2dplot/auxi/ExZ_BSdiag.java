@@ -1,10 +1,11 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
@@ -15,44 +16,42 @@ import javax.swing.JTextField;
 
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.d2dplot.D2Dplot_global;
+import com.vava33.d2dplot.ExZones;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.D2Dplot_global;
-import vava33.d2dplot.ExZones_dialog;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
-public class ExZ_BSdiag extends JDialog {
+public class ExZ_BSdiag {
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = -5599520227993866877L;
-    private final JPanel contentPanel = new JPanel();
+    private JDialog exzBSdialog;
+    private JPanel contentPanel;
     private JTextField txtRadi;
     private JTextField txtBsarmx;
     private JTextField txtBsarmy;
     private JTextField txtBsarmw;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(ExZ_BSdiag.class.getName());
+    private static final String className = "ExZ_BSdialog";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     private boolean finishedOK;
     private int radiBS=-1;
     private int ampladaArm=-1;
     private int ipX=-1;
     private int ipY=-1;
-    ExZones_dialog pare;
+    ExZones pare;
     
     /**
      * Create the dialog.
      */
-    public ExZ_BSdiag(ExZones_dialog exzd) {
+    public ExZ_BSdiag(JFrame parent, ExZones exzd) {
         this.pare=exzd;
-        setTitle("Add BeamStop Mask");
-        setBounds(100, 100, 344, 191);
-        getContentPane().setLayout(new BorderLayout());
+        contentPanel = new JPanel();
+        exzBSdialog = new JDialog(parent,"Add BeamStop Mask",false);
+        exzBSdialog.setBounds(100, 100, 344, 191);
+        exzBSdialog.getContentPane().setLayout(new BorderLayout());
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(contentPanel, BorderLayout.CENTER);
+        exzBSdialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
         {
             JLabel lblBSradi = new JLabel("Beamstop Radius (px)");
@@ -93,7 +92,7 @@ public class ExZ_BSdiag extends JDialog {
         {
             JPanel buttonPane = new JPanel();
             buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            exzBSdialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 JButton okButton = new JButton("OK");
                 okButton.addActionListener(new ActionListener() {
@@ -103,7 +102,7 @@ public class ExZ_BSdiag extends JDialog {
                 });
                 okButton.setActionCommand("OK");
                 buttonPane.add(okButton);
-                getRootPane().setDefaultButton(okButton);
+                exzBSdialog.getRootPane().setDefaultButton(okButton);
             }
             {
                 JButton cancelButton = new JButton("Cancel");
@@ -201,10 +200,26 @@ public class ExZ_BSdiag extends JDialog {
     protected void do_okButton_actionPerformed(ActionEvent evt) {
         finishedOK = getInfoFromFields();
         if (finishedOK)pare.applyBSparameters(this.radiBS,this.ampladaArm,this.ipX,this.ipY);
-        this.dispose();
+        exzBSdialog.dispose();
     }
     protected void do_cancelButton_actionPerformed(ActionEvent e) {
         finishedOK = false;
-        this.dispose();
+        exzBSdialog.dispose();
     }
+
+
+	/**
+	 * @return the exzBSdialog
+	 */
+	public JDialog getExzBSdialog() {
+		return exzBSdialog;
+	}
+
+
+	/**
+	 * @param exzBSdialog the exzBSdialog to set
+	 */
+	public void setExzBSdialog(JDialog exzBSdialog) {
+		this.exzBSdialog = exzBSdialog;
+	}
 }

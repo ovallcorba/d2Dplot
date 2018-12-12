@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.Component;
 
@@ -8,7 +8,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 
 import com.vava33.jutils.FileUtils;
 
-public class findPksTableRenderer extends DefaultTableCellRenderer {
+public class FindPksTableRenderer extends DefaultTableCellRenderer {
 
     private static final long serialVersionUID = 8297343427722845804L;
 

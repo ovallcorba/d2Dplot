@@ -61,14 +61,12 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.border.LineBorder;
 
-public class TTS_frame extends JFrame {
+public class TTS {
 
-    private static final long serialVersionUID = -3907664630337090114L;
     private static int window_width = 960;
     private static int window_height = 600;
     
     private static final String userGuideFile="Write_up_tts_software.pdf";
-//    private static final String cfgFile = "prefs";
     private static final String ttsVersion="1609 [160930]";
     private static final String welcomeMSG = " --> tts software UI - version "+ttsVersion+" by OV\n"
                                            + " |    tts software main author: J.Rius (ICMAB-CSIC)\n"
@@ -78,7 +76,6 @@ public class TTS_frame extends JFrame {
     private static final int max_logo_width = 1200;
     private static final int min_logo_width = 600; 
     private static final String code = "110606";
-//    private static String d2DplotPath = "(not set)";
     
     private static final String incoExecPath = FileUtils.getSeparator()+"bin"+FileUtils.getSeparator()+"tts_inco";
     private static final String mergeExecPath = FileUtils.getSeparator()+"bin"+FileUtils.getSeparator()+"tts_merge";
@@ -88,6 +85,7 @@ public class TTS_frame extends JFrame {
     private static String celrefExec = "";
     private static String maskFileName = "MASK.BIN";
     
+    private JFrame ttsFrame;
     private JPanel contentPane;
     private Settings_dialog prefs;
     private LogJTextArea txtOut;
@@ -104,20 +102,22 @@ public class TTS_frame extends JFrame {
     protected InputStreamReader sortidaProg;
     private static boolean TTSInExecution=false;
     private static boolean TTSRunStopped=false;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(TTS_frame.class.getName());
+    private static final String className = "TTS";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
     
     private MainFrame d2DplotMain;
 
     /**
      * Create the frame.
      */
-    public TTS_frame(MainFrame mf) {
+    public TTS(MainFrame mf) {
         d2DplotMain = mf;
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        ttsFrame = new JFrame("tts software");
+        ttsFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 //        setBounds(100, 100, 780, 580); //780x600 inicial per provar
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-        setContentPane(contentPane);
+        ttsFrame.setContentPane(contentPane);
         contentPane.setLayout(new MigLayout("insets 0", "[grow]", "[grow][]"));
         
         JSplitPane splitPane = new JSplitPane();
@@ -186,7 +186,7 @@ public class TTS_frame extends JFrame {
         });
         panel_current.add(lblWorkingFile, "cell 1 1 4 1,growx,aligny baseline");
         
-        BackgroundPanel panel_logo = new BackgroundPanel(new ImageIcon(getClass().getResource("/img/tts_splash_760x120.png")).getImage(),TTS_frame.getMaxLogoWidth(),TTS_frame.getMinLogoWidth());
+        BackgroundPanel panel_logo = new BackgroundPanel(new ImageIcon(getClass().getResource("/img/tts_splash_760x120.png")).getImage(),TTS.getMaxLogoWidth(),TTS.getMinLogoWidth());
         panel_top.add(panel_logo, "cell 0 0 3 1,grow");
         panel_logo.setLayout(new MigLayout("insets 5", "[grow][]", "[][][grow]"));
         
@@ -359,7 +359,15 @@ public class TTS_frame extends JFrame {
         txtpnAaa.setOpaque(false);
         
         txtpnAaa.setText("<html>Download TTS_software from: <a href=\"http://www.icmab.es/crystallography/software\">http://www.icmab.es/crystallography/software</a></html>");
-        contentPane.add(txtpnAaa, "cell 0 1,growx");
+        contentPane.add(txtpnAaa, "flowx,cell 0 1,growx");
+        
+        JButton btnClose = new JButton("Close");
+        btnClose.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		do_btnClose_actionPerformed(e);
+        	}
+        });
+        contentPane.add(btnClose, "cell 0 1");
         
         this.iniciaFinestra();
         this.iniciPrefs();
@@ -367,31 +375,31 @@ public class TTS_frame extends JFrame {
     }
     
     private void iniciaFinestra(){
-        setTitle("tts software");
+    	ttsFrame.setTitle("tts software");
         //icono petit de la finestra
         final List<Image> icons = new ArrayList<Image>();
         icons.add(new ImageIcon(getClass().getResource("/img/tts_icon120x120.png")).getImage());
-        this.setIconImages(icons);
+        ttsFrame.setIconImages(icons);
         
         //Farem que es posicioni correctament i a mida bona en pantalla
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         
-        this.setPreferredSize(new Dimension(TTS_frame.window_width, TTS_frame.window_height));
+        ttsFrame.setPreferredSize(new Dimension(TTS.window_width, TTS.window_height));
 //        this.setMinimumSize(new Dimension(MainFrame_tts.window_width/2, MainFrame_tts.window_height/2)); //posem mida minima
-        this.setMinimumSize(new Dimension(TTS_frame.getMinLogoWidth(), TTS_frame.window_height/2)); //posem mida minima
+        ttsFrame.setMinimumSize(new Dimension(TTS.getMinLogoWidth(), TTS.window_height/2)); //posem mida minima
 
-        if(screen.width<TTS_frame.window_width)TTS_frame.window_width=screen.width;
-        if(screen.height<TTS_frame.window_height)TTS_frame.window_height=screen.height;
+        if(screen.width<TTS.window_width)TTS.window_width=screen.width;
+        if(screen.height<TTS.window_height)TTS.window_height=screen.height;
         
         //finalment redimensionem i centrem a la pantalla
-        int x = (screen.width-TTS_frame.window_width)/2;
-        int y = (screen.height-TTS_frame.window_height)/4; //fem entre 4 perque hi ha la barra d'inici
-        this.setBounds(x,y,TTS_frame.window_width,TTS_frame.window_height);
+        int x = (screen.width-TTS.window_width)/2;
+        int y = (screen.height-TTS.window_height)/4; //fem entre 4 perque hi ha la barra d'inici
+        ttsFrame.setBounds(x,y,TTS.window_width,TTS.window_height);
 
-        this.pack();// TODO: PROVAR SI CAL
+        ttsFrame.pack();// TODO: PROVAR SI CAL
 //        resizeImage(MainFrame_tts.window_width);
 //        txtOut.saltL();
-        txtOut.ln(TTS_frame.getWelcomemsg());
+        txtOut.ln(TTS.getWelcomemsg());
         txtOut.saltL();
     }
     
@@ -402,10 +410,10 @@ public class TTS_frame extends JFrame {
             stat = llegirPreferences();
         }catch(Exception e){
             if(isDebug())e.printStackTrace();
-            this.print_loginfo_tAOut("error reading tts_software executables, check in preferences");
+            this.print_logdebug_tAOut("error reading tts_software executables, check in preferences");
         }
         if (stat!=0){//hi ha hagut error al localitzar fitxers}
-            this.print_loginfo_tAOut("tts_software_folder not found, set it in preferences");
+            this.print_logdebug_tAOut("tts_software_folder not found, set it in preferences");
         }
     }
     
@@ -415,7 +423,7 @@ public class TTS_frame extends JFrame {
         boolean tts_deps = this.checkTTSDependencies();
         //es creen les preferencies
         if (prefs==null){
-            prefs = new Settings_dialog(this);
+            prefs = new Settings_dialog(this.ttsFrame,this);
         }
         //mirem que existeixi tot
         if(!tts_deps){return 1;}
@@ -426,54 +434,57 @@ public class TTS_frame extends JFrame {
         String tts_folder = D2Dplot_global.getTTSsoftwareFolder().trim();
         boolean somethingWrong = false;
         if (tts_folder.isEmpty()) {
-            this.print_loginfo_tAOut("no tts_software folder has been set");
+            this.print_logdebug_tAOut("no tts_software folder has been set");
             return false;
         }else {
             //ara buscarem els executables un a un
-            this.print_loginfo_tAOut("tts folder found: "+tts_folder);
+            this.print_logdebug_tAOut("tts folder supplied: "+tts_folder);
             
-            File temp = new File(tts_folder+TTS_frame.incoExecPath);
+            File temp = new File(tts_folder+TTS.incoExecPath);
             if (!temp.exists()){
-                this.print_loginfo_tAOut(String.format("warning: %s not found",temp));
+                this.print_logdebug_tAOut(String.format("warning: %s not found",temp));
+                TTS.setIncoExec("");
                 somethingWrong = true;
             }else {
-                TTS_frame.setIncoExec(temp.getAbsolutePath());
-                this.print_loginfo_tAOut("tts_inco found: "+TTS_frame.getIncoExec());
+                TTS.setIncoExec(temp.getAbsolutePath());
+                this.print_logdebug_tAOut("tts_inco found: "+TTS.getIncoExec());
             }
             
-            temp = new File(tts_folder+TTS_frame.mergeExecPath);
+            temp = new File(tts_folder+TTS.mergeExecPath);
             if (!temp.exists()){
-                this.print_loginfo_tAOut(String.format("warning: %s not found",temp));
+                this.print_logdebug_tAOut(String.format("warning: %s not found",temp));
+                TTS.setMergeExec("");
                 somethingWrong = true;
             }else {
-                TTS_frame.setMergeExec(temp.getAbsolutePath());
-                this.print_loginfo_tAOut("tts_merge found: "+TTS_frame.getMergeExec());
+                TTS.setMergeExec(temp.getAbsolutePath());
+                this.print_logdebug_tAOut("tts_merge found: "+TTS.getMergeExec());
             }
             
-            temp = new File(tts_folder+TTS_frame.celrefExecPath);
+            temp = new File(tts_folder+TTS.celrefExecPath);
             if (!temp.exists()){
-                this.print_loginfo_tAOut(String.format("warning: %s not found",temp));
+                this.print_logdebug_tAOut(String.format("warning: %s not found",temp));
+                TTS.setCelrefExec("");
                 somethingWrong = true;
             }else {
-                TTS_frame.setCelrefExec(temp.getAbsolutePath());
-                this.print_loginfo_tAOut("tts_celref found: "+TTS_frame.getCelrefExec());
+                TTS.setCelrefExec(temp.getAbsolutePath());
+                this.print_logdebug_tAOut("tts_celref found: "+TTS.getCelrefExec());
             }
         }
         if (somethingWrong) {
-            this.print_loginfo_tAOut("Files missing, please check that /bin/ folder inside tts_software_folder exists");
+            this.print_logdebug_tAOut("Files missing, please check that /bin/ folder inside tts_software_folder exists");
         }
         return true;
     }
     
     protected void do_btnSettings_actionPerformed(ActionEvent e) {
         if (prefs==null){
-            prefs = new Settings_dialog(this);
+            prefs = new Settings_dialog(this.ttsFrame,this);
         }
         prefs.setVisible(true);
     }
     
     protected void do_btnManual_actionPerformed(ActionEvent e) {
-        AboutTTS_dialog about = new AboutTTS_dialog();
+        AboutTTS_dialog about = new AboutTTS_dialog(this.ttsFrame);
         about.setVisible(true);
     }
     
@@ -483,7 +494,7 @@ public class TTS_frame extends JFrame {
     
     protected void do_btnOpenTsd_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
-        File f = FileUtils.fchooserOpen(this, new File(D2Dplot_global.getWorkdir()), filt, 0);
+        File f = FileUtils.fchooserOpen(ttsFrame, new File(D2Dplot_global.getWorkdir()), filt, 0);
         if (f!=null){
             this.updateWorkDir(f);
             this.setCurrentTSD(f);
@@ -498,19 +509,19 @@ public class TTS_frame extends JFrame {
     public void setCurrentTSD(File currentTSD) {
         this.currentTSD = currentTSD;
         lblWorkingFile.setText(currentTSD.toString());
-        txtOut.stat("File selected: "+currentTSD.toString());
+        print_logdebug_tAOut("File selected: "+currentTSD.toString());
         //el llegim
         try{
             this.tsdfile=new TSDfile(currentTSD.toString());    
         }catch(Exception e){
             if(isDebug())e.printStackTrace();
-            log.debug("Parsing TSD failed, open files directly in D2Dplot will not work");
+            print_logdebug_tAOut("Parsing TSD failed, open files directly in D2Dplot will not work");
         }
     }
     
     protected void do_btnEdit_actionPerformed(ActionEvent e) {
         if (this.getCurrentTSD()==null){
-            txtOut.stat("No working TSD file found");
+        	print_logdebug_tAOut("No working TSD file found");
             return;
         }
         this.openTEXTfile(this.getCurrentTSD());
@@ -519,11 +530,11 @@ public class TTS_frame extends JFrame {
         this.openWorkDir();
     }
     protected void do_lblWorkingFile_mouseEntered(MouseEvent e) {
-        this.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    	ttsFrame.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         this.lblWorkingFile.setForeground(Color.blue);
     }
     protected void do_lblWorkingFile_mouseExited(MouseEvent e) {
-        this.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+    	ttsFrame.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         this.lblWorkingFile.setForeground(Color.black);
     }
 
@@ -570,21 +581,26 @@ public class TTS_frame extends JFrame {
                     if(isDebug())e.printStackTrace();
                     opened=false;
                 }
-                if(!opened)txtOut.stat("Unable to open folder");
+                if(!opened)print_logdebug_tAOut("Unable to open folder");
             }
         }
     }
     
+    private void stopExecution() {
+    	TTS_process.destroy();
+    	TTSInExecution=false;
+    	btnStop.setEnabled(false);
+    	TTSRunStopped=true;
+    	
+    }
     protected void do_btnStop_actionPerformed(ActionEvent e) {
-        if(TTSInExecution){
-            TTS_process.destroy();
-            TTSInExecution=false;
-            btnStop.setEnabled(false);
-            TTSRunStopped=true;
-            txtOut.stat("*************************");
-            txtOut.stat("** Run stopped by user **");
-            txtOut.stat("*************************");
-        }
+    	if(TTSInExecution){
+    		stopExecution();
+        	print_logdebug_tAOut("*************************");
+        	print_logdebug_tAOut("** Run stopped by user **");
+        	print_logdebug_tAOut("*************************");
+    	}
+        
     }
     
     private class TTSRunnable implements Runnable{
@@ -602,17 +618,17 @@ public class TTS_frame extends JFrame {
             switch(proc){
                 case INCO:
                     this.activeButt = btnRunInco;
-                    this.exec = TTS_frame.getIncoExec();
+                    this.exec = TTS.getIncoExec();
                     this.progName = "INCO";
                     break;
                 case MERGE:
                     activeButt = btnRunMerge;
-                    this.exec = TTS_frame.getMergeExec();
+                    this.exec = TTS.getMergeExec();
                     this.progName = "MERGE";
                     break;
                 case CELREF:
                     activeButt = btnRunCelRef;
-                    this.exec = TTS_frame.getCelrefExec();
+                    this.exec = TTS.getCelrefExec();
                     this.progName = "CELREF";
                     break;
                 default:
@@ -668,7 +684,7 @@ public class TTS_frame extends JFrame {
                     if (line.contains("<CR>"))print = false;
                     if (nblank>2) print=false;
                         
-                    if(print)txtOut.stat(line);
+                    if(print)print_logdebug_tAOut(line);
                     line=reader.readLine();
                 }
                 reader.close();
@@ -676,13 +692,13 @@ public class TTS_frame extends JFrame {
                 this.activeButt.setEnabled(true);
                 try{
                     if(TTS_process.exitValue()==0){
-                        txtOut.stat(String.format("%s finished correctly.",this.progName));
+                    	print_logdebug_tAOut(String.format("%s finished correctly.",this.progName));
                     }else{
-                        txtOut.stat(String.format("%s finished.",this.progName));
+                    	print_logdebug_tAOut(String.format("%s finished.",this.progName));
                     }
                 }catch(Exception e){
                     if(isDebug())e.printStackTrace();
-                    txtOut.stat(String.format("%s has NOT finished correctly.",this.progName));
+                    print_logdebug_tAOut(String.format("%s has NOT finished correctly.",this.progName));
                     this.activeButt.setEnabled(true);
                     TTSInExecution=false;
                     btnStop.setEnabled(false);
@@ -719,11 +735,11 @@ public class TTS_frame extends JFrame {
         //Fem correr el programa
         txtOut.saltL();
         if(tsdfile.getIoff()!=1) { //coarse
-            txtOut.stat(" RUNNING INCO (coarse scan for domains in central frame):");
+        	print_logdebug_tAOut(" RUNNING INCO (coarse scan for domains in central frame):");
         }else { //=1 oriented
-            txtOut.stat(" RUNNING INCO (full scan of a single oriented domain):");
+        	print_logdebug_tAOut(" RUNNING INCO (full scan of a single oriented domain):");
         }
-        txtOut.stat("  Input file: "+this.getCurrentTSD());
+        print_logdebug_tAOut("  Input file: "+this.getCurrentTSD());
         txtOut.saltL();
         //creem i executem el thread del ribbols
         Thread inco = new Thread(new TTSRunnable(TTSRunnable.INCO));
@@ -739,17 +755,17 @@ public class TTS_frame extends JFrame {
         if (imgfile!=null)return imgfile;
         return null;
     }
- 
+    
     protected void do_btnChecksol_actionPerformed(ActionEvent arg0) {
         //el sol el gestiona d2dplot amb l'opcio -sol
         File imgfile = findImageFileFromTSD(-1);
         //SI HEM TROBAT OBRIM
         if (imgfile!=null){
-            txtOut.stat("Opening d2Dplot (imgfile="+imgfile.toString()+")");
+        	print_logdebug_tAOut("Opening d2Dplot (imgfile="+imgfile.toString()+")");
             this.openInD2Dplot(imgfile.getAbsolutePath(),true);
             return;
         }else{
-            txtOut.stat("Sorry, image file could not be found. Open it manually with d2Dplot");
+        	print_logdebug_tAOut("Sorry, image file could not be found. Open it manually with d2Dplot");
         }
     }
 
@@ -764,14 +780,14 @@ public class TTS_frame extends JFrame {
         
         
         //si s'ha arribat aqui no s'ha trobat fitxer out
-        txtOut.stat("No INCO results file found (.OUT), run INCO first");
+        print_logdebug_tAOut("No INCO results file found (.OUT), run INCO first");
         return;
     }
     
     private void openTEXTfile(File txtf){
         //we have to OPEN a text file (TSD, OUT, ...) with preferred editor
         if (txtf==null){
-            txtOut.stat("File not found");
+        	print_logdebug_tAOut("File not found");
             return;
         }
         File txtEditorExec = new File(D2Dplot_global.getTxtEditPath());
@@ -801,8 +817,8 @@ public class TTS_frame extends JFrame {
         File imgFull = new File(imgPath);
         String fname = imgFull.getName();
         String fdir = imgFull.getParent();
-        log.info("fname="+fname);
-        log.info("fdir="+fdir);;
+        log.debug("fname="+fname);
+        log.debug("fdir="+fdir);;
 //        String[] args = {"",imgFull.getAbsolutePath(),""};
 //        if(openSOL) args[2]="-sol";
 //        ArgumentLauncher.startInteractive(d2DplotMain, args);
@@ -817,17 +833,17 @@ public class TTS_frame extends JFrame {
                 fsol = this.findRelatedFile(this.getCurrentTSD(), "sol", -1, true); //ara mirem el SOL general (coarse)
             }
             if (fsol!=null) {
-                this.print_loginfo_tAOut(String.format("SOL file found: %s", fsol.toString()));
+                this.print_logdebug_tAOut(String.format("SOL file found: %s", fsol.toString()));
                 //OBRIM dialeg INCO directament amb un fitxer SOL
                 if (d2DplotMain.getDincoFrame() == null) {
-                    d2DplotMain.setDincoFrame(new Dinco_frame(d2DplotMain.getPanelImatge()));
+                    d2DplotMain.setDincoFrame(new IncoPlot(this.ttsFrame, d2DplotMain.getPanelImatge()));
                 }
                 d2DplotMain.getDincoFrame().setSOLMode();
                 d2DplotMain.getDincoFrame().loadSOLFileDirectly(fsol);
                 d2DplotMain.getDincoFrame().setVisible(true);
                 d2DplotMain.getPanelImatge().setDinco(d2DplotMain.getDincoFrame());
             }else {
-                this.print_loginfo_tAOut("Could not find SOL file, try to open it manually");
+                this.print_logdebug_tAOut("Could not find SOL file, try to open it manually");
             }
         }
     }
@@ -841,7 +857,7 @@ public class TTS_frame extends JFrame {
         }
         
         //si s'ha arribat aqui no s'ha trobat fitxer out
-        txtOut.stat("No CELREF results file found (.CEL), run CELREF first");
+        print_logdebug_tAOut("No CELREF results file found (.CEL), run CELREF first");
         return;
     }
     
@@ -852,9 +868,9 @@ public class TTS_frame extends JFrame {
             this.openTEXTfile(mrgFile);
             return;
         }
-
+        
         //si s'ha arribat aqui no s'ha trobat fitxer out
-        txtOut.stat("No MERGE results file found (.MRG), run MERGE first");
+        print_logdebug_tAOut("No MERGE results file found (.MRG), run MERGE first");
         return;
     }
     
@@ -872,12 +888,12 @@ public class TTS_frame extends JFrame {
         //Fem correr el programa
         txtOut.saltL();
         if (tsdfile.getMultdom()!=1) {
-            txtOut.stat(" RUNNING MERGE (partial datasets of 1 domain):");    
+        	print_logdebug_tAOut(" RUNNING MERGE (partial datasets of 1 domain):");    
         }else { //==1 multidomain
-            txtOut.stat(" RUNNING MERGE (multiple oriented domains):");
+        	print_logdebug_tAOut(" RUNNING MERGE (multiple oriented domains):");
         }
         
-        txtOut.stat("  Input file: "+this.getCurrentTSD());
+        print_logdebug_tAOut("  Input file: "+this.getCurrentTSD());
         txtOut.saltL();
         //creem i executem el thread del merge
         Thread merge = new Thread(new TTSRunnable(TTSRunnable.MERGE));
@@ -888,15 +904,15 @@ public class TTS_frame extends JFrame {
         //rellegim el TSD per si hi ha hagut canvis
         this.setCurrentTSD(this.getCurrentTSD());
         if(this.getCurrentTSD()==null){
-            txtOut.stat("Select first a valid TSD input file");
+        	print_logdebug_tAOut("Select first a valid TSD input file");
             return false;
         }
         if(!this.getCurrentTSD().exists()){
-            txtOut.stat("Selected TSD file does not exist");
+        	print_logdebug_tAOut("Selected TSD file does not exist");
             return false;            
         }
         if(!FileUtils.getExtension(this.getCurrentTSD()).equalsIgnoreCase("TSD")){
-            txtOut.stat("Working file must have the .TSD extension");
+        	print_logdebug_tAOut("Working file must have the .TSD extension");
             return false;            
         }
         return true;
@@ -905,17 +921,17 @@ public class TTS_frame extends JFrame {
     private boolean checkForExistingMaskBIN(){
 //        File msk = FileUtils.canviNomFitxer(this.getCurrentTSD(), "MASK");
 //        msk = FileUtils.canviExtensio(msk, "BIN");
-        File msk = new File(this.getCurrentTSD().getParentFile()+FileUtils.getSeparator()+TTS_frame.maskFileName); 
+        File msk = new File(this.getCurrentTSD().getParentFile()+FileUtils.getSeparator()+TTS.maskFileName); 
         log.debug("msk="+msk.toString());
         if (msk.exists())return true;
         //test uppercase
-        String upp = this.getCurrentTSD().getParentFile()+FileUtils.getSeparator()+TTS_frame.maskFileName;
+        String upp = this.getCurrentTSD().getParentFile()+FileUtils.getSeparator()+TTS.maskFileName;
         upp = upp.toUpperCase();
         log.debug("msk="+upp);
         msk = new File(upp);
         if (msk.exists())return true;
         //otherwise ask for creating one
-        boolean open = FileUtils.YesNoDialog(this,"MASK.BIN not found, open Excluded Zones module to generate one?");
+        boolean open = FileUtils.YesNoDialog(ttsFrame,"MASK.BIN not found, open Excluded Zones module to generate one?");
         if (open) {
             //first open image
             File imgfile = this.findImageFileFromTSD(-1);
@@ -944,7 +960,7 @@ public class TTS_frame extends JFrame {
             if (generalTrobat==true) { //s'han trobat totes
                 return true;
             }else {
-                boolean open = FileUtils.YesNoDialog(this,"Generate missing PCS files in the peaksearch module?");
+                boolean open = FileUtils.YesNoDialog(ttsFrame,"Generate missing PCS files in the peaksearch module?");
                 if (open) {//we will open only the first one missing
                     for (int i=0; i<tsdfile.getNfiles();i++) {
                         int codifile = tsdfile.getFnum()[i];
@@ -1032,10 +1048,10 @@ public class TTS_frame extends JFrame {
             if (extfile.exists())trobat = true;
         }
         if (!trobat) {
-            this.print_loginfo_tAOut(filenameNoExt+"."+ext.toLowerCase()+" or ."+ext.toUpperCase()+" not found");
+            this.print_logdebug_tAOut(filenameNoExt+"."+ext.toLowerCase()+" or ."+ext.toUpperCase()+" not found");
             return null;
         }
-        this.print_loginfo_tAOut("file found: "+extfile.getAbsolutePath());
+        this.print_logdebug_tAOut("file found: "+extfile.getAbsolutePath());
         return extfile;
     }
     
@@ -1047,17 +1063,17 @@ public class TTS_frame extends JFrame {
         
         //Fem correr el programa
         txtOut.saltL();
-        txtOut.stat(" RUNNING CELREF:             ");
-        txtOut.stat("  Input file: "+this.getCurrentTSD());
+        print_logdebug_tAOut(" RUNNING CELREF:             ");
+        print_logdebug_tAOut("  Input file: "+this.getCurrentTSD());
         txtOut.saltL();
         //creem i executem el thread del celref
         Thread celref = new Thread(new TTSRunnable(TTSRunnable.CELREF));
         celref.start();
     }
     protected void do_btnGenerateTsd_actionPerformed(ActionEvent e) {
-        txtOut.stat("This will generate a template TSD file");
+    	print_logdebug_tAOut("This will generate a template TSD file");
         FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
-        File f = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), filt, "TSD");
+        File f = FileUtils.fchooserSaveAsk(ttsFrame, D2Dplot_global.getWorkdirFile(), filt, "TSD");
         if (f==null)return;
         this.updateWorkDir(f);
 //        f = FileUtils.canviExtensio(f, "TSD");
@@ -1065,16 +1081,16 @@ public class TTS_frame extends JFrame {
 //            boolean over = FileUtils.YesNoDialog(this, "Overwrite existing "+f.getName()+" file?");
 //            if(!over)return;
 //        }
-        f = ImgFileUtils.generateTSD(f);
+        f = ImgFileUtils.generateTSD(f,false);//ext forçada al fchoser
         if (f==null) {
-            txtOut.stat("Error generating TSD file");
+        	print_logdebug_tAOut("Error generating TSD file");
             return;
         }else {
-            txtOut.stat("TSD file saved: "+f.getAbsolutePath());
-            txtOut.stat("Now you can edit TSD file according to your sample, check the manual for all the details.");
-            txtOut.stat("Do not forget to follow the file naming convention suggested on the manual.");
+        	print_logdebug_tAOut("TSD file saved: "+f.getAbsolutePath());
+        	print_logdebug_tAOut("Now you can edit TSD file according to your sample, check the manual for all the details.");
+        	print_logdebug_tAOut("Do not forget to follow the file naming convention suggested on the manual.");
             //set as working TSD
-            boolean open = FileUtils.YesNoDialog(this, "Load "+f.getName()+" as working file and edit it?");
+            boolean open = FileUtils.YesNoDialog(ttsFrame, "Load "+f.getName()+" as working file and edit it?");
             if (open) {
                 this.setCurrentTSD(f);
                 this.openTEXTfile(f);
@@ -1084,19 +1100,19 @@ public class TTS_frame extends JFrame {
         
     protected void do_btnCopyTsd_actionPerformed(ActionEvent e) {
         if(this.getCurrentTSD()==null){
-            txtOut.stat("Select first a valid TSD input file");
+        	print_logdebug_tAOut("Select first a valid TSD input file");
             return;
         }
         if(!this.getCurrentTSD().exists()){
-            txtOut.stat("Selected TSD file does not exist");
+        	print_logdebug_tAOut("Selected TSD file does not exist");
             return;            
         }
         FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
-        File dest = FileUtils.fchooserSaveAsk(this, new File(D2Dplot_global.getWorkdir()), filt,"TSD"); 
+        File dest = FileUtils.fchooserSaveAsk(ttsFrame, new File(D2Dplot_global.getWorkdir()), filt,"TSD"); 
         if (dest == null) return;
         this.updateWorkDir(dest);
         FileUtils.copyFile(this.getCurrentTSD(), dest, false, txtOut);
-        boolean over = FileUtils.YesNoDialog(this, "Load "+dest.getName()+" as working file and edit it?");
+        boolean over = FileUtils.YesNoDialog(ttsFrame, "Load "+dest.getName()+" as working file and edit it?");
         if (over){
             setCurrentTSD(dest);
             this.openTEXTfile(dest);
@@ -1117,7 +1133,7 @@ public class TTS_frame extends JFrame {
             if (tsdfile.isSuccessfulRead()){
                 if (!checkTSDrequirements())return null;
                 if (d2DplotMain.getDincoFrame() == null) {
-                    txtOut.stat("no opened solutions found, try doing it by editing manually TSD files");
+                	print_logdebug_tAOut("no opened solutions found, try doing it by editing manually TSD files");
                     return null;
                 }
                 float lon = d2DplotMain.getDincoFrame().getActiveOrientSol().getAngR_lon();
@@ -1135,7 +1151,7 @@ public class TTS_frame extends JFrame {
                     }
                 }
                 if (centralImage<0) {
-                    txtOut.stat("Could not find image number with offset 0, try doing it by editing manually TSD files");
+                	print_logdebug_tAOut("Could not find image number with offset 0, try doing it by editing manually TSD files");
                     return null;
                 }
                 //tindrem les imatges 0 1 2 3... centralImage ...3 2 1 0  (es a dir "simètric" segons la central)
@@ -1207,17 +1223,17 @@ public class TTS_frame extends JFrame {
                     }
                     inTSDfile.close();
                     outTSDfile.close();
-                    txtOut.stat("file TSD written");
+                    print_logdebug_tAOut("file TSD written");
                     return out;
                     
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-            txtOut.stat("Current TSD file has not been read successfully, check for syntax errors");
+            print_logdebug_tAOut("Current TSD file has not been read successfully, check for syntax errors");
             return null;
         }
-        txtOut.stat("no TSD file opened");
+        print_logdebug_tAOut("no TSD file opened");
         return null;
     }
     
@@ -1245,7 +1261,7 @@ public class TTS_frame extends JFrame {
     }
 
     public static void setIncoExec(String incoExec) {
-        TTS_frame.incoExec = incoExec;
+        TTS.incoExec = incoExec;
     }
     
     public static String getMergeExec() {
@@ -1253,7 +1269,7 @@ public class TTS_frame extends JFrame {
     }
 
     public static void setMergeExec(String mergeExec) {
-        TTS_frame.mergeExec = mergeExec;
+        TTS.mergeExec = mergeExec;
     }
 
     public static String getCelrefExec() {
@@ -1261,11 +1277,11 @@ public class TTS_frame extends JFrame {
     }
 
     public static void setCelrefExec(String celrefExec) {
-        TTS_frame.celrefExec = celrefExec;
+        TTS.celrefExec = celrefExec;
     }
-    private void print_loginfo_tAOut(String toPrint) {
+    private void print_logdebug_tAOut(String toPrint) {
         txtOut.stat(toPrint);
-        log.info(toPrint);
+        log.debug(toPrint);
     }
     protected void do_btnCreateTsdIref_actionPerformed(ActionEvent e) {
         //1rCOMPROVAR QUE HI HA UNA SOLUCIO OBERTA
@@ -1273,22 +1289,22 @@ public class TTS_frame extends JFrame {
             if (tsdfile.isSuccessfulRead()){
                 if (!checkTSDrequirements())return;
                 if (d2DplotMain.getDincoFrame() == null) {
-                    txtOut.stat("no opened solutions found, you must open a SOL file to generate TSD(IREF=1)");
+                	print_logdebug_tAOut("no opened solutions found, you must open a SOL file to generate TSD(IREF=1)");
                     return;
                 }
                 FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
-                File out = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), filt, "TSD");
+                File out = FileUtils.fchooserSaveAsk(ttsFrame, D2Dplot_global.getWorkdirFile(), filt, "TSD");
                 if (out==null)return;
                 File f = this.copyTSDtoIREF1(out);
                 if (f!=null) {
                     //open new TSD
-                    boolean over = FileUtils.YesNoDialog(this, "Load "+f.getName()+" as working file and edit it?");
+                    boolean over = FileUtils.YesNoDialog(ttsFrame, "Load "+f.getName()+" as working file and edit it?");
                     if (over){
                         setCurrentTSD(f);
                         this.openTEXTfile(f);
                     }
                 }
-                txtOut.stat("TSD (IREF=1) file created, check that everything is ok (especially PCS/HKL block) and click RUN");
+                print_logdebug_tAOut("TSD (IREF=1) file created, check that everything is ok (especially PCS/HKL block) and click RUN");
             }
         }
     }
@@ -1298,10 +1314,10 @@ public class TTS_frame extends JFrame {
         if (tsdfile!=null){
             if (tsdfile.isSuccessfulRead()){
                 FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
-                File f = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), filt, "TSD", "New TSD file to create");
+                File f = FileUtils.fchooserSaveAsk(ttsFrame, D2Dplot_global.getWorkdirFile(), filt, "TSD", "New TSD file to create");
                 if (f==null)return;
                 FileNameExtensionFilter[] filt2 = {new FileNameExtensionFilter("HKL file", "hkl","HKL")};
-                File[] hkls = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), filt2, 0,"Select HKL files to merge (FULL oriented domains only)");
+                File[] hkls = FileUtils.fchooserMultiple(ttsFrame, D2Dplot_global.getWorkdirFile(), filt2, 0,"Select HKL files to merge (FULL oriented domains only)");
                 String[] hklfilenames = new String[hkls.length];
                 for (int i=0; i<hkls.length;i++) {
                     hklfilenames[i]=hkls[i].getName();
@@ -1309,7 +1325,7 @@ public class TTS_frame extends JFrame {
                 File newTSD = copyTSDtoMULTDOM(this.getCurrentTSD(),f,hklfilenames);
                 if (newTSD!=null) {
                     //ask to open and run merge
-                    boolean over = FileUtils.YesNoDialog(this, "Load "+newTSD.getName()+" as working file and run merge?");
+                    boolean over = FileUtils.YesNoDialog(ttsFrame, "Load "+newTSD.getName()+" as working file and run merge?");
                     if (over){
                         setCurrentTSD(f);
                         this.btnRunMerge.doClick();
@@ -1317,7 +1333,7 @@ public class TTS_frame extends JFrame {
                     }
                 }
             }
-            txtOut.stat("You should have a valid single-domain TSD as working file");
+            print_logdebug_tAOut("You should have a valid single-domain TSD as working file");
         }
         
         
@@ -1374,7 +1390,7 @@ public class TTS_frame extends JFrame {
                 outTSDfile.println(hklfilenames[i]);
             }
             outTSDfile.close();
-            txtOut.stat("file TSD written");
+            print_logdebug_tAOut("file TSD written");
             return tsdout;
 
         } catch (Exception e) {
@@ -1389,10 +1405,10 @@ public class TTS_frame extends JFrame {
         if (tsdfile!=null){
             if (tsdfile.isSuccessfulRead()){
                 FileNameExtensionFilter[] filt = {new FileNameExtensionFilter("TSD file", "tsd","TSD")};
-                File f = FileUtils.fchooserSaveAsk(this, D2Dplot_global.getWorkdirFile(), filt, "TSD", "New TSD file to create");
+                File f = FileUtils.fchooserSaveAsk(ttsFrame, D2Dplot_global.getWorkdirFile(), filt, "TSD", "New TSD file to create");
                 if (f==null)return;
                 FileNameExtensionFilter[] filt2 = {new FileNameExtensionFilter("HKL file", "hkl","HKL")};
-                File[] hkls = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), filt2, 0,"Select HKL files to use in CelRef (PARTIAL oriented domains only)");
+                File[] hkls = FileUtils.fchooserMultiple(ttsFrame, D2Dplot_global.getWorkdirFile(), filt2, 0,"Select HKL files to use in CelRef (PARTIAL oriented domains only)");
                 String[] hklfilenames = new String[hkls.length];
                 for (int i=0; i<hkls.length;i++) {
                     hklfilenames[i]=hkls[i].getName();
@@ -1400,7 +1416,7 @@ public class TTS_frame extends JFrame {
                 File newTSD = copyTSDtoCELREF(this.getCurrentTSD(),f,hklfilenames);
                 if (newTSD!=null) {
                     //ask to open and run merge
-                    boolean over = FileUtils.YesNoDialog(this, "Load "+newTSD.getName()+" as working file and run celref?");
+                    boolean over = FileUtils.YesNoDialog(ttsFrame, "Load "+newTSD.getName()+" as working file and run celref?");
                     if (over){
                         setCurrentTSD(f);
                         this.btnRunCelRef.doClick();
@@ -1408,7 +1424,7 @@ public class TTS_frame extends JFrame {
                     }
                 }
             }
-            txtOut.stat("You should have a valid single-domain TSD as working file");
+            print_logdebug_tAOut("You should have a valid single-domain TSD as working file");
         }
     }
     private File copyTSDtoCELREF(File tsdin, File tsdout, String[] hklfilenames){
@@ -1433,7 +1449,7 @@ public class TTS_frame extends JFrame {
                 outTSDfile.println(hklfilenames[i]);
             }
             outTSDfile.close();
-            txtOut.stat("file TSD written");
+            print_logdebug_tAOut("file TSD written");
             return tsdout;
 
         } catch (Exception e) {
@@ -1441,4 +1457,17 @@ public class TTS_frame extends JFrame {
             return null;
         }
     }
+    public void setVisible(boolean vis) {
+    	ttsFrame.setVisible(vis);
+    }
+	protected void do_btnClose_actionPerformed(ActionEvent e) {
+		this.dispose();
+	}
+	
+	public void dispose() {
+		if(TTSInExecution){
+			this.stopExecution();
+		}
+		ttsFrame.dispose();
+	}
 }

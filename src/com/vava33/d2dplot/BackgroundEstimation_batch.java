@@ -1,12 +1,7 @@
-// TODO: Inicialment cal comprovar si existeix fitxer EXZ i llegir-lo.
-// si no existeix, cada cop que s'executi d2dsub fer que es comprovi si existeix fitxer EXZ 
-// i sin� crear-lo amb la informaci� introdu�da.
-
 package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
@@ -25,13 +20,11 @@ import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
@@ -39,6 +32,7 @@ import javax.swing.WindowConstants;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ButtonGroup;
 
@@ -46,7 +40,6 @@ import com.vava33.d2dplot.auxi.ImgFileUtils;
 import com.vava33.d2dplot.auxi.ImgOps;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 import javax.swing.JSeparator;
@@ -54,30 +47,26 @@ import javax.swing.JList;
 
 import net.miginfocom.swing.MigLayout;
 
-public class D2Dsub_batch extends JFrame {
-
-    private static final long serialVersionUID = 7730139568601028032L;
+public class BackgroundEstimation_batch {
+	
+    private JDialog d2dsubBatchDialog;
     private JButton btnSelectFile;
     private JButton btnStop;
     private JCheckBox chckbxFactor;
     private JCheckBox checkBox;
-    private final JPanel contentPanel = new JPanel();
+    private JPanel contentPanel;
     private JLabel label;
     private JLabel lblGlassF;
     private JLabel lblIter;
     private JLabel lblN;
     private JPanel panel;
-    private JPanel panel_output;
     private JPanel panel_top;
     private JPanel panelBkg;
     private JPanel panelGlass;
     private JProgressBar progressBar;
-    private JScrollPane scrollPane_1;
-    private JSplitPane splitPane;
     private JTextField txtFactor;
     private JTextField txtIter;
     private JTextField txtN;
-    private LogJTextArea tAOut;
     
     private File glassD2File;
     private JComboBox<String> comboBox;
@@ -115,28 +104,27 @@ public class D2Dsub_batch extends JFrame {
     private JList<File> listfiles;
     private JButton btnClear;
     private JScrollPane scrollPane;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(D2Dsub_batch.class.getName());
+    private MainFrame mf;
+    private static final String className = "BKG_sub_batch";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
 
     /**
      * Create the dialog.
      */
-    public D2Dsub_batch(MainFrame mf) {
+    public BackgroundEstimation_batch(MainFrame mf) {
+    	this.mf=mf;
+    	d2dsubBatchDialog = new JDialog(mf.getMainF(),"Background subtraction and LP correction (batch processing)",false);
+    	this.contentPanel=new JPanel();
         UIManager.put("ProgressBar.selectionBackground", Color.black);
-        setIconImage(Toolkit.getDefaultToolkit().getImage(D2Dsub_batch.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("Background subtraction and LP correction (batch processing)");
-        getContentPane().setLayout(new BorderLayout());
-        getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        d2dsubBatchDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(BackgroundEstimation_batch.class.getResource("/img/Icona.png")));
+        d2dsubBatchDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        d2dsubBatchDialog.getContentPane().setLayout(new BorderLayout());
+        d2dsubBatchDialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[grow]", "[grow]"));
-        this.splitPane = new JSplitPane();
-        contentPanel.add(splitPane, "cell 0 0,grow");
-        splitPane.setEnabled(false);
-        this.splitPane.setBorder(null);
-        this.splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
         this.panel_top = new JPanel();
-        this.splitPane.setLeftComponent(this.panel_top);
-        panel_top.setLayout(new MigLayout("", "[grow][]", "[][][][]"));
+        contentPanel.add(panel_top, "cell 0 0,grow");
+        panel_top.setLayout(new MigLayout("insets 0,fill", "[grow][]", "[][][][]"));
         {
         	panel_1 = new JPanel();
         	panel_top.add(panel_1, "cell 0 0 1 4,grow");
@@ -181,7 +169,7 @@ public class D2Dsub_batch extends JFrame {
                     do_btnSelectFile_actionPerformed(arg0);
                 }
             });
-            panelGlass.setLayout(new MigLayout("insets 0", "[][][][grow][][]", "[]"));
+            panelGlass.setLayout(new MigLayout("", "[][][][grow][][]", "[]"));
             {
             	chk_doGlass = new JCheckBox("Do it!");
             	panelGlass.add(chk_doGlass, "cell 0 0,alignx center,aligny center");
@@ -225,7 +213,7 @@ public class D2Dsub_batch extends JFrame {
                     do_comboBox_itemStateChanged(arg0);
                 }
             });
-            panelBkg.setLayout(new MigLayout("insets 0", "[][][][grow][][grow][][grow][][][grow][][grow][][grow][][][]", "[]"));
+            panelBkg.setLayout(new MigLayout("", "[][][][grow][][grow][][grow][][][grow][][grow][][grow][][][]", "[]"));
             {
             	chk_doBkg = new JCheckBox("Do it!");
             	panelBkg.add(chk_doBkg, "cell 0 0,alignx center,aligny center");
@@ -318,7 +306,7 @@ public class D2Dsub_batch extends JFrame {
         this.panel = new JPanel();
         this.panel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Lorentz & Polarization corrections", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
         this.panel_top.add(this.panel, "cell 1 2,grow");
-        panel.setLayout(new MigLayout("insets 0", "[][][][][][][][][][][][][]", "[]"));
+        panel.setLayout(new MigLayout("", "[][][][][][][][][][][][][]", "[]"));
         {
         	chk_doLP = new JCheckBox("Do it!");
         	panel.add(chk_doLP, "cell 0 0,alignx center,aligny center");
@@ -414,29 +402,10 @@ public class D2Dsub_batch extends JFrame {
         	    this.progressBar.setFont(new Font("Tahoma", Font.BOLD, 15));
         	}
         }
-        {
-            this.panel_output = new JPanel();
-            this.panel_output.setBackground(Color.BLACK);
-            this.splitPane.setRightComponent(this.panel_output);
-            panel_output.setLayout(new MigLayout("insets 5", "[grow]", "[grow]"));
-            {
-                this.scrollPane_1 = new JScrollPane();
-                this.scrollPane_1.setBorder(null);
-                this.panel_output.add(this.scrollPane_1, "cell 0 0,grow");
-                {
-                    this.tAOut = new LogJTextArea();
-                    this.tAOut.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
-                    this.tAOut.setLineWrap(true);
-                    this.tAOut.setWrapStyleWord(true);
-                    this.tAOut.setEditable(false);
-                    this.scrollPane_1.setViewportView(this.tAOut);
-                }
-            }
-        }
         
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            d2dsubBatchDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             buttonPane.setLayout(new MigLayout("", "[][][grow]", "[]"));
             {
                 {
@@ -480,7 +449,7 @@ public class D2Dsub_batch extends JFrame {
                 }
             });
             okButton.setActionCommand("OK");
-            getRootPane().setDefaultButton(okButton);
+            d2dsubBatchDialog.getRootPane().setDefaultButton(okButton);
         }
         
         this.userInit();
@@ -489,44 +458,48 @@ public class D2Dsub_batch extends JFrame {
 
     private void userInit(){
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        this.setBounds(0, 0, 1157, 600);
-        int width = this.getWidth();
-        int height = this.getHeight();
+        int width = d2dsubBatchDialog.getWidth();
+        int height = d2dsubBatchDialog.getHeight();
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        this.setBounds(x, y, width, height);
-        
+        d2dsubBatchDialog.setBounds(x, y, width, height);
+        d2dsubBatchDialog.pack();        
         //mostrem titol i versio D2Dsub
-        tAOut.ln("** Background estimation/subtraction & LP correction **");
+        log.info("** Background estimation/subtraction & LP correction **");
     }
 	
     protected void do_btnSelectFile_actionPerformed(ActionEvent arg0) {
 
     	FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("2D Data file (bin,img,spr,gfrm,edf)", "bin", "img",
                 "spr", "gfrm", "edf")};
-        glassD2File = FileUtils.fchooserOpen(this,new File(MainFrame.getWorkdir()), filter, 0);
+        glassD2File = FileUtils.fchooserOpen(d2dsubBatchDialog,new File(MainFrame.getWorkdir()), filter, 0);
         if (glassD2File == null) return;
-        tAOut.ln("Glass file selected: " + glassD2File.getPath());
+        log.info("Glass file selected: " + glassD2File.getPath());
         lblGlassF.setText(glassD2File.getName());
     }
     
 
-    protected void do_btnStop_actionPerformed(ActionEvent arg0) {
-    	//preguntar per si de cas
-        int n = JOptionPane.showConfirmDialog(this, "Abort current operation?", "Stop",
-                JOptionPane.YES_NO_OPTION);
-        if (n == JOptionPane.NO_OPTION) {
-        	return;
-        }
+    private void stopProcess() {
     	if(runBkg!=null){
     		try{
     			runBkg.interrupt();	
     		}catch(Exception e){
     		    if (D2Dplot_global.isDebug())e.printStackTrace();
-    		    log.warning("error in runBkg");
+    		    log.warning("Error in runBkg");
     		}
     	}
         runBkg = null;
+
+    }
+    
+    protected void do_btnStop_actionPerformed(ActionEvent arg0) {
+    	//preguntar per si de cas
+        int n = JOptionPane.showConfirmDialog(d2dsubBatchDialog, "Abort current operation?", "Stop",
+                JOptionPane.YES_NO_OPTION);
+        if (n == JOptionPane.NO_OPTION) {
+        	return;
+        }
+        this.stopProcess();
     }
 
     protected void do_chckbxFactor_itemStateChanged(ItemEvent arg0) {
@@ -534,7 +507,7 @@ public class D2Dsub_batch extends JFrame {
     }
 
     protected void do_checkBox_itemStateChanged(ItemEvent arg0) {
-        this.setAlwaysOnTop(checkBox.isSelected());
+    	d2dsubBatchDialog.setAlwaysOnTop(checkBox.isSelected());
     }
 
     protected void do_label_mouseEntered(MouseEvent arg0) {
@@ -547,64 +520,33 @@ public class D2Dsub_batch extends JFrame {
     }
 
     protected void do_label_mouseReleased(MouseEvent e) {
-//        tAOut.ln("");
-//        tAOut.ln("** d2Dsub HELP **");
-//        tAOut.ln("1) To subtract glass contribution, select a glass file (IMG or BIN) and click "
-//                + "on subtract. The scale factor will be automatically calculated. After the first run you "
-//                + "can manually \"refine\" the scale factor (Iglass*factor). You can see the results in "
-//                + "the result image and compare with the initial one. The result file is written in the "
-//                + "same folder as the data file with the name: " + FileUtils.getFNameNoExt(FBef).concat("-glass.bin")
-//                + ".");
-//        tAOut.ln("");
-//        tAOut.ln("2) There are 5 ways to estimate the background:");
-//        tAOut.ln("   -bkg: Each iteration estimates the background by averaging square areas around each pixel "
-//               + "from the previous iteration. Set the number of pixels for the side of the square (Npix) and "
-//               + "the number of iterations (Niter). It is a slow process for high Npix and Niter values. Two "
-//               + "output files are written in the same folder as the data file: (a) the data file where the "
-//               + "background have been subtracted: "+ FileUtils.getFNameNoExt(FBef).concat("-subBkgItX.bin")
-//               + "; and (b) the background intensity that has been subtracted: "
-//               + FileUtils.getFNameNoExt(FBef).concat("-BkgItX.bin") + " [X is the iteration number]. You can "
-//               + "inspect for residual intensity in the last one by clicking the \"view BKG\" button.");
-//        tAOut.ln("   -rad: Each iteration estimates the background from the previous iteration using the radial "
-//               + "integration in the 2T of each pixel. Set the stepsize for the 2T ranges (step) and "
-//               + "the number of iterations (Niter). The same output files as BKG option are written.");
-//        tAOut.ln("   -arc: The same as the BKG option but using arc shaped areas (2T ring) around each pixel. "
-//               + "Set the number of iterations (Niter) and the factors for the width (wdt) and angular aperture " 
-//               + "(ang) for the arcs. This is a VERY slow method. The same output files as BKG option are written.");
-//        tAOut.ln("   -flip: The background intensity value for each pixel (v0) is calculated as: Minimum(v0,v1,v2,v3); "
-//               + "where v1,v2 and v3 are related pixels applying a reflection of the image (vertical, horizontal and " 
-//               + "both). Set the which operations to use (v,h,vh), and the number of pixels (Npix) defining the square "
-//               + "zone to be averaged after the operation (use 0 for only 1 pixel). The output files in this case are "
-//               + FileUtils.getFNameNoExt(FBef).concat("-subBkgflip.bin") + " and "
-//               + FileUtils.getFNameNoExt(FBef).concat("-Bkgflip.bin") + ". It is a FAST method but some peak intensity "
-//               + "may be subtracted.");
-//        tAOut.ln("   -fliparc: The same as FLIP but using an arc shaped zone for each pixel. Set the operations (v,h,vh) "
-//               + "and the factors for width and angular aperture (wdt,ang). Same output files as FLIP.");
-//        tAOut.ln("");
-//        tAOut.ln("3) LP correction is automatically applied by clicking the button.");
-//        tAOut.ln("");
-//        tAOut.ln("IMPORTANT: ");
-//        tAOut.ln(" - The corrections are always applied to the SOURCE image. To continue working "
-//                + "with the RESULT image, click the \"Set as source\" button to set the result image as the "
-//                + "source image.");
-//        tAOut.ln(" - Define any excluded zones BEFORE subtracting the background [pixels with intensity=-1 (BIN files) "
-//                + "or .EXZ file with the same filename] as they will lead to incorrect background subtraction.");
-//        tAOut.ln(" - Clean .BIN files generated in tests or failed runs from the working folder that will not be "
-//                + "used anymore and keep only the desired ones.");
-//        tAOut.ln("");
-//        String d2dsubHelp="<html><div style=\"text-align:justify\"> 1) To subtract glass contribution, select a glass file (IMG or BIN) and click on subtract. The scale factor will be automatically calculated. After the first run you can manually adjust the scale factor (Iglass*factor). You can see the results in the result image and compare with the initial one. The result file is written in the same folder as the data file with the name *-glass.bin<br><br>2) There are 5 ways to estimate the background:<ul><li> avsq: Each iteration estimates the background by averaging square areas around each pixel from the previous iteration. Set the number of pixels for the side of the square (Npix) and the number of iterations (Niter). It is a slow process for high Npix and Niter values. Two output files are written in the same folder as the data file: the data file where the background have been subtracted (*-subBkgItX.bin) and the background intensity that has been subtracted (*-BkgItX.bin) [X is the iteration number]. You can inspect for residual intensity in the last one by clicking the [view BKG] button.</li><li> avcirc: Each iteration estimates the background from the previous iteration using the radial integration in the 2T of each pixel. Set the stepsize for the 2T ranges (step) and the number of iterations (Niter). The same output files as BKG option are written.</li><li> avarc: The same as the BKG option but using arc shaped areas (2T ring) around each pixel. Set the number of iterations (Niter) and the factors for the width (wdt) and angular aperture (ang) for the arcs. This is a VERY slow method. The same output files as BKG option are written.</li><li> minsq: The background intensity value for each pixel (v0) is calculated as: Minimum(v0,v1,v2,v3) where v1,v2 and v3 are related pixels applying a reflection of the image (vertical, horizontal and both). Set the which operations to use (v,h,vh), and the number of pixels (Npix) defining the square zone to be averaged after the operation (use 0 for only 1 pixel). The output files in this case are *-subBkgflip.bin and *-Bkgflip.bin). It is a FAST method but some peak intensity may be subtracted.</li><li> minarc: The same as FLIP but using an arc shaped zone for each pixel. Set the operations (v,h,vh) and the factors for width and angular aperture (wdt,ang). Same output files as FLIP.</li></ul><br>3) LP correction is automatically applied by clicking the button.<br><br>IMPORTANT: <ul><li> The corrections are always applied to the SOURCE image. To continue working with the RESULT image, click the [Set as source] button to set the result image as the source image.</li><li> Define any excluded zones BEFORE subtracting the background [pixels with intensity=-1 (BIN files) or .EXZ file with the same filename] as they will lead to incorrect background subtraction.</li><li> Clean .BIN files generated in tests or failed runs from the working folder that will not be used anymore and keep only the desired ones.</li></ul></div> </html>";
-// el bo abans canvis: String d2dsubHelp="<html><div style=\"text-align:justify\"> 1) To subtract glass contribution, select a glass file (IMG or BIN) and click on subtract. The scale factor will be automatically calculated. After the first run you can manually adjust the scale factor (Iglass*factor). You can see the results in the result image and compare with the initial one. The result file is written in the same folder as the data file with the name *-glass.bin<br><br>2) There are 5 ways to estimate the background:<ul><li> avsq: Each iteration estimates the background by averaging square areas around each pixel from the previous iteration. Set the number of pixels for the side of the square (Npix) and the number of iterations (Niter). It is a slow process for high Npix and Niter values.</li><li> avarc: The same as previous option but using arc shaped areas (within 2T) around each pixel. Set the number of iterations (Niter) and the factors for the width (wdt) and angular aperture (ang) for the arcs. This is a VERY slow method.</li><li> avcirc: The background estimation for each pixel is the mean intensity from a radial integration (in the 2T circle containing each pixel). Set the stepsize for the 2T ranges (step).</li><li> minsq: The background intensity value for each pixel (v0) is calculated as: Minimum(v0,v1,v2,v3) where v1,v2 and v3 are related pixels applying a reflection of the image (vertical, horizontal and both). Set which operations to use (v,h,vh), and the number of pixels (Npix) defining the square zone to be averaged after the operation (use 0 to consider only 1 pixel). It is a FAST method but some peak intensity may be subtracted.</li><li> minarc: The same as FLIP but using an arc shaped zone for each pixel. Set the operations (v,h,vh) and the factors for width and angular aperture (wdt,ang).</li></ul>For all options, two output files are written in the same folder as the data file: the data file where the background have been subtracted (*-subBkg.bin) and the background intensity that has been subtracted (*-Bkg.bin). You can inspect for residual peak intensity in the last one by clicking the [view BKG] button.<br>3) LP correction is automatically applied by clicking the button.<br><br>IMPORTANT: <ul><li> The corrections are always applied to the SOURCE image. To continue working with the RESULT image, click the [Set as source] button to set the result image as the source image.</li><li> Define any excluded zones BEFORE subtracting the background [pixels with intensity=-1 (BIN files) or .EXZ file with the same filename] as they will lead to incorrect background subtraction.</li><li> Clean .BIN files generated in tests or failed runs from the working folder that will not be used anymore and keep only the desired ones.</li></ul></div> </html>";
+
     	String d2dsubHelp="<html><div style=\"text-align:justify\"> 1) To subtract glass contribution, select a glass file and check the glass option. The scale factor will be automatically calculated. After the first run you can manually adjust the scale factor (Iglass*factor).<br><br>2) There are 5 methods to estimate the background:<ul><li> avsq: Each iteration estimates the background by averaging square areas around each pixel from the previous iteration. Set the number of pixels for the side of the square (Npix) and the number of iterations (Niter). It is a slow process for high Npix and Niter values.</li><li> avarc: The same as previous option but using arc shaped areas (within 2T) around each pixel. Set the number of iterations (Niter) and the factors for the width (wdt) and angular aperture (ang) for the arcs. This is a VERY slow method.</li><li> avcirc: The background estimation for each pixel is the mean intensity from a radial integration (in the 2T circle containing each pixel). Set the stepsize for the 2T ranges (step).</li><li> minsq: The background intensity value for each pixel (v0) is calculated as: Minimum(v0,v1,v2,v3) where v1,v2 and v3 are related pixels applying a reflection of the image (vertical, horizontal and both). Set which operations to use (v,h,vh), and the number of pixels (Npix) defining the square zone to be averaged after the operation (use 0 to consider only 1 pixel). It is a FAST method but some peak intensity may be subtracted.</li><li> minarc: The same as MINSQ but using an arc shaped zone for each pixel. Set the operations (v,h,vh) and the factors for width and angular aperture (wdt,ang).</li></ul> Visual inspection for residual peak intensity in the subtracted background can be done by clicking the [view BKG] button.<br><br>3) LP correction with the options selected is applied if the LP option is checked.<br><br>IMPORTANT: <ul><li> Result images can be seen on the main window and source image can be reloaded if wanted. It is recommended to save the result to a image file before applying more corrections to the result file. </li><li> Define any excluded zones BEFORE subtracting the background [pixels with intensity=-1 (BIN files) or .EXZ file with the same filename] as they will lead to incorrect background subtraction.</li></ul></div> </html>";
-        Help_dialog hd = new Help_dialog("d2Dsub Help",d2dsubHelp);
-        hd.setSize(700,700);
-        hd.setLocationRelativeTo(this);
-        hd.setVisible(true);
+        Help hd = new Help(this.getMf().getMainF(),"d2Dsub Help",d2dsubHelp);
+        hd.getHelpDialog().setSize(700,700);
+        hd.getHelpDialog().setLocationRelativeTo(d2dsubBatchDialog);
+        hd.getHelpDialog().setVisible(true);
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
     	this.dispose();
     }
-
+	
+    public void dispose() {
+    	this.stopProcess();
+    	d2dsubBatchDialog.dispose();
+    }
+    
+    public void setVisible(boolean vis) {
+    	d2dsubBatchDialog.setVisible(vis);
+    }
+    
+//    //es una manera de posar al log tot el que surt pel txtArea local
+//	public void printTaOut(String msg) {
+//        this.tAOut.stat(msg);
+//		log.debug(msg);
+//	}
+	
     protected void do_comboBox_itemStateChanged(ItemEvent arg0) {
         this.activeOptions();
     }
@@ -680,7 +622,7 @@ public class D2Dsub_batch extends JFrame {
             		glassFactor = Float.parseFloat(txtFactor.getText());	
             	}catch(Exception e){
             	    if (D2Dplot_global.isDebug())e.printStackTrace();
-            	    log.warning("error parsing factor");
+            	    log.warning("Error parsing glass factor");
             		glassFactor = -1.f;
             	}
             }
@@ -700,7 +642,7 @@ public class D2Dsub_batch extends JFrame {
                 stepsize = Float.parseFloat(txtStep.getText());
 			} catch (Exception e) {
 			    if (D2Dplot_global.isDebug())e.printStackTrace();
-				tAOut.ln("Enter valid values for background subtraction options");
+			    log.warning("Enter valid values for background subtraction options");
 				return;
 			}
 		}
@@ -715,7 +657,7 @@ public class D2Dsub_batch extends JFrame {
 		}
 		
 		if(!doGlass&&!doBkg&&!doLP){
-			tAOut.ln("No operation selected");
+			log.warning("No operation selected");
 			return;
 		}
 		
@@ -750,7 +692,7 @@ public class D2Dsub_batch extends JFrame {
 		@Override
 		public void run() {
 			interrupted = false;
-	        tAOut.stat("Batch process started...");
+			log.info("Batch process started...");
 			progressBar.setIndeterminate(true);
 			progressBar.setString("Batch process started...");
 			progressBar.setStringPainted(true);
@@ -761,34 +703,38 @@ public class D2Dsub_batch extends JFrame {
 			try{
 				while(cua.size()>0){
 					bkgsubtraction bs = cua.poll();
-					tAOut.afegirLinia('*');
+					log.info(FileUtils.getCharLine('*',80));
 					String fpath = bs.getDataWork().getImgfile().toString();
-					tAOut.stat("Processing file ("+nfile+" of "+nfiles+"): "+fpath);
+					log.info("Processing file ("+nfile+" of "+nfiles+"): "+fpath);
 					runBkg = new Thread(bs);
 					runBkg.run();
 					
 					//save file
 					Pattern2D result = bs.getDataWork();
-					String pathOut = FileUtils.getFNameNoExt(fpath).concat("_BkgSub.bin");
-					ImgFileUtils.writeBIN(new File(pathOut), result);
+//					String pathOut = FileUtils.getFNameNoExt(fpath).concat("_BkgSub.bin");
+//					ImgFileUtils.writeBIN(new File(pathOut), result);
+					String pathOut = FileUtils.getFNameNoExt(fpath).concat("_BkgSub.d2d");
+                    ImgFileUtils.writePatternFile(new File(pathOut), result, false); //ja l'hem posat aqui dalt...
 //					try{
 //						runBkg.interrupt();
 //					}catch(Exception e){
 //						e.printStackTrace();
 //					}
-					tAOut.stat("File: "+ fpath +" --> finished");
-					tAOut.stat("Result saved to: "+ pathOut);
+                    log.info("File: "+ fpath +" --> finished");
+                    log.info("Result saved to: "+ pathOut);
 					
 					//save fons
 					if(chckbxSaveBkg.isSelected()){
 						Pattern2D fons = bs.getDataFons();
-						pathOut = FileUtils.getFNameNoExt(fpath).concat("_Bkg.bin");
-						ImgFileUtils.writeBIN(new File(pathOut), fons);
-						tAOut.stat("Background saved to: "+ pathOut);	
+//						pathOut = FileUtils.getFNameNoExt(fpath).concat("_Bkg.bin");
+//						ImgFileUtils.writeBIN(new File(pathOut), fons);
+						pathOut = FileUtils.getFNameNoExt(fpath).concat("_Bkg.d2d");
+                        ImgFileUtils.writePatternFile(new File(pathOut), fons, false);
+                        log.info("Background saved to: "+ pathOut);	
 					}
 					
 					if(interrupted){
-						tAOut.stat("*** Run STOPPED ***");
+						log.warning("*** Run STOPPED ***");
 		                progressBar.setIndeterminate(false);
 		                progressBar.setStringPainted(false);
 		                return;
@@ -796,14 +742,14 @@ public class D2Dsub_batch extends JFrame {
 					nfile = nfile+1;
 				}
 				
-				tAOut.afegirLinia('*');
+				log.info(FileUtils.getCharLine('*',80));
 		        // un cop aqui s'hauria d'haver acabat l'execucio
-		        tAOut.stat("Batch process finished");
+				log.info("Batch process finished");
 		        progressBar.setIndeterminate(false);
 		        progressBar.setStringPainted(false);
             }catch(Exception e){
                 if (D2Dplot_global.isDebug())e.printStackTrace();
-                tAOut.stat("*** Run ERROR ***");
+                log.warning("*** Run ERROR ***");
                 progressBar.setIndeterminate(false);
                 progressBar.setStringPainted(false);
             }
@@ -862,20 +808,20 @@ public class D2Dsub_batch extends JFrame {
 				if (doGlass) {
 				    // comprovem si hi ha seleccionat fitxer vidre
 				    if (glassD2File == null || !glassD2File.exists()) {
-				        tAOut.ln("select a valid glass image first");
+				    	log.warning("Select a valid glass image first");
 				        throw new Exception();
 				    }
 				    
-				    tAOut.stat("Glass subtraction... ");
+				    log.info("Glass subtraction... ");
 				    
 				    //preparacio dades
 				    Pattern2D glass = ImgFileUtils.readPatternFile(glassD2File,false);
-				    glass.copyMaskPixelsFromImage(dataWork);
+				    glass.copyExZonesFromImage(dataWork); //TODO comprovar que funcioni he canviat el metode (era copyMaskPixelsFromImage)
 				    
 				    //escalat del vidre
 				    glass = ImgOps.correctGlass(glass);
                     if (glass==null) {
-                        log.warning("Error during glass correction, please check instrumental parameters");
+                    	log.warning("Error during glass correction, please check instrumental parameters");
                         return;
                     }
 				    if (this.glassFactor < 0){
@@ -885,21 +831,20 @@ public class D2Dsub_batch extends JFrame {
 				    
 				    //treiem el fons
 				    //les dades amb vidre sostret seran les d'entrada a posteriors operacions
-				    dataWork = ImgOps.subtractBKG_v2(dataWork, glass, this.glassFactor, tAOut)[0];
+				    dataWork = ImgOps.subtractBKG_v2(dataWork, glass, this.glassFactor)[0];
 				    
-				    tAOut.stat("Glass subtraction... DONE!");
+				    log.info("Glass subtraction... DONE!");
 				}
 				
 				if (doBkg){
-				    tAOut.stat("Background subtraction... ");
+					log.info("Background subtraction... ");
 					//metode
 					if(this.bkgOpt.equalsIgnoreCase("avsq")){
 						//necessitem 2 imatges (la iteracio anterior i la nova)
 				        Pattern2D it[] = new Pattern2D[2];
 				        it[0] = ImgOps.firstBkgPass(dataWork);
-//				        tAOut.ln("Iterations started...");
 				        for(int i=0;i<this.bkgIter;i++){
-				        	it[1] = ImgOps.calcIterAvsq(it[0], this.bkgN, tAOut, progressBar);
+				        	it[1] = ImgOps.calcIterAvsq(it[0], this.bkgN, progressBar);
 				        	it[0] = it[1]; //actualitzem l'anterior
 				        }
 				        datafons = it[1];
@@ -911,9 +856,8 @@ public class D2Dsub_batch extends JFrame {
 						//necessitem 2 imatges (la iteracio anterior i la nova)
 				        Pattern2D it[] = new Pattern2D[2];
 				        it[0] = ImgOps.firstBkgPass(dataWork);
-//				        tAOut.ln("Iterations started...");
 				        for(int i=0;i<this.bkgIter;i++){
-				        	it[1] = ImgOps.calcIterAvarc(it[0], this.amplada, this.angle, tAOut, progressBar);
+				        	it[1] = ImgOps.calcIterAvarc(it[0], this.amplada, this.angle, progressBar);
 				        	it[0] = it[1]; //actualitzem l'anterior
 				        }
 				        datafons = it[1];
@@ -926,7 +870,7 @@ public class D2Dsub_batch extends JFrame {
 				    	//nomes s'ha de fer una passada
 				        Pattern2D it[] = new Pattern2D[2];
 				        it[0] = ImgOps.firstBkgPass(dataWork);
-				        it[1] = ImgOps.calcIterAvcirc(it[0], this.stepsize, tAOut, progressBar);
+				        it[1] = ImgOps.calcIterAvcirc(it[0], this.stepsize, progressBar);
 				        datafons = it[1];
 				        //treiem el fons
 				        dataWork = ImgOps.subtractBKG(dataWork, it[1]);
@@ -934,25 +878,25 @@ public class D2Dsub_batch extends JFrame {
 
 				    //calcul del fons metode min (antic "flip")
 				    if (this.bkgOpt.equalsIgnoreCase("minsq")) {
-				    	Pattern2D fons = ImgOps.bkgMin(dataWork, this.fhor, this.fver, this.fhorver, this.aresta, this.angle, this.amplada, false, tAOut, progressBar);
+				    	Pattern2D fons = ImgOps.bkgMin(dataWork, this.fhor, this.fver, this.fhorver, this.aresta, this.angle, this.amplada, false, progressBar);
 				    	datafons = fons;
 				        //treiem el fons
 				        dataWork = ImgOps.subtractBKG(dataWork, fons);
 				    }
 				    
 				    if (this.bkgOpt.equalsIgnoreCase("minarc")) {
-				    	Pattern2D fons = ImgOps.bkgMin(dataWork, this.fhor, this.fver, this.fhorver, this.aresta, this.angle, this.amplada, true, tAOut, progressBar);
+				    	Pattern2D fons = ImgOps.bkgMin(dataWork, this.fhor, this.fver, this.fhorver, this.aresta, this.angle, this.amplada, true, progressBar);
 				    	datafons = fons;
 				        //treiem el fons
 				        dataWork = ImgOps.subtractBKG(dataWork, fons);
 				    }
-				    tAOut.stat("Background subtraction... DONE!");
+				    log.info("Background subtraction... DONE!");
 				}
 				
 				if(doLP){
-				    tAOut.stat("LP correction... ");
+					log.info("LP correction... ");
 				    dataWork = ImgOps.corrLP(dataWork, this.ipol, this.ilor, -1, false);//EIX PER DEFECTE -1 VERTICAL
-				    tAOut.stat("LP correction... DONE!");
+				    log.info("LP correction... DONE!");
 				}
 				
 			} catch (Exception e) {
@@ -1025,4 +969,14 @@ public class D2Dsub_batch extends JFrame {
 		}
 		
 	}
+
+	public MainFrame getMf() {
+		return mf;
+	}
+
+	public void setMf(MainFrame mf) {
+		this.mf = mf;
+	}
 }
+
+

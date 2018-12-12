@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.Point;
 import java.awt.geom.Point2D;
@@ -8,8 +8,7 @@ import java.util.Iterator;
 
 import org.apache.commons.math3.util.FastMath;
 
-import vava33.d2dplot.D2Dplot_global;
-
+import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.VavaLogger;
 
 public class ArcExZone {
@@ -26,7 +25,8 @@ public class ArcExZone {
     private int nclicks;
     private Point2D.Float[] clickPix;
     
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(ArcExZone.class.getName());
+    private static final String className = "ArcExZone";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     private HashSet<Point> listPixelsZone;
     int maxX;
@@ -43,10 +43,17 @@ public class ArcExZone {
         this.halfAzimApertureDeg=halfAzimApDeg;
         this.patt2D = whereIbelong;
         this.setNclicks(3);
-        calcRadialWth2t();
-        calcListPixelsZone();
-        
+        if (this.patt2D!=null) {
+            calcRadialWth2t();
+            calcListPixelsZone();            
+        }
     }
+    
+    public void recalcZones() {
+        calcRadialWth2t();
+        calcListPixelsZone();            
+    }
+    
     //empty zone (to do by clicking)
     public ArcExZone(Pattern2D whereIbelong){
         this.px=0;
@@ -170,8 +177,8 @@ public class ArcExZone {
         minX = FastMath.round(ImgOps.findMin(xs)-halfRadialWthPx);
         maxY = FastMath.round(ImgOps.findMax(ys)+halfRadialWthPx);
         minY = FastMath.round(ImgOps.findMin(ys)-halfRadialWthPx);
-        maxX = FastMath.min(maxX,patt2D.dimX-1);
-        maxY = FastMath.min(maxY,patt2D.dimY-1);
+        maxX = FastMath.min(maxX,patt2D.getDimX()-1);
+        maxY = FastMath.min(maxY,patt2D.getDimY()-1);
         minX = FastMath.max(minX,0);
         minY = FastMath.max(minY,0);
         
@@ -249,6 +256,14 @@ public class ArcExZone {
     }
     public void setHalfAzimApertureDeg(float halfAzimApertureDeg) {
         this.halfAzimApertureDeg = halfAzimApertureDeg;
+    }
+
+    public Pattern2D getPatt2D() {
+        return patt2D;
+    }
+
+    public void setPatt2D(Pattern2D patt2d) {
+        patt2D = patt2d;
     }
 }
 

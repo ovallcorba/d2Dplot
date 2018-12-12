@@ -25,7 +25,8 @@ public class PDCompound implements Comparable<PDCompound>{
     private ArrayList<String> comment;
     private ArrayList<PDReflection> peaks;
     
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(PDCompound.class.getName());
+    private static final String className = "PDcompound";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
     
     public PDCompound(String name){
         this.compName = new ArrayList<String>();

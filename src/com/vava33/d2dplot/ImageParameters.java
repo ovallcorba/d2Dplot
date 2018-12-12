@@ -8,6 +8,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -22,10 +23,9 @@ import com.vava33.d2dplot.auxi.ImageTiltRot_diag;
 import com.vava33.d2dplot.auxi.ImgFileUtils;
 import com.vava33.d2dplot.auxi.Pattern2D;
 
-public class Param_dialog extends JDialog {
-
-    private static final long serialVersionUID = -7972051523318564847L;
-    private final JPanel contentPanel = new JPanel();
+public class ImageParameters {
+    private JPanel contentPanel;
+    private JDialog paramDialog;
     private JTextField txtCentrX;
     private JTextField txtCentrY;
     private JTextField txtDistOD;
@@ -51,29 +51,30 @@ public class Param_dialog extends JDialog {
     private JButton label;
     private JButton btnUpdate;
     private JCheckBox chckbxKeepCalib;
-
-    private Pattern2D patt2D;
     private ImagePanel ip;
+    private JLabel lblSatur;
+    private JTextField txtSaturvalue;
     
     /**
      * Create the dialog.
      */
-    public Param_dialog(ImagePanel ipanel,Pattern2D p2d) {
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Param_dialog.class.getResource("/img/Icona.png")));
-        setModal(false);
-        setAlwaysOnTop(true);
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("Instrumental Parameters");
+    public ImageParameters(JFrame parent, ImagePanel ipanel) {
+    	this.contentPanel=new JPanel();
+    	paramDialog = new JDialog(parent,"Instrumental Parameters",false);
+    	paramDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(ImageParameters.class.getResource("/img/Icona.png")));
+    	paramDialog.setAlwaysOnTop(true);
+    	paramDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 476, 498);
-        getContentPane().setLayout(new MigLayout("", "[]", "[grow][]"));
+        paramDialog.setBounds(x, y, width, height);
+        paramDialog.getContentPane().setLayout(new MigLayout("", "[]", "[grow][]"));
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(this.contentPanel, "cell 0 0,grow");
-        contentPanel.setLayout(new MigLayout("fill, insets 5", "[][][grow]", "[grow][grow][grow][grow][grow][grow][grow][grow][][][]"));
+        paramDialog.getContentPane().add(this.contentPanel, "cell 0 0,grow");
+        contentPanel.setLayout(new MigLayout("fill, insets 5", "[][][grow]", "[grow][grow][grow][grow][grow][grow][][grow][][][][]"));
         {
             JLabel lblSampledetectorDistancemm = new JLabel("Sample-Detector distance (mm)=");
             contentPanel.add(lblSampledetectorDistancemm, "cell 0 0 2 1,alignx trailing,aligny center");
@@ -165,38 +166,48 @@ public class Param_dialog extends JDialog {
             contentPanel.add(txtRot, "cell 2 7,growx,aligny center");
         }
         {
+        	lblSatur = new JLabel("Saturation value (counts)");
+        	contentPanel.add(lblSatur, "cell 1 8,alignx trailing");
+        }
+        {
+        	txtSaturvalue = new JTextField();
+        	txtSaturvalue.setText("0.0");
+        	contentPanel.add(txtSaturvalue, "cell 2 8,growx");
+        	txtSaturvalue.setColumns(10);
+        }
+        {
             lblscanOmegaIni = new JLabel("(scan) omega ini (º)=");
-            contentPanel.add(lblscanOmegaIni, "cell 0 8 2 1,alignx trailing,aligny center");
+            contentPanel.add(lblscanOmegaIni, "cell 0 9 2 1,alignx trailing,aligny center");
         }
         {
             txtOmeini = new JTextField();
             txtOmeini.setText("0.0");
-            contentPanel.add(txtOmeini, "cell 2 8,growx,aligny center");
+            contentPanel.add(txtOmeini, "cell 2 9,growx,aligny center");
             txtOmeini.setColumns(10);
         }
         {
             lblscanOmegaEnd = new JLabel("(scan) omega end (º)=");
-            contentPanel.add(lblscanOmegaEnd, "cell 0 9 2 1,alignx trailing,aligny center");
+            contentPanel.add(lblscanOmegaEnd, "cell 0 10 2 1,alignx trailing,aligny center");
         }
         {
             txtOmefin = new JTextField();
             txtOmefin.setText("0.0");
-            contentPanel.add(txtOmefin, "cell 2 9,growx,aligny center");
+            contentPanel.add(txtOmefin, "cell 2 10,growx,aligny center");
             txtOmefin.setColumns(10);
         }
         {
             lblAcquisitionTime = new JLabel("Acquisition time (s)=");
-            contentPanel.add(lblAcquisitionTime, "cell 0 10 2 1,alignx trailing,aligny center");
+            contentPanel.add(lblAcquisitionTime, "cell 0 11 2 1,alignx trailing,aligny center");
         }
         {
             txtAcqtime = new JTextField();
             txtAcqtime.setText("0.0");
-            contentPanel.add(txtAcqtime, "cell 2 10,growx,aligny center");
+            contentPanel.add(txtAcqtime, "cell 2 11,growx,aligny center");
             txtAcqtime.setColumns(10);
         }
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, "cell 0 1,growx,aligny top");
+            paramDialog.getContentPane().add(buttonPane, "cell 0 1,growx,aligny top");
             buttonPane.setLayout(new MigLayout("fill, insets 5", "[][grow]", "[][grow][]"));
             JButton okButton = new JButton("Apply and Close");
             okButton.addActionListener(new ActionListener() {
@@ -229,7 +240,7 @@ public class Param_dialog extends JDialog {
             }
             okButton.setActionCommand("OK");
             buttonPane.add(okButton, "cell 1 1,grow");
-            getRootPane().setDefaultButton(okButton);
+            paramDialog.getRootPane().setDefaultButton(okButton);
             {
                 btnCancel = new JButton("Cancel");
                 btnCancel.addActionListener(new ActionListener() {
@@ -247,48 +258,51 @@ public class Param_dialog extends JDialog {
 
         // Llegim els parametres de la imatge, agafarem ipanel o si no s'ha donat doncs patt2d
         this.ip=ipanel;
-        this.patt2D=p2d;
+        paramDialog.pack();
         this.inicia();
 
     }
 
     public void inicia(){
-        if (this.ip!=null){
-            this.patt2D=ip.getPatt2D();    
-        }
+//        if (this.ip!=null){
+//            this.patt2D=ip.getPatt2D();    
+//        }
         this.getParameters();
     }
     
     private void getParameters() {
-        this.patt2D.getDistMD();
-        this.txtDistOD.setText(Float.toString(this.patt2D.getDistMD()));
-        this.txtPicSizeX.setText(Float.toString(this.patt2D.getPixSx()));
-        this.txtPicSizeY.setText(Float.toString(this.patt2D.getPixSy()));
-        this.txtCentrX.setText(Float.toString(this.patt2D.getCentrX()));
-        this.txtCentrY.setText(Float.toString(this.patt2D.getCentrY()));
-        this.txtWave.setText(Float.toString(this.patt2D.getWavel()));
-        this.txtTilt.setText(Float.toString(this.patt2D.getTiltDeg()));
-        this.txtRot.setText(Float.toString(this.patt2D.getRotDeg()));
-        this.txtOmeini.setText(Float.toString(this.patt2D.getOmeIni()));
-        this.txtOmefin.setText(Float.toString(this.patt2D.getOmeFin()));
-        this.txtAcqtime.setText(Float.toString(this.patt2D.getAcqTime()));
+        Pattern2D patt2D = this.getIp().getPatt2D();
+        this.txtDistOD.setText(Float.toString(patt2D.getDistMD()));
+        this.txtPicSizeX.setText(Float.toString(patt2D.getPixSx()));
+        this.txtPicSizeY.setText(Float.toString(patt2D.getPixSy()));
+        this.txtCentrX.setText(Float.toString(patt2D.getCentrX()));
+        this.txtCentrY.setText(Float.toString(patt2D.getCentrY()));
+        this.txtWave.setText(Float.toString(patt2D.getWavel()));
+        this.txtTilt.setText(Float.toString(patt2D.getTiltDeg()));
+        this.txtRot.setText(Float.toString(patt2D.getRotDeg()));
+        this.txtOmeini.setText(Float.toString(patt2D.getOmeIni()));
+        this.txtOmefin.setText(Float.toString(patt2D.getOmeFin()));
+        this.txtAcqtime.setText(Float.toString(patt2D.getAcqTime()));
+        this.txtSaturvalue.setText(Integer.toString(patt2D.getSaturValue()));
         this.counter = 0;
     }
 
     // true=tot correcte
     private boolean setParameters() {
+        Pattern2D patt2D = this.getIp().getPatt2D();
         try {
-            this.patt2D.setDistMD(Float.parseFloat(this.txtDistOD.getText()));
-            this.patt2D.setPixSx(Float.parseFloat(this.txtPicSizeX.getText()));
-            this.patt2D.setPixSy(Float.parseFloat(this.txtPicSizeY.getText()));
-            this.patt2D.setCentrX(Float.parseFloat(this.txtCentrX.getText()));
-            this.patt2D.setCentrY(Float.parseFloat(this.txtCentrY.getText()));
-            this.patt2D.setWavel(Float.parseFloat(this.txtWave.getText()));
-            this.patt2D.setTiltDeg(Float.parseFloat(this.txtTilt.getText()));
-            this.patt2D.setRotDeg(Float.parseFloat(this.txtRot.getText()));
-            this.patt2D.setOmeIni(Float.parseFloat(this.txtOmeini.getText()));
-            this.patt2D.setOmeFin(Float.parseFloat(this.txtOmefin.getText()));
-            this.patt2D.setAcqTime(Float.parseFloat(this.txtAcqtime.getText()));
+            patt2D.setDistMD(Float.parseFloat(this.txtDistOD.getText()));
+            patt2D.setPixSx(Float.parseFloat(this.txtPicSizeX.getText()));
+            patt2D.setPixSy(Float.parseFloat(this.txtPicSizeY.getText()));
+            patt2D.setCentrX(Float.parseFloat(this.txtCentrX.getText()));
+            patt2D.setCentrY(Float.parseFloat(this.txtCentrY.getText()));
+            patt2D.setWavel(Float.parseFloat(this.txtWave.getText()));
+            patt2D.setTiltDeg(Float.parseFloat(this.txtTilt.getText()));
+            patt2D.setRotDeg(Float.parseFloat(this.txtRot.getText()));
+            patt2D.setOmeIni(Float.parseFloat(this.txtOmeini.getText()));
+            patt2D.setOmeFin(Float.parseFloat(this.txtOmefin.getText()));
+            patt2D.setAcqTime(Float.parseFloat(this.txtAcqtime.getText()));
+            patt2D.setSaturValue(Integer.parseInt(this.txtSaturvalue.getText()));
         } catch (Exception e) {
             if(D2Dplot_global.isDebug())e.printStackTrace();
             lblCheckValues.setForeground(col[counter % 3]);
@@ -305,10 +319,11 @@ public class Param_dialog extends JDialog {
     }
     
     protected boolean do_btnApply_actionPerformed(ActionEvent e) {
+        Pattern2D patt2D = this.getIp().getPatt2D();
         boolean ok = this.setParameters();
         D2Dplot_global.setKeepCalibration(chckbxKeepCalib.isSelected());
         if (D2Dplot_global.isKeepCalibration()){
-            D2Dplot_global.setCalib(this.patt2D.getDistMD(), this.patt2D.getCentrX(), this.patt2D.getCentrY(), this.patt2D.getTiltDeg(), this.patt2D.getRotDeg());
+            D2Dplot_global.setCalib(patt2D.getDistMD(), patt2D.getCentrX(), patt2D.getCentrY(), patt2D.getTiltDeg(), patt2D.getRotDeg());
         }
         if (this.ip!=null)this.ip.actualitzarVista();
         return ok;
@@ -317,7 +332,7 @@ public class Param_dialog extends JDialog {
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
         boolean ok = do_btnApply_actionPerformed(null);
         if (ok) {
-            patt2D.recalcularCercles();
+            this.getIp().getPatt2D().recalcularCercles();
             if (this.ip!=null)this.ip.actualitzarVista();
             this.dispose();
         }
@@ -333,6 +348,7 @@ public class Param_dialog extends JDialog {
     }
     
     protected void do_btnUpdate_actionPerformed(ActionEvent e) {
+        Pattern2D patt2D = this.getIp().getPatt2D();
         //it should update from image header
         this.chckbxKeepCalib.setSelected(false);
         D2Dplot_global.setKeepCalibration(false);
@@ -345,4 +361,20 @@ public class Param_dialog extends JDialog {
         this.getParameters();
         if (this.ip!=null)this.ip.actualitzarVista();
     }
+
+    public ImagePanel getIp() {
+        return ip;
+    }
+
+    public void setIp(ImagePanel ip) {
+        this.ip = ip;
+    }
+    
+    public void dispose() {
+    	paramDialog.dispose();	
+    }
+    public void setVisible(boolean vis) {
+    	paramDialog.setVisible(vis);
+    }
+    
 }

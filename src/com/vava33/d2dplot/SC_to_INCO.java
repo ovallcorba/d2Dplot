@@ -6,12 +6,13 @@ import java.awt.Toolkit;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 import com.vava33.d2dplot.auxi.ImgFileUtils;
+import com.vava33.d2dplot.auxi.ImgFileUtils.EdfHeaderPatt2D;
 import com.vava33.d2dplot.auxi.ImgOps;
-import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
 
@@ -32,14 +33,11 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import javax.swing.JCheckBox;
 
-public class SC_to_INCO_dialog extends JDialog {
-
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1L;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(SC_to_INCO_dialog.class.getName());
-    private final JPanel contentPanel = new JPanel();
+public class SC_to_INCO {
+    private static final String className = "SCtoINCO";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
+    private JDialog scTOincoDialog;
+    private JPanel contentPanel;
     private JTextField txtIniangle;
     private JTextField txtStep;
     private JTextField txtFinalangle;
@@ -57,21 +55,20 @@ public class SC_to_INCO_dialog extends JDialog {
     private JCheckBox chckbxBackgroundSubtraction;
     private JTextField txtBkgFile;
     
-    private MainFrame mf;
     private JTextField txtBkgScale;
     private JCheckBox chckbxBkgScaleAuto;
     
     /**
      * Create the dialog.
      */
-    public SC_to_INCO_dialog(MainFrame mf) {
-        this.mf=mf;
-        setTitle("SC to INCO");
-        setBounds(100, 100, 740, 512);
-        setIconImage(Toolkit.getDefaultToolkit().getImage(SC_to_INCO_dialog.class.getResource("/img/Icona.png")));
-        getContentPane().setLayout(new BorderLayout());
+    public SC_to_INCO(JFrame parent) {
+    	this.contentPanel=new JPanel();
+    	scTOincoDialog = new JDialog(parent, "SC to INCO",false);
+    	scTOincoDialog.setBounds(100, 100, 740, 512);
+    	scTOincoDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(SC_to_INCO.class.getResource("/img/Icona.png")));
+    	scTOincoDialog.getContentPane().setLayout(new BorderLayout());
         contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(contentPanel, BorderLayout.CENTER);
+        scTOincoDialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
         contentPanel.setLayout(new MigLayout("", "[grow][]", "[grow]"));
         {
             JPanel panel = new JPanel();
@@ -237,7 +234,7 @@ public class SC_to_INCO_dialog extends JDialog {
         {
             JPanel buttonPane = new JPanel();
             buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            scTOincoDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 JButton cancelButton = new JButton("Close");
                 cancelButton.addActionListener(new ActionListener() {
@@ -252,7 +249,7 @@ public class SC_to_INCO_dialog extends JDialog {
     }
 
     protected void do_btnLoadFiles_actionPerformed(ActionEvent e) {
-        infiles = FileUtils.fchooserMultiple(this, D2Dplot_global.getWorkdirFile(), ImgFileUtils.getExtensionFilterRead(), 0,"Select 2DXRD data files to load");
+        infiles = FileUtils.fchooserMultiple(scTOincoDialog, D2Dplot_global.getWorkdirFile(), ImgFileUtils.getExtensionFilterRead(), 0,"Select 2DXRD data files to load");
         if (infiles==null){
             log.info("no files selected");
             return;
@@ -262,15 +259,15 @@ public class SC_to_INCO_dialog extends JDialog {
             return;
         }
         updateList();
-        //try to read first and last image to guess parameters
-        log.info("trying to guess parameters");
-        Pattern2D img = ImgFileUtils.readEDFheaderOnly(infiles[0]);
-        txtIniangle.setText(String.format("%.3f", img.getOmeIni()));
-        txtOutiniangle.setText(String.format("%.3f", img.getOmeIni()));
-        txtStep.setText(String.format("%.3f", img.getOmeFin()-img.getOmeIni()));
+        //try to read first and last image to guess parameters TODO: he canviat a EdfHeaderPatt2D
+        log.info("Trying to guess parameters..-");
+        EdfHeaderPatt2D img = ImgFileUtils.readEDFheaderOnly(infiles[0]);
+        txtIniangle.setText(String.format("%.3f", img.getPatt2D().getOmeIni()));
+        txtOutiniangle.setText(String.format("%.3f", img.getPatt2D().getOmeIni()));
+        txtStep.setText(String.format("%.3f", img.getPatt2D().getOmeFin()-img.getPatt2D().getOmeIni()));
         img = ImgFileUtils.readEDFheaderOnly(infiles[infiles.length-1]);
-        txtFinalangle.setText(String.format("%.3f", img.getOmeFin()));
-        txtOutfinalangle.setText(String.format("%.3f", img.getOmeFin()));
+        txtFinalangle.setText(String.format("%.3f", img.getPatt2D().getOmeFin()));
+        txtOutfinalangle.setText(String.format("%.3f", img.getPatt2D().getOmeFin()));
         
     }
     
@@ -288,8 +285,8 @@ public class SC_to_INCO_dialog extends JDialog {
     
     protected void do_btnWriteFiles_actionPerformed(ActionEvent e) {
         
-        File dir = FileUtils.fchooserOpenDir(this, D2Dplot_global.getWorkdirFile(), "folder to save INCO-ready image files");
-        log.info("outdir="+dir.getAbsolutePath());
+        File dir = FileUtils.fchooserOpenDir(scTOincoDialog, D2Dplot_global.getWorkdirFile(), "folder to save INCO-ready image files");
+        log.info("Outdir="+dir.getAbsolutePath());
         String baseFname = txtOutfname.getText().trim();
         
         //TODO preguntar format??
@@ -306,19 +303,19 @@ public class SC_to_INCO_dialog extends JDialog {
             outomegaacq = Float.parseFloat(txtOutomegaacq.getText());
             outomegaInc = Float.parseFloat(txtOutomegainc.getText());
         }catch(Exception ex) {
-            log.info("error reading parameters, please check");
+            log.warning("Error reading parameters, please check");
             return;
         }
         if (outFin<outIni) {
-            FileUtils.InfoDialog(this, "Please, final angle must be bigger than initial angle", "");
+        	log.warning("Please, final angle must be bigger than initial angle");
             return;
         }
         if (outomegaacq<=0) {
-            FileUtils.InfoDialog(this, "Please, acquisition angle must be positive", "");
+        	log.warning("Please, acquisition angle must be positive");
             return;
         }
         if (outomegaInc<=0) {
-            FileUtils.InfoDialog(this, "Please, increment angle must be positive", "");
+        	log.warning("Please, increment angle must be positive");
             return;
         }
 
@@ -327,7 +324,7 @@ public class SC_to_INCO_dialog extends JDialog {
         try {
             bkgscale = Float.parseFloat(txtBkgScale.getText());    
         }catch(Exception ex) {
-            log.debug("error reading background scale, set to 1.0");
+            log.warning("Error reading background scale, set to 1.0");
         }
         if (chckbxBkgScaleAuto.isSelected()) {
             bkgscale = -1.0f; //aixo vol dir auto calcular
@@ -337,7 +334,7 @@ public class SC_to_INCO_dialog extends JDialog {
             bkgfile = null;
         }
         
-        sumwk = new ImgOps.sumImagesIncoFileWorker(infiles, bkgfile, bkgscale, scAini, scStep, outIni, outFin, outomegaacq, outomegaInc, chckbxBackgroundSubtraction.isSelected(), baseFname, dir, mf.gettAOut());
+        sumwk = new ImgOps.sumImagesIncoFileWorker(infiles, bkgfile, bkgscale, scAini, scStep, outIni, outFin, outomegaacq, outomegaInc, chckbxBackgroundSubtraction.isSelected(), baseFname, dir);
         
         pm = new ProgressMonitor(null,
                 "Summing Images...",
@@ -352,15 +349,13 @@ public class SC_to_INCO_dialog extends JDialog {
                     int progress = (Integer) evt.getNewValue();
                     pm.setProgress(progress);
                     pm.setNote(String.format("%d%%\n", progress));
-                    log.fine("hi from inside if progress");
                     if (pm.isCanceled() || sumwk.isDone()) {
-                        log.fine("hi from inside if cancel/done");
                         Toolkit.getDefaultToolkit().beep();
                         if (pm.isCanceled()) {
                             sumwk.cancel(true);
-                            log.info("sumwk canceled");
+                            log.info("sum (inco) canceled");
                         } else {
-                            log.info("sumwk finished!!");
+                            log.info("sum (inco) finished!!");
                         }
                         pm.close();
                     }
@@ -371,7 +366,7 @@ public class SC_to_INCO_dialog extends JDialog {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    log.info("finished summing");
+                    log.info("Sum finished!");
                 }
             }
         });
@@ -379,15 +374,30 @@ public class SC_to_INCO_dialog extends JDialog {
        
     }
     
+    private void stopExecution() {
+    	if (sumwk!=null) {
+    		sumwk.cancel(true);
+    	}
+    }
+    
     protected void do_cancelButton_actionPerformed(ActionEvent e) {
-        this.dispose();
+    	this.dispose();
     }
 
     protected void do_btnSelectFile_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter filt[] = ImgFileUtils.getExtensionFilterRead();
-        File f = FileUtils.fchooserOpen(this, D2Dplot_global.getWorkdirFile(), filt, 0);
+        File f = FileUtils.fchooserOpen(scTOincoDialog, D2Dplot_global.getWorkdirFile(), filt, 0);
         if (f!=null) {
             txtBkgFile.setText(f.getAbsolutePath());
         }
     }
+    public void setVisible(boolean vis) {
+    	scTOincoDialog.setVisible(vis);
+    }
+    
+	public void dispose() {
+		this.stopExecution();
+		scTOincoDialog.dispose();
+	}
+
 }

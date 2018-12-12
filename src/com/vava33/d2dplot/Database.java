@@ -1,6 +1,5 @@
 package com.vava33.d2dplot;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Toolkit;
@@ -22,6 +21,7 @@ import java.util.Scanner;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -45,10 +45,8 @@ import com.vava33.d2dplot.auxi.PDCompound;
 import com.vava33.d2dplot.auxi.PDDatabase;
 import com.vava33.d2dplot.auxi.PDReflection;
 import com.vava33.d2dplot.auxi.PDSearchResult;
-import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.Cif_file;
 import com.vava33.jutils.FileUtils;
-import com.vava33.jutils.LogJTextArea;
 import com.vava33.jutils.VavaLogger;
 
 import javax.swing.event.ListSelectionListener;
@@ -61,25 +59,21 @@ import javax.swing.JTextArea;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-public class DB_dialog extends JFrame {
+public class Database  {
 
-    private static final long serialVersionUID = -6104927797410689910L;
     private static float minDspacingToSearch = 1.15f; //def 1.15
     private static float minDspacingLatGen = 1.05f; //def 1.05
     private static final int maxNsol = 50;
 
+    private JDialog DBdialog;
     private JButton btnLoadDB;
     private JCheckBox cbox_onTop;
     private JCheckBox chckbxPDdata;
-    private final JPanel contentPanel = new JPanel();
+    private JPanel contentPanel;
     private JLabel lblHelp;
     private JList<Object> listCompounds;
     private JPanel panel_left;
-    private JPanel panel_right;
     private JScrollPane scrollPane;
-    private JScrollPane scrollPane_1;
-    private JSplitPane splitPane;
-    private static LogJTextArea tAOut;
     
     private DefaultListModel<Object> lm;
     private boolean showPDDataRings;
@@ -98,9 +92,9 @@ public class DB_dialog extends JFrame {
     private JPanel panel;
     private JPanel panel_1;
     private JButton btnAddCompound;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(DB_dialog.class.getName());
+    private static final String className = "DB";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
-    private Pattern2D patt2d;
     private ImagePanel ipanel;
     private JButton btnAddToQuicklist;
     private JPanel panel_3;
@@ -132,8 +126,10 @@ public class DB_dialog extends JFrame {
     /**
      * Create the dialog.
      */
-    public DB_dialog(ImagePanel ip) {
-        addWindowListener(new WindowAdapter() {
+    public Database(JFrame parent, ImagePanel ip) {
+    	DBdialog = new JDialog(parent,"Compound DB",false);
+    	this.contentPanel=new JPanel();
+    	DBdialog.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 do_this_windowClosing(e);
@@ -141,26 +137,21 @@ public class DB_dialog extends JFrame {
         });
         this.setIpanel(ip);
         
-        setIconImage(Toolkit.getDefaultToolkit().getImage(DB_dialog.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        setTitle("Compound DB");
+        DBdialog.setIconImage(Toolkit.getDefaultToolkit().getImage(Database.class.getResource("/img/Icona.png")));
+        DBdialog.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 820, 680);
-        getContentPane().setLayout(new MigLayout("fill, insets 5", "[grow]", "[grow][37px]"));
-        getContentPane().add(this.contentPanel, "cell 0 0,grow");
+        DBdialog.setBounds(x, y, width, height);
+        DBdialog.getContentPane().setLayout(new MigLayout("fill, insets 5", "[grow]", "[grow][37px]"));
+        DBdialog.getContentPane().add(this.contentPanel, "cell 0 0,grow");
         contentPanel.setLayout(new MigLayout("fill, insets 0", "[grow]", "[598px,grow]"));
         {
-            this.splitPane = new JSplitPane();
-            splitPane.setResizeWeight(0.7);
-            this.splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
-            contentPanel.add(this.splitPane, "cell 0 0,grow");
             {
                 this.panel_left = new JPanel();
-                this.splitPane.setLeftComponent(this.panel_left);
+                contentPanel.add(this.panel_left, "cell 0 0,grow");
                 {
                     {
                         {
@@ -444,7 +435,7 @@ public class DB_dialog extends JFrame {
                             });
                             {
 //                                splitPane_1.setDividerLocation(375);
-                                splitPane_1.setDividerLocation(this.getWidth()/2);
+                                splitPane_1.setDividerLocation(DBdialog.getWidth()/2);
                             }
                             btnAddCompound.addActionListener(new ActionListener() {
                                 public void actionPerformed(ActionEvent arg0) {
@@ -457,30 +448,10 @@ public class DB_dialog extends JFrame {
                 {
                 }
             }
-            {
-                this.panel_right = new JPanel();
-                this.panel_right.setBackground(Color.BLACK);
-                this.splitPane.setRightComponent(this.panel_right);
-                panel_right.setLayout(new MigLayout("fill, insets 5", "[grow]", "[grow]"));
-                {
-                    this.scrollPane_1 = new JScrollPane();
-                    scrollPane_1.setViewportBorder(null);
-                    this.scrollPane_1.setBorder(null);
-                    this.panel_right.add(this.scrollPane_1, "cell 0 0,grow");
-                    {
-                        DB_dialog.tAOut = new LogJTextArea();
-                        DB_dialog.tAOut.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
-                        DB_dialog.tAOut.setWrapStyleWord(true);
-                        DB_dialog.tAOut.setLineWrap(true);
-                        DB_dialog.tAOut.setEditable(false);
-                        this.scrollPane_1.setViewportView(DB_dialog.tAOut);
-                    }
-                }
-            }
         }
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, "cell 0 1,growx,aligny top");
+            DBdialog.getContentPane().add(buttonPane, "cell 0 1,growx,aligny top");
             JButton okButton = new JButton("close");
             okButton.addActionListener(new ActionListener() {
                 @Override
@@ -498,32 +469,38 @@ public class DB_dialog extends JFrame {
             }
             okButton.setActionCommand("OK");
             buttonPane.add(okButton, "cell 1 0,alignx right,aligny center");
-            getRootPane().setDefaultButton(okButton);
+            DBdialog.getRootPane().setDefaultButton(okButton);
         }
-        this.setAlwaysOnTop(cbox_onTop.isSelected());
-        tAOut.ln("** PDDatabase **");
+        DBdialog.setAlwaysOnTop(cbox_onTop.isSelected());
+        log.info("** PDDatabase **");
+        DBdialog.pack();
         this.inicia();
     }
 
-    @Override
-    public void dispose() {
-        this.chckbxPDdata.setSelected(false);
-        super.dispose();
-    }
-
     public void inicia(){
-        this.setPatt2d(this.getIpanel().getPatt2D());
+//        this.setPatt2d(this.getIpanel().getPatt2D());
         lm = new DefaultListModel<Object>();
         listCompounds.setModel(lm);
-        tAOut.ln(" Reading default database: "+PDDatabase.getDefaultDBpath());
+//        tAOut.ln(" Reading default database: "+PDDatabase.getDefaultDBpath());//TODO no cal dir-ho ja que es diu al llegir-ho
         this.readDB(true);
         //select the first compound
+        //set the log of cellsymmetry to the same level
+        Cell.setLogEnabled(log.isEnabled());
+        Cell.setLogLevel(log.getLogLevelString());
+        SpaceGroup.setLogEnabled(log.isEnabled());
+        SpaceGroup.setLogLevel(log.getLogLevelString());
     }
-   
+
+	//es una manera de posar al log tot el que surt pel txtArea local
+//	public void printTaOut(String msg) {
+//        tAOut.stat(msg);
+//		log.debug(msg);
+//	}
+    
     private void readDB(boolean readDefault) {
         
         //primer creem el progress monitor, 
-        pm = new ProgressMonitor(this,
+        pm = new ProgressMonitor(DBdialog,
                 "Reading DB file...",
                 "", 0, 100);
         pm.setProgress(0);
@@ -536,9 +513,9 @@ public class DB_dialog extends JFrame {
         if (!readDefault) {
             //Load file
             FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB file (db,txt,dat)", "db", "txt", "dat")};
-            DBFile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+            DBFile = FileUtils.fchooserOpen(DBdialog,new File(D2Dplot_global.getWorkdir()), filter, 0);
             if(DBFile==null){
-                tAOut.stat("No data file selected");
+            	log.warning("No data file selected");
                 return;
             }
             D2Dplot_global.setWorkdir(DBFile);
@@ -560,11 +537,11 @@ public class DB_dialog extends JFrame {
                       Toolkit.getDefaultToolkit().beep();
                       if (pm.isCanceled()) {
                           openDBFwk.cancel(true);
-                          tAOut.stat("reading of DB file "+openDBFwk.getReadedFile()+" stopped!");
-                          tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
+                          log.info("reading of DB file "+openDBFwk.getReadedFile()+" stopped!");
+                          log.info("Number of compounds = "+PDDatabase.getnCompounds());    
                       } else {
-                          tAOut.stat("reading of DB file "+openDBFwk.getReadedFile()+" finished!");
-                          tAOut.stat("Number of compounds = "+PDDatabase.getnCompounds());    
+                    	  log.info("reading of DB file "+openDBFwk.getReadedFile()+" finished!");
+                    	  log.info("Number of compounds = "+PDDatabase.getnCompounds());    
                       }
                       pm.close();
                       pBarDB.setValue(100);
@@ -583,7 +560,7 @@ public class DB_dialog extends JFrame {
         openDBFwk.execute();
         if (!new File(D2Dplot_global.DBfile).getName().equalsIgnoreCase(DBFile.getName())){
             //ask if this new file should become the default one on config
-            boolean defDB = FileUtils.YesNoDialog(this, "Set this DB file as the default for further sessions?");
+            boolean defDB = FileUtils.YesNoDialog(DBdialog, "Set this DB file as the default for further sessions?");
             if (defDB) {
                 D2Dplot_global.DBfile=DBFile.getAbsolutePath();
             }
@@ -596,7 +573,7 @@ public class DB_dialog extends JFrame {
     }
 
     protected void do_cbox_onTop_itemStateChanged(ItemEvent arg0) {
-        this.setAlwaysOnTop(cbox_onTop.isSelected());
+    	DBdialog.setAlwaysOnTop(cbox_onTop.isSelected());
     }
 
     protected void do_chckbxCalibrate_itemStateChanged(ItemEvent arg0) {
@@ -614,25 +591,26 @@ public class DB_dialog extends JFrame {
     }
 
     protected void do_lbllist_mouseReleased(MouseEvent e) {
-        tAOut.ln("");
-        tAOut.ln("** General help **");
-        tAOut.ln(" - Click on a compound to see the rings on the image (if ShowRings is selected)");
-        tAOut.ln(" - Check apply name filter and type to find the desired compound");
-        tAOut.ln(" - Add/Edit compounds by clicking the respective buttons and filling the info. Alternatively you can edit manually the DB file "
-                + "(which is a simple self-explanatory text file)");
-        tAOut.ln(" - Add to QuickList (QL) to access the rings from the main window directly. Compounds in the QL are saved in a separate file "
-                + "with the same format as the DB file and can also be edited the same way");
-        tAOut.ln("** Search by peaks **");
-        tAOut.ln(" - On the main window click on the desired rings so that they are selected in the point list (Sel.points should be active)");
-        tAOut.ln(" - Click the button -search by peaks-");
-        tAOut.ln(" - List will be updated by the best matching compounds (with respective residuals)");
-        tAOut.ln(" - Click on the compounds to see the rings on top of your image and check if they really match");
-        tAOut.ln("");
-        tAOut.ln("Note:\n"
-                + "The default DB is a small selection of compounds taken from different sources, mostly publications. Each entry contains the reference from "
-                + "where it has been taken (with the respective authors) which can be retrieved by clicking -compound info- or by editing the compound."
-                + "For any doubts/comments/complaints/suggestions, please contact the author\n");
-        tAOut.ln("");
+        String msg = "\n"
+                +"** General help **\n"
+                +" - Click on a compound to see the rings on the image (if ShowRings is selected)\n"
+                +" - Check apply name filter and type to find the desired compound\n"
+                +" - Add/Edit compounds by clicking the respective buttons and filling the info. Alternatively you can edit manually the DB file\n"
+                + "(which is a simple self-explanatory text file)\n"
+                +" - Add to QuickList (QL) to access the rings from the main window directly. Compounds in the QL are saved in a separate file\n"
+                + "with the same format as the DB file and can also be edited the same way\n"
+                +"** Search by peaks **\n"
+                +" - On the main window click on the desired rings so that they are selected in the point list (Sel.points should be active)\n"
+                +" - Click the button -search by peaks-\n"
+                +" - List will be updated by the best matching compounds (with respective residuals)\n"
+                +" - Click on the compounds to see the rings on top of your image and check if they really match\n"
+                +"\n"
+                +"Note:\n"
+                + "The default DB is a small selection of compounds taken from different sources, mostly publications. Each entry contains the reference from\n"
+                + "where it has been taken (with the respective authors) which can be retrieved by clicking -compound info- or by editing the compound.\n"
+                + "For any doubts/comments/complaints/suggestions, please contact the author\n"
+                +"\n";
+        FileUtils.InfoDialog(DBdialog, msg, "Database Help");
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
@@ -698,7 +676,7 @@ public class DB_dialog extends JFrame {
             PDCompound edited = new PDCompound("aa");
             this.updateCompoundFromFields(edited,false);
             if (edited.compareTo(oldCompound)!=0) {
-                boolean update = FileUtils.YesNoDialog(this, "Previous compound had changed, update it?");
+                boolean update = FileUtils.YesNoDialog(DBdialog, "Previous compound had changed, update it?");
                 if (update) {
                     this.updateCompoundFromFields(oldCompound,true);
                     PDDatabase.setDBmodified(true);
@@ -779,7 +757,7 @@ public class DB_dialog extends JFrame {
     
     public void searchPeaks(){
         
-        pm = new ProgressMonitor(this,
+        pm = new ProgressMonitor(DBdialog,
                 "Searching for peak matching...",
                 "", 0, 100);
         pm.setProgress(0);
@@ -787,7 +765,7 @@ public class DB_dialog extends JFrame {
         pBarDB.setString("Searching DB");
         pBarDB.setStringPainted(true);
         
-        searchDBwk = new PDDatabase.searchDBWorker(patt2d,minDspacingToSearch);
+        searchDBwk = new PDDatabase.searchDBWorker(this.getIpanel().getPatt2D(),minDspacingToSearch);
         searchDBwk.addPropertyChangeListener(new PropertyChangeListener() {
 
             @Override
@@ -804,9 +782,9 @@ public class DB_dialog extends JFrame {
                       if (pm.isCanceled()) {
                           searchDBwk.cancel(true);
                           searchDBwk.setStop(true);
-                          tAOut.stat("search cancelled");
+                          log.warning("search cancelled");
                       } else {
-                          tAOut.stat("search finished!");
+                    	  log.info("search finished!");
                           loadSearchPeaksResults();
                       }
                       pm.close();
@@ -825,8 +803,8 @@ public class DB_dialog extends JFrame {
     
     //la faig nova passant PuntsCercles al swingworker
     protected void do_btnSearchByPeaks_actionPerformed(ActionEvent e) {
-        if (getPatt2d().getPuntsCercles().isEmpty()){
-            tAOut.stat("Please select some peaks clicking in the image");
+        if (this.getIpanel().getPatt2D().getPuntsCercles().isEmpty()){
+        	log.info("Please select some peaks clicking in the image");
             return;
         }
         this.searchPeaks();
@@ -872,25 +850,26 @@ public class DB_dialog extends JFrame {
             });
             if (txtNamefilter.getText().trim().length() == 0){
                 listCompounds.setModel(lm);
-                tAOut.stat("Number of compounds = "+lm.getSize());    
+                log.info("Number of compounds = "+lm.getSize());    
             }else{
-                tAOut.stat("Number of (filtered) compounds = "+filteredListModel.getSize());    
+            	log.info("Number of (filtered) compounds = "+filteredListModel.getSize());    
             }
         }
         this.getIpanel().actualitzarVista();
         
     }
     protected void do_btnResetSearch_actionPerformed(ActionEvent arg0) {
-        this.updateListAllCompounds();
+    	this.txtNamefilter.setText("");
+    	this.updateListAllCompounds();
         this.getIpanel().actualitzarVista();
     }
     protected void do_btnSaveDb_actionPerformed(ActionEvent arg0) {
         FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("DB files", "db", "DB")};
-        File f = FileUtils.fchooserSaveAsk(this, new File(PDDatabase.getCurrentDB()),filter,null);
+        File f = FileUtils.fchooserSaveAsk(DBdialog, new File(PDDatabase.getCurrentDB()),filter,null);
         if (f == null)return;
         D2Dplot_global.setWorkdir(f);
         //primer creem el progress monitor, 
-        pm = new ProgressMonitor(this,
+        pm = new ProgressMonitor(DBdialog,
                 "Saving DB file...",
                 "", 0, 100);
         pm.setProgress(0);
@@ -912,9 +891,9 @@ public class DB_dialog extends JFrame {
                         Toolkit.getDefaultToolkit().beep();
                         if (pm.isCanceled()) {
                             saveDBFwk.cancel(true);
-                            tAOut.stat("Error saving file "+saveDBFwk.getDbFileString());
+                            log.warning("Error saving file "+saveDBFwk.getDbFileString());
                         } else {
-                            tAOut.stat("DB saved to "+saveDBFwk.getDbFileString());
+                        	log.info("DB saved to "+saveDBFwk.getDbFileString());
                         }
                         pm.close();
                         pBarDB.setValue(100);
@@ -929,19 +908,11 @@ public class DB_dialog extends JFrame {
         saveDBFwk.execute();
         if (!new File(D2Dplot_global.DBfile).getName().equalsIgnoreCase(saveDBFwk.getDbFileString())){
             //ask if this new file should become the default one on config
-            boolean defDB = FileUtils.YesNoDialog(this, "Set this DB file as the default for further sessions?");
+            boolean defDB = FileUtils.YesNoDialog(DBdialog, "Set this DB file as the default for further sessions?");
             if (defDB) {
                 D2Dplot_global.DBfile=f.getAbsolutePath();
             }
         }
-    }
-
-    public Pattern2D getPatt2d() {
-        return patt2d;
-    }
-
-    public void setPatt2d(Pattern2D patt2d) {
-        this.patt2d = patt2d;
     }
 
     public ImagePanel getIpanel() {
@@ -963,7 +934,7 @@ public class DB_dialog extends JFrame {
     }
 
     public static void setMinDspacingToSearch(float minDspacingToSearch) {
-        DB_dialog.minDspacingToSearch = minDspacingToSearch;
+        Database.minDspacingToSearch = minDspacingToSearch;
     }
     
     protected void do_btnApplyChanges_actionPerformed(ActionEvent e) {
@@ -1000,7 +971,7 @@ public class DB_dialog extends JFrame {
     }
     
     protected void do_btnRemove_actionPerformed(ActionEvent e) {
-        boolean remove = FileUtils.YesNoDialog(this, "Remove selected Compound?");
+        boolean remove = FileUtils.YesNoDialog(DBdialog, "Remove selected Compound?");
         if (remove) PDDatabase.getDBCompList().remove(this.getCurrentCompound());
         this.updateListAllCompounds();
         PDDatabase.setDBmodified(true);
@@ -1020,11 +991,11 @@ public class DB_dialog extends JFrame {
             gamma = Float.parseFloat(cellp[5]);
         }catch(Exception e){
             if (D2Dplot_global.isDebug())e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error parsing cell parameters, should be: a b c alpha beta gamma");
+            JOptionPane.showMessageDialog(DBdialog, "Error parsing cell parameters, should be: a b c alpha beta gamma");
             return false;
         }
         if (txtName.getText().isEmpty()){
-            JOptionPane.showMessageDialog(this, "Please give the compound name");
+            JOptionPane.showMessageDialog(DBdialog, "Please give the compound name");
             return false;
         }
         
@@ -1035,7 +1006,7 @@ public class DB_dialog extends JFrame {
         for (int i=0;i<hkl_lines.length;i++){
             String[] line = hkl_lines[i].trim().split("\\s+");
             if (line.length<5){
-                JOptionPane.showMessageDialog(this, "Error in hkl lines, should be: h k l dspacing Intensity");
+                JOptionPane.showMessageDialog(DBdialog, "Error in hkl lines, should be: h k l dspacing Intensity");
                 return false;
             }else{
                 try{
@@ -1053,7 +1024,7 @@ public class DB_dialog extends JFrame {
                     PDReflection refl = new PDReflection(h,k,l,dsp,inten);
                     pdref.add(refl);
                 }catch(Exception e){
-                    JOptionPane.showMessageDialog(this, "Error in parsing hkl lines, e.g: 1 0 0 12.5 100.0");
+                    JOptionPane.showMessageDialog(DBdialog, "Error in parsing hkl lines, e.g: 1 0 0 12.5 100.0");
                     return false;
                 }
             }
@@ -1079,7 +1050,7 @@ public class DB_dialog extends JFrame {
         comp.setPeaks(pdref);
         
         //don't forget to save the DB file to keep changes for future openings.
-        if(warningSave)JOptionPane.showMessageDialog(this, "Do not forget to save the DB into a file \n(otherwise changes will be lost on close)");
+        if(warningSave)JOptionPane.showMessageDialog(DBdialog, "Do not forget to save the DB into a file \n(otherwise changes will be lost on close)");
         
 //        this.updateListAllCompounds();
         return true;
@@ -1089,7 +1060,7 @@ public class DB_dialog extends JFrame {
         //lines like this:
         //0  -1  -1  26042. 547.139   1
         FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("HKL file", "hkl", "HKL")};
-        File hklfile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+        File hklfile = FileUtils.fchooserOpen(DBdialog,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if(hklfile==null)return;
         D2Dplot_global.setWorkdir(hklfile);
         
@@ -1105,7 +1076,7 @@ public class DB_dialog extends JFrame {
             gamma = Float.parseFloat(cellp[5]);
         }catch(Exception ex){
             if (D2Dplot_global.isDebug())ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Cell parameters needed (a b c alpha beta gamma) to parse hkl file");
+            JOptionPane.showMessageDialog(DBdialog, "Cell parameters needed (a b c alpha beta gamma) to parse hkl file");
             return;
         }
         
@@ -1124,18 +1095,18 @@ public class DB_dialog extends JFrame {
                     refs.add(new PDReflection(h,k,l,-1,inten));
                 }catch(Exception ex2){
                     if (D2Dplot_global.isDebug())ex2.printStackTrace();
-                    log.warning("error parsing values");
+                    log.warning("Error parsing h,k,l,intensity values");
                 }
             }
             ImgOps.getDspacingFromHKL(refs, a, b, c, alfa, beta, gamma);
             shkl.close();
         } catch (Exception ex) {
             if (D2Dplot_global.isDebug())ex.printStackTrace();
-            log.warning("error reading file");
+            log.warning("Error reading HKL file");
         }
         
         if (refs.size()==0){
-            log.warning("no reflections found");
+            log.warning("No reflections found");
             return;
         }
         
@@ -1162,7 +1133,7 @@ public class DB_dialog extends JFrame {
     
     protected void do_btnImportCif_actionPerformed(ActionEvent e) {
         FileNameExtensionFilter[] filter = {new FileNameExtensionFilter("CIF file", "cif", "CIF")};
-        File ciffile = FileUtils.fchooserOpen(this,new File(D2Dplot_global.getWorkdir()), filter, 0);
+        File ciffile = FileUtils.fchooserOpen(DBdialog,new File(D2Dplot_global.getWorkdir()), filter, 0);
         if(ciffile==null)return;
         D2Dplot_global.setWorkdir(ciffile);
         Cif_file cf = new Cif_file(ciffile,true);
@@ -1211,7 +1182,7 @@ public class DB_dialog extends JFrame {
             gamma = Float.parseFloat(cellp[5]);
         }catch(Exception ex){
             if (D2Dplot_global.isDebug())ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Cell parameters needed (a b c alpha beta gamma) to parse hkl file");
+            JOptionPane.showMessageDialog(DBdialog, "Cell parameters needed (a b c alpha beta gamma) to parse hkl file");
             return;
         }
         Cell cel = new Cell(a,b,c,alfa,beta,gamma,sg.getSGnum());
@@ -1231,7 +1202,7 @@ public class DB_dialog extends JFrame {
     private void checkSaveAndDispose() {
         if(PDDatabase.isDBmodified()){
             //prompt and save QL file if necessary
-            int save = FileUtils.YesNoCancelDialog(this, "Database has changed, Do you want to save it?");
+            int save = FileUtils.YesNoCancelDialog(DBdialog, "Database has changed, Do you want to save it?");
             if (save==1) {
                 this.do_btnSaveDb_actionPerformed(null);
             }
@@ -1240,5 +1211,13 @@ public class DB_dialog extends JFrame {
             }
         }
         this.dispose();
+    }
+    public void setVisible(boolean vis) {
+    	DBdialog.setVisible(vis);
+    	if(vis)this.chckbxPDdata.setSelected(true);
+    }
+    public void dispose() {
+        this.chckbxPDdata.setSelected(false);
+        DBdialog.dispose();
     }
 }

@@ -1,6 +1,7 @@
-package vava33.d2dplot;
+package com.vava33.d2dplot;
 
 import java.awt.BorderLayout;
+import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.Toolkit;
@@ -10,16 +11,17 @@ import java.awt.event.ActionListener;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import net.miginfocom.swing.MigLayout;
 
-public class Help_dialog extends JDialog {
+public class Help  {
 
-    private static final long serialVersionUID = 5573831371448966498L;
-    private final JPanel contentPanel = new JPanel();
+    private JPanel contentPanel;
+    private JDialog helpDialog;
     private JLabel lblTalplogo;
     private JLabel lbloriolVallcorbaJordi;
 
@@ -27,25 +29,25 @@ public class Help_dialog extends JDialog {
      * Create the dialog.
      * @wbp.parser.constructor
      */
-    public Help_dialog(String title,String text) {
-        setModal(true);
-        setModalityType(ModalityType.APPLICATION_MODAL);
-        setAlwaysOnTop(true);
-        setIconImage(Toolkit.getDefaultToolkit().getImage(Help_dialog.class.getResource("/img/Icona.png")));
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle(title);
+    public Help(JFrame parent, String title,String text) {
+    	this.contentPanel=new JPanel();
+    	helpDialog = new JDialog(parent,title,true);
+    	helpDialog.setModalityType(ModalityType.APPLICATION_MODAL);
+    	helpDialog.setAlwaysOnTop(true);
+    	helpDialog.setIconImage(Toolkit.getDefaultToolkit().getImage(Help.class.getResource("/img/Icona.png")));
+    	helpDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int width = 660;
         int height = 730;
         int x = (screen.width - width) / 2;
         int y = (screen.height - height) / 2;
-        setBounds(x, y, 570, 630);
-        getContentPane().setLayout(new BorderLayout());
+        helpDialog.setBounds(x, y, 570, 630);
+        helpDialog.getContentPane().setLayout(new BorderLayout());
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        helpDialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
         {
             JPanel buttonPane = new JPanel();
-            getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            helpDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             JButton okButton = new JButton("Close");
             okButton.addActionListener(new ActionListener() {
                 @Override
@@ -55,11 +57,11 @@ public class Help_dialog extends JDialog {
             });
             okButton.setActionCommand("OK");
             buttonPane.add(okButton);
-            getRootPane().setDefaultButton(okButton);
+            helpDialog.getRootPane().setDefaultButton(okButton);
         }
 
         // posem el logo escalat
-        Image img = Toolkit.getDefaultToolkit().getImage(Help_dialog.class.getResource("/img/Icona.png"));
+        Image img = Toolkit.getDefaultToolkit().getImage(Help.class.getResource("/img/Icona.png"));
         Image newimg = img.getScaledInstance(-100, 64, java.awt.Image.SCALE_SMOOTH);
         ImageIcon logo = new ImageIcon(newimg);
         contentPanel.setLayout(new MigLayout("", "[][grow]", "[grow][]"));
@@ -80,8 +82,8 @@ public class Help_dialog extends JDialog {
 
     }
 
-    public Help_dialog(String title,String text,boolean noSignature) {
-        this(title,text);
+    public Help(JFrame parent, String title,String text,boolean noSignature) {
+        this(parent,title,text);
         if (noSignature){
             lbloriolVallcorbaJordi.setVisible(false);
             lblTalplogo.setVisible(false);
@@ -89,6 +91,20 @@ public class Help_dialog extends JDialog {
     }
     
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
-        this.dispose();
+    	helpDialog.dispose();
     }
+
+	/**
+	 * @return the helpDialog
+	 */
+	public JDialog getHelpDialog() {
+		return helpDialog;
+	}
+
+	/**
+	 * @param helpDialog the helpDialog to set
+	 */
+	public void setHelpDialog(JDialog helpDialog) {
+		this.helpDialog = helpDialog;
+	}
 }

@@ -1,4 +1,4 @@
-package vava33.d2dplot.auxi;
+package com.vava33.d2dplot.auxi;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -10,9 +10,8 @@ import javax.swing.JTextField;
 
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.jutils.VavaLogger;
-
-import vava33.d2dplot.D2Dplot_global;
 
 public class OrientSolucio implements Comparable<Object>{
     // statics aplicables a totes les solucions, es a dir caracteristiques de les solucions
@@ -37,7 +36,8 @@ public class OrientSolucio implements Comparable<Object>{
     private ArrayList<Peak> peaksPCS; // contindra els pics en cas que sigui un PCS
     private float numRefCoincidents; // valor de la funcio de rotacio de la solucio en questio -->ARA JA NO, ES EL NOMBRE DE REFLEXIONS COINCIDENTS
     private float angR_lon,angS_lat,angT_spin;
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(OrientSolucio.class.getName());
+    private static final String className = "OrientSolucio";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
 //  private boolean showSol; // mostra la solucio o no la mostra
     

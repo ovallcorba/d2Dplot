@@ -4,10 +4,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import com.vava33.d2dplot.Calib_dialog;
+import com.vava33.d2dplot.Calibration;
 import com.vava33.d2dplot.D2Dplot_global;
-import com.vava33.d2dplot.Dinco_frame;
-import com.vava33.d2dplot.IntegracioRadial;
+import com.vava33.d2dplot.IncoPlot;
+import com.vava33.d2dplot.ConvertTo1DXRD;
 import com.vava33.d2dplot.MainFrame;
 import com.vava33.jutils.ConsoleWritter;
 import com.vava33.jutils.FileUtils;
@@ -19,8 +19,8 @@ public final class ArgumentLauncher {
 
     private static boolean launchGraphics = true; //dira si cal mostrar o no el graphical user interface o sortir del programa directament
     
-    private static VavaLogger log = D2Dplot_global.getVavaLogger(ArgumentLauncher.class.getName());
-
+    private static final String className = "ArgLauncher";
+    private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
     /*
      * -macro com a primer argument implica interactive
      * el segon argument aleshores ha de ser la imatge de treball
@@ -152,7 +152,7 @@ public final class ArgumentLauncher {
                 ConsoleWritter.stat(String.format("SOL file found: %s", fsol.toString()));
                 //OBRIM dialeg INCO directament amb un fitxer SOL
                 if (mf.getDincoFrame() == null) {
-                    mf.setDincoFrame(new Dinco_frame(mf.getPanelImatge()));
+                    mf.setDincoFrame(new IncoPlot(mf.getMainF(),mf.getPanelImatge()));
                 }
                 mf.getDincoFrame().setSOLMode();
                 mf.getDincoFrame().loadSOLFileDirectly(fsol);
@@ -178,8 +178,8 @@ public final class ArgumentLauncher {
             
             //now we start the radial integration dialog (it contains the integ options)
             if (mf.getIrWin() == null) {
-                mf.setIrWin(new IntegracioRadial(mf.getPanelImatge()));
-                if (mf.isVisible()){
+                mf.setIrWin(new ConvertTo1DXRD(mf.getMainF(),mf.getPanelImatge()));
+                if (mf.getMainF().isVisible()){
                     mf.getIrWin().setVisible(true);
                 }
             }
@@ -289,9 +289,9 @@ public final class ArgumentLauncher {
             
             
             if (mf.getCalibration() == null) {
-                mf.setCalibration(new Calib_dialog(mf.getPanelImatge()));
+                mf.setCalibration(new Calibration(mf.getMainF(),mf.getPanelImatge()));
                 mf.getPanelImatge().setCalibration(mf.getCalibration());
-                if (mf.isVisible()){
+                if (mf.getMainF().isVisible()){
                     mf.getCalibration().setVisible(true);
                 }
             }
@@ -325,7 +325,7 @@ public final class ArgumentLauncher {
                 //ESCRIBIM FITXER
                 ConsoleWritter.stat(String.format("Writting output CAL file: %s",outpathS));
                 try {
-                    mf.getCalibration().writeCALfile(new File(outpathS));
+                	ImgFileUtils.writeCALfile(new File(outpathS), mf.getPatt2D(), mf.getCalibration(),false); //aqui exporto un fitxer INP (per Spock) TODO: mirar si es pot canviar a CAL
                     // GIVE THE COMMAND TO INTEGRATE:
                     ConsoleWritter.stat("To perform 1D-integration with this cal file type:");
                     ConsoleWritter.stat(String.format("d2Dplot -macro %s -rint %s",mf.getPatt2D().getImgfile().toString(),outpathS));
