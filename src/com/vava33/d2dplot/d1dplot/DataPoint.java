@@ -6,55 +6,64 @@ public class DataPoint {
     private double y;
     private double sdy;
     private double yBkg;
-    
-    public DataPoint(double px, double py, double pysd){
+
+    public DataPoint(double px, double py, double pysd) {
         this.setX(px);
         this.setY(py);
         this.setSdy(pysd);
         this.setyBkg(0);
     }
-    
-    public DataPoint(double px, double py, double pysd, double ybkg){
+
+    public DataPoint(double px, double py, double pysd, double ybkg) {
         this.setX(px);
         this.setY(py);
         this.setSdy(pysd);
         this.setyBkg(ybkg);
     }
-    
+
     public double getX() {
-        return x;
+        return this.x;
     }
+
     public void setX(double x) {
         this.x = x;
     }
+
     public double getY() {
-        return y;
+        return this.y;
     }
+
     public void setY(double y) {
         this.y = y;
     }
+
     public double getSdy() {
-        return sdy;
+        return this.sdy;
     }
+
     public void setSdy(double sdy) {
         this.sdy = sdy;
     }
+
     public double getyBkg() {
-        return yBkg;
+        return this.yBkg;
     }
+
     public void setyBkg(double yBkg) {
         this.yBkg = yBkg;
     }
 
     @Override
     public boolean equals(Object obj) {
-        DataPoint dp = (DataPoint)obj;
-        if ((dp.getX()==this.getX())&&(dp.getY()==this.getY())&&(dp.getSdy()==this.getSdy())){
+        if (obj == null)
+            return false;
+        final DataPoint dp = (DataPoint) obj;
+        if ((dp.getX() == this.getX()) && (dp.getY() == this.getY()) && (dp.getSdy() == this.getSdy())) {
             return true;
-        }else{
+        } else {
             return false;
         }
-        
+
     }
-    
+
 }

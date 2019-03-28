@@ -3,213 +3,221 @@ package com.vava33.d2dplot.tts;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Desktop;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
-
-import net.miginfocom.swing.MigLayout;
-
-import javax.swing.JLabel;
-import javax.swing.JTextField;
 
 import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.d2dplot.TTS;
 import com.vava33.jutils.FileUtils;
 
-import java.awt.Insets;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.io.File;
-import javax.swing.JTextPane;
+import net.miginfocom.swing.MigLayout;
 
 public class Settings_dialog {
 
-    private JDialog ttsSettingsdialog;
-    private JPanel contentPanel;
+    private final JDialog ttsSettingsdialog;
+    private final JPanel contentPanel;
     private JTextField txtTxteditor;
     private JTextField txtTtsfolder;
     private JLabel lblInco;
     private JLabel lblTtsmerge;
     private JLabel lblTtscelref;
-    private TTS parent;
+    private final TTS parent;
 
     /**
      * Create the dialog.
      */
     public Settings_dialog(JFrame parent, TTS pare) {
         this.parent = pare;
-        contentPanel = new JPanel();
-        ttsSettingsdialog = new JDialog(parent, "TTS software settings",true);
-        ttsSettingsdialog.setIconImage(new ImageIcon(getClass().getResource("/img/tts_icon120x120.png")).getImage());
-        ttsSettingsdialog.setBounds(100, 100, 450, 280);
-        ttsSettingsdialog.getContentPane().setLayout(new BorderLayout());
-        contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        ttsSettingsdialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("insets 0", "[][grow][]", "[][grow][][][][][grow]"));
+        this.contentPanel = new JPanel();
+        this.ttsSettingsdialog = new JDialog(parent, "TTS software settings", true);
+        this.ttsSettingsdialog
+                .setIconImage(new ImageIcon(this.getClass().getResource("/img/tts_icon120x120.png")).getImage());
+        this.ttsSettingsdialog.setBounds(100, 100, 450, 280);
+        this.ttsSettingsdialog.getContentPane().setLayout(new BorderLayout());
+        this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
+        this.ttsSettingsdialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        this.contentPanel.setLayout(new MigLayout("insets 0", "[][grow][]", "[][grow][][][][][grow]"));
         {
-            JLabel lblTextEditor = new JLabel("Text editor");
-            contentPanel.add(lblTextEditor, "cell 0 0,alignx trailing,aligny center");
+            final JLabel lblTextEditor = new JLabel("Text editor");
+            this.contentPanel.add(lblTextEditor, "cell 0 0,alignx trailing,aligny center");
         }
         {
-            txtTxteditor = new JTextField();
-            txtTxteditor.setText("(system default)");
-            contentPanel.add(txtTxteditor, "cell 1 0,growx,aligny center");
-            txtTxteditor.setColumns(10);
+            this.txtTxteditor = new JTextField();
+            this.txtTxteditor.setText("(system default)");
+            this.contentPanel.add(this.txtTxteditor, "cell 1 0,growx,aligny center");
+            this.txtTxteditor.setColumns(10);
         }
         {
-            JButton btnTxt = new JButton("...");
+            final JButton btnTxt = new JButton("...");
             btnTxt.addActionListener(new ActionListener() {
+                @Override
                 public void actionPerformed(ActionEvent e) {
-                    do_btnTxt_actionPerformed(e);
+                    Settings_dialog.this.do_btnTxt_actionPerformed(e);
                 }
             });
             btnTxt.setMargin(new Insets(2, 2, 2, 2));
-            contentPanel.add(btnTxt, "cell 2 0,aligny center");
+            this.contentPanel.add(btnTxt, "cell 2 0,aligny center");
         }
         {
-            JTextPane txtpnPleaseSelectTtssoftware = new JTextPane();
+            final JTextPane txtpnPleaseSelectTtssoftware = new JTextPane();
             txtpnPleaseSelectTtssoftware.setContentType("text/html");
-            
+
             txtpnPleaseSelectTtssoftware.setEditorKit(JEditorPane.createEditorKitForContentType("text/html"));
             txtpnPleaseSelectTtssoftware.setEditable(false);
-            
+
             txtpnPleaseSelectTtssoftware.addHyperlinkListener(new HyperlinkListener() {
+                @Override
                 public void hyperlinkUpdate(HyperlinkEvent e) {
-                    if(e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                        if(Desktop.isDesktopSupported()) {
+                    if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                        if (Desktop.isDesktopSupported()) {
                             try {
                                 Desktop.getDesktop().browse(e.getURL().toURI());
-                            } catch (Exception e1) {
-                                if(D2Dplot_global.isDebug())e1.printStackTrace();
+                            } catch (final Exception e1) {
+                                if (D2Dplot_global.isDebug())
+                                    e1.printStackTrace();
                             }
                         }
                     }
                 }
             });
             txtpnPleaseSelectTtssoftware.setOpaque(false);
-            
-            txtpnPleaseSelectTtssoftware.setText("<html> Please select tts_software folder to use it inside d2Dplot.<br>\nIt can be downloaded from: <a href=\"http://www.icmab.es/crystallography/software\">http://www.icmab.es/crystallography/software</a> </html>");
-            contentPanel.add(txtpnPleaseSelectTtssoftware, "cell 0 1 3 1,grow");
+
+            txtpnPleaseSelectTtssoftware.setText(
+                    "<html> Please select tts_software folder to use it inside d2Dplot.<br>\nIt can be downloaded from: <a href=\"http://www.icmab.es/crystallography/software\">http://www.icmab.es/crystallography/software</a> </html>");
+            this.contentPanel.add(txtpnPleaseSelectTtssoftware, "cell 0 1 3 1,grow");
         }
         {
-            JLabel lblTtssoftwarefolder = new JLabel("tts_software_folder");
-            contentPanel.add(lblTtssoftwarefolder, "cell 0 2,alignx trailing");
+            final JLabel lblTtssoftwarefolder = new JLabel("tts_software_folder");
+            this.contentPanel.add(lblTtssoftwarefolder, "cell 0 2,alignx trailing");
         }
         {
-            txtTtsfolder = new JTextField();
-            contentPanel.add(txtTtsfolder, "cell 1 2,growx");
-            txtTtsfolder.setColumns(10);
+            this.txtTtsfolder = new JTextField();
+            this.contentPanel.add(this.txtTtsfolder, "cell 1 2,growx");
+            this.txtTtsfolder.setColumns(10);
         }
         {
-            JButton btnTTSfolder = new JButton("...");
+            final JButton btnTTSfolder = new JButton("...");
             btnTTSfolder.addActionListener(new ActionListener() {
+                @Override
                 public void actionPerformed(ActionEvent e) {
-                    do_btnTTSfolder_actionPerformed(e);
+                    Settings_dialog.this.do_btnTTSfolder_actionPerformed(e);
                 }
             });
             btnTTSfolder.setMargin(new Insets(2, 2, 2, 2));
-            contentPanel.add(btnTTSfolder, "cell 2 2");
+            this.contentPanel.add(btnTTSfolder, "cell 2 2");
         }
         {
-            lblInco = new JLabel("");
-            contentPanel.add(lblInco, "cell 1 3 2 1,alignx center,aligny center");
+            this.lblInco = new JLabel("");
+            this.contentPanel.add(this.lblInco, "cell 1 3 2 1,alignx center,aligny center");
         }
         {
-            JButton okButton = new JButton("Close");
+            final JButton okButton = new JButton("Close");
             okButton.addActionListener(new ActionListener() {
+                @Override
                 public void actionPerformed(ActionEvent e) {
-                    do_okButton_actionPerformed(e);
+                    Settings_dialog.this.do_okButton_actionPerformed(e);
                 }
             });
             {
-                lblTtsmerge = new JLabel("");
-                contentPanel.add(lblTtsmerge, "cell 1 4 2 1,alignx center");
+                this.lblTtsmerge = new JLabel("");
+                this.contentPanel.add(this.lblTtsmerge, "cell 1 4 2 1,alignx center");
             }
             {
-                lblTtscelref = new JLabel("");
-                contentPanel.add(lblTtscelref, "cell 1 5 2 1,alignx center");
+                this.lblTtscelref = new JLabel("");
+                this.contentPanel.add(this.lblTtscelref, "cell 1 5 2 1,alignx center");
             }
-            contentPanel.add(okButton, "cell 0 6 3 1,alignx center,aligny bottom");
+            this.contentPanel.add(okButton, "cell 0 6 3 1,alignx center,aligny bottom");
             okButton.setActionCommand("OK");
-            ttsSettingsdialog.getRootPane().setDefaultButton(okButton);
+            this.ttsSettingsdialog.getRootPane().setDefaultButton(okButton);
         }
-        
-        inicia();
+
+        this.inicia();
     }
 
     //inicialitzacions extres
-    private void inicia(){
-    	ttsSettingsdialog.setVisible(false); //per defecte no ho mostrarem al crear-lo
+    private void inicia() {
+        this.ttsSettingsdialog.setVisible(false); //per defecte no ho mostrarem al crear-lo
         this.updateTxtFields();
     }
-    
+
+
     protected void do_btnTxt_actionPerformed(ActionEvent e) {
-        File f = FileUtils.fchooserOpen(ttsSettingsdialog, new File(D2Dplot_global.getWorkdir()), null, 0);
-        if (f!=null){
-            txtTxteditor.setText(f.getAbsolutePath());
+        final File f = FileUtils.fchooserOpen(this.ttsSettingsdialog, new File(D2Dplot_global.getWorkdir()), null, 0);
+        if (f != null) {
+            this.txtTxteditor.setText(f.getAbsolutePath());
             D2Dplot_global.setTxtEditPath(f.getAbsolutePath());
         }
     }
-    
+
     protected void do_btnTTSfolder_actionPerformed(ActionEvent e) {
-        File dir = FileUtils.fchooserOpenDir(ttsSettingsdialog, new File(D2Dplot_global.getWorkdir()), "Select tts_software FOLDER");
-        if (dir!=null){
-            txtTtsfolder.setText(dir.getAbsolutePath());
+        final File dir = FileUtils.fchooserOpenDir(this.ttsSettingsdialog, new File(D2Dplot_global.getWorkdir()),
+                "Select tts_software FOLDER");
+        if (dir != null) {
+            this.txtTtsfolder.setText(dir.getAbsolutePath());
             D2Dplot_global.setTTSsoftwareFolder(dir.getAbsolutePath());
-            parent.checkTTSDependencies();
-            updateTxtFields();
+            this.parent.checkTTSDependencies();
+            this.updateTxtFields();
         }
     }
-    
-    private void updateTxtFields(){
+
+    private void updateTxtFields() {
         if (D2Dplot_global.getTxtEditPath().trim().isEmpty()) {
             this.txtTxteditor.setText("< system default >");
-        }else {
+        } else {
             this.txtTxteditor.setText(D2Dplot_global.getTxtEditPath());
         }
-        
+
         if (D2Dplot_global.getTTSsoftwareFolder().trim().isEmpty()) {
             this.txtTtsfolder.setText("< not set >");
-        }else {
+        } else {
             this.txtTtsfolder.setText(D2Dplot_global.getTTSsoftwareFolder());
             //we try to detect the executables now...
             if (!TTS.getIncoExec().trim().isEmpty()) {
-            	lblInco.setForeground(Color.GREEN);
-                lblInco.setText("tts_inco FOUND!");
-            }else {
-            	lblInco.setForeground(Color.RED);
-                lblInco.setText("tts_inco NOT FOUND!");
+                this.lblInco.setForeground(Color.GREEN);
+                this.lblInco.setText("tts_inco FOUND!");
+            } else {
+                this.lblInco.setForeground(Color.RED);
+                this.lblInco.setText("tts_inco NOT FOUND!");
             }
             if (!TTS.getMergeExec().trim().isEmpty()) {
-            	lblTtsmerge.setForeground(Color.GREEN);
-                lblTtsmerge.setText("tts_merge FOUND!");
-            }else {
-            	lblTtsmerge.setForeground(Color.RED);
-                lblTtsmerge.setText("tts_merge NOT FOUND!");
+                this.lblTtsmerge.setForeground(Color.GREEN);
+                this.lblTtsmerge.setText("tts_merge FOUND!");
+            } else {
+                this.lblTtsmerge.setForeground(Color.RED);
+                this.lblTtsmerge.setText("tts_merge NOT FOUND!");
             }
             if (!TTS.getCelrefExec().trim().isEmpty()) {
-            	lblTtscelref.setForeground(Color.GREEN);
-                lblTtscelref.setText("tts_celref FOUND!");
-            }else {
-            	lblTtscelref.setForeground(Color.RED);
-                lblTtscelref.setText("tts_celref NOT FOUND!");
+                this.lblTtscelref.setForeground(Color.GREEN);
+                this.lblTtscelref.setText("tts_celref FOUND!");
+            } else {
+                this.lblTtscelref.setForeground(Color.RED);
+                this.lblTtscelref.setText("tts_celref NOT FOUND!");
             }
         }
     }
-    
+
     protected void do_okButton_actionPerformed(ActionEvent e) {
-    	ttsSettingsdialog.setVisible(false);
-//        parent.checkTTSDependencies();
+        this.ttsSettingsdialog.setVisible(false);
+        //        parent.checkTTSDependencies();
     }
+
     public void setVisible(boolean vis) {
-    	ttsSettingsdialog.setVisible(vis);
+        this.ttsSettingsdialog.setVisible(vis);
     }
 
 }

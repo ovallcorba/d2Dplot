@@ -22,48 +22,54 @@ public class FilteredListModel extends AbstractListModel<Object> {
     public FilteredListModel(ListModel<?> source) {
         if (source == null)
             throw new IllegalArgumentException("Source is null");
-        _source = source;
-        _source.addListDataListener(new ListDataListener() {
+        this._source = source;
+        this._source.addListDataListener(new ListDataListener() {
+            @Override
             public void intervalRemoved(ListDataEvent e) {
-                doFilter();
+                FilteredListModel.this.doFilter();
             }
 
+            @Override
             public void intervalAdded(ListDataEvent e) {
-                doFilter();
+                FilteredListModel.this.doFilter();
             }
 
+            @Override
             public void contentsChanged(ListDataEvent e) {
-                doFilter();
+                FilteredListModel.this.doFilter();
             }
         });
     }
 
     public void setFilter(Filter f) {
-        _filter = f;
-        doFilter();
+        this._filter = f;
+        this.doFilter();
     }
 
     private void doFilter() {
-        _indices.clear();
+        this._indices.clear();
 
-        Filter f = _filter;
+        final Filter f = this._filter;
         if (f != null) {
-            int count = _source.getSize();
+            final int count = this._source.getSize();
             for (int i = 0; i < count; i++) {
-                Object element = _source.getElementAt(i);
+                final Object element = this._source.getElementAt(i);
                 if (f.accept(element)) {
-                    _indices.add(i);
+                    this._indices.add(i);
                 }
             }
-            fireContentsChanged(this, 0, getSize() - 1);
+            this.fireContentsChanged(this, 0, this.getSize() - 1);
         }
     }
 
+    @Override
     public int getSize() {
-        return (_filter != null) ? _indices.size() : _source.getSize();
+        return (this._filter != null) ? this._indices.size() : this._source.getSize();
     }
 
+    @Override
     public Object getElementAt(int index) {
-        return (_filter != null) ? _source.getElementAt(_indices.get(index)) : _source.getElementAt(index);
+        return (this._filter != null) ? this._source.getElementAt(this._indices.get(index))
+                : this._source.getElementAt(index);
     }
 }

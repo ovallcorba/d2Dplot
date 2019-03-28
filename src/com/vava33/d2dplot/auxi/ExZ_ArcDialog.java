@@ -13,18 +13,18 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.d2dplot.ExZones;
 import com.vava33.jutils.VavaLogger;
 
+import net.miginfocom.swing.MigLayout;
+
 public class ExZ_ArcDialog {
 
     private JDialog exzArcDialog;
-    private JPanel contentPanel;
+    private final JPanel contentPanel;
     private JTextField txtpx;
     private JTextField txtpy;
     private JTextField txthrw;
@@ -33,81 +33,82 @@ public class ExZ_ArcDialog {
     private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     private boolean finishedOK;
-    private int ipX=-1;
-    private int ipY=-1;
-    private int halfRadialWidthPx=-1;
-    private int halfAzimAperDeg=-1; 
+    private int ipX = -1;
+    private int ipY = -1;
+    private int halfRadialWidthPx = -1;
+    private int halfAzimAperDeg = -1;
     ExZones pare;
 
-    
     /**
      * Create the dialog.
      */
     public ExZ_ArcDialog(JFrame parent, ExZones exzd) {
-        this.pare=exzd;
-        contentPanel = new JPanel();
-        exzArcDialog = new JDialog(parent,"Add arc-shaped mask zone",false);
-        exzArcDialog.setBounds(100, 100, 344, 191);
-        exzArcDialog.getContentPane().setLayout(new BorderLayout());
-        contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        exzArcDialog.getContentPane().add(contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
+        this.pare = exzd;
+        this.contentPanel = new JPanel();
+        this.exzArcDialog = new JDialog(parent, "Add arc-shaped mask zone", false);
+        this.exzArcDialog.setBounds(100, 100, 344, 191);
+        this.exzArcDialog.getContentPane().setLayout(new BorderLayout());
+        this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
+        this.exzArcDialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        this.contentPanel.setLayout(new MigLayout("", "[][grow]", "[][][][]"));
         {
-            JLabel lblBSradi = new JLabel("Zone center px X");
-            contentPanel.add(lblBSradi, "cell 0 0,alignx trailing");
+            final JLabel lblBSradi = new JLabel("Zone center px X");
+            this.contentPanel.add(lblBSradi, "cell 0 0,alignx trailing");
         }
         {
-            txtpx = new JTextField();
-            contentPanel.add(txtpx, "cell 1 0,growx");
-            txtpx.setColumns(10);
+            this.txtpx = new JTextField();
+            this.contentPanel.add(this.txtpx, "cell 1 0,growx");
+            this.txtpx.setColumns(10);
         }
         {
-            JLabel lblBsArmPixel = new JLabel("Zone center px Y");
-            contentPanel.add(lblBsArmPixel, "cell 0 1,alignx trailing");
+            final JLabel lblBsArmPixel = new JLabel("Zone center px Y");
+            this.contentPanel.add(lblBsArmPixel, "cell 0 1,alignx trailing");
         }
         {
-            txtpy = new JTextField();
-            contentPanel.add(txtpy, "cell 1 1,growx");
-            txtpy.setColumns(10);
+            this.txtpy = new JTextField();
+            this.contentPanel.add(this.txtpy, "cell 1 1,growx");
+            this.txtpy.setColumns(10);
         }
         {
-            JLabel lblBsArmPixel_1 = new JLabel("Half radial width (px)");
-            contentPanel.add(lblBsArmPixel_1, "cell 0 2,alignx trailing");
+            final JLabel lblBsArmPixel_1 = new JLabel("Half radial width (px)");
+            this.contentPanel.add(lblBsArmPixel_1, "cell 0 2,alignx trailing");
         }
         {
-            txthrw = new JTextField();
-            contentPanel.add(txthrw, "cell 1 2,growx");
-            txthrw.setColumns(10);
+            this.txthrw = new JTextField();
+            this.contentPanel.add(this.txthrw, "cell 1 2,growx");
+            this.txthrw.setColumns(10);
         }
         {
-            JLabel lblBsArmWidth = new JLabel("Half azim aperture (deg)");
-            contentPanel.add(lblBsArmWidth, "cell 0 3,alignx trailing");
+            final JLabel lblBsArmWidth = new JLabel("Half azim aperture (deg)");
+            this.contentPanel.add(lblBsArmWidth, "cell 0 3,alignx trailing");
         }
         {
-            txthaw = new JTextField();
-            contentPanel.add(txthaw, "cell 1 3,growx");
-            txthaw.setColumns(10);
+            this.txthaw = new JTextField();
+            this.contentPanel.add(this.txthaw, "cell 1 3,growx");
+            this.txthaw.setColumns(10);
         }
         {
-            JPanel buttonPane = new JPanel();
+            final JPanel buttonPane = new JPanel();
             buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
-            exzArcDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            this.exzArcDialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
-                JButton okButton = new JButton("OK");
+                final JButton okButton = new JButton("OK");
                 okButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
-                        do_okButton_actionPerformed(e);
+                        ExZ_ArcDialog.this.do_okButton_actionPerformed(e);
                     }
                 });
                 okButton.setActionCommand("OK");
                 buttonPane.add(okButton);
-                exzArcDialog.getRootPane().setDefaultButton(okButton);
+                this.exzArcDialog.getRootPane().setDefaultButton(okButton);
             }
             {
-                JButton cancelButton = new JButton("Cancel");
+                final JButton cancelButton = new JButton("Cancel");
                 cancelButton.addActionListener(new ActionListener() {
+                    @Override
                     public void actionPerformed(ActionEvent e) {
-                        do_cancelButton_actionPerformed(e);
+                        ExZ_ArcDialog.this.do_cancelButton_actionPerformed(e);
                     }
                 });
                 cancelButton.setActionCommand("Cancel");
@@ -116,30 +117,29 @@ public class ExZ_ArcDialog {
         }
     }
 
-    
-    private boolean getInfoFromFields(){
+    private boolean getInfoFromFields() {
         boolean allReaded = true;
-        try{
-            setHalfRadialWidthPx(FastMath.round(Float.parseFloat(txthrw.getText())));    
-        }catch(Exception e){
+        try {
+            this.setHalfRadialWidthPx(FastMath.round(Float.parseFloat(this.txthrw.getText())));
+        } catch (final Exception e) {
             log.info("Could not read half radial width (pixels)");
             allReaded = false;
         }
-        try{
-            setHalfAzimAperDeg(FastMath.round(Float.parseFloat(txthaw.getText())));  
-        }catch(Exception e){
+        try {
+            this.setHalfAzimAperDeg(FastMath.round(Float.parseFloat(this.txthaw.getText())));
+        } catch (final Exception e) {
             log.info("Could not read half azimuthal aperture (degrees)");
             allReaded = false;
         }
-        try{
-            ipX = FastMath.round(Float.parseFloat(txtpx.getText()));  
-        }catch(Exception e){
+        try {
+            this.ipX = FastMath.round(Float.parseFloat(this.txtpx.getText()));
+        } catch (final Exception e) {
             log.info("Could not read pixel X");
             allReaded = false;
         }
-        try{
-            ipY = FastMath.round(Float.parseFloat(txtpy.getText()));  
-        }catch(Exception e){
+        try {
+            this.ipY = FastMath.round(Float.parseFloat(this.txtpy.getText()));
+        } catch (final Exception e) {
             log.info("Could not read pixel Y");
             allReaded = false;
         }
@@ -147,79 +147,69 @@ public class ExZ_ArcDialog {
     }
 
     public int getIpX() {
-        return ipX;
+        return this.ipX;
     }
-
 
     public void setIpX(int ipX) {
         this.ipX = ipX;
     }
 
-
     public int getIpY() {
-        return ipY;
+        return this.ipY;
     }
-
 
     public void setIpY(int ipY) {
         this.ipY = ipY;
     }
 
-
     public int getHalfRadialWidthPx() {
-        return halfRadialWidthPx;
+        return this.halfRadialWidthPx;
     }
-
 
     public void setHalfRadialWidthPx(int halfRadialWidthPx) {
         this.halfRadialWidthPx = halfRadialWidthPx;
     }
 
-
     public int getHalfAzimAperDeg() {
-        return halfAzimAperDeg;
+        return this.halfAzimAperDeg;
     }
-
 
     public void setHalfAzimAperDeg(int halfAzimAperDeg) {
         this.halfAzimAperDeg = halfAzimAperDeg;
     }
 
-
     public boolean isFinishedOK() {
-        return finishedOK;
+        return this.finishedOK;
     }
-
 
     public void setFinishedOK(boolean finishedOK) {
         this.finishedOK = finishedOK;
     }
 
-
     protected void do_okButton_actionPerformed(ActionEvent evt) {
-        finishedOK = getInfoFromFields();
-        if (finishedOK)pare.applyArcZoneParameters(ipX, ipY, halfRadialWidthPx, halfAzimAperDeg);
-        exzArcDialog.dispose();
+        this.finishedOK = this.getInfoFromFields();
+        if (this.finishedOK)
+            this.pare.applyArcZoneParameters(this.ipX, this.ipY, this.halfRadialWidthPx, this.halfAzimAperDeg);
+        this.exzArcDialog.dispose();
     }
+
     protected void do_cancelButton_actionPerformed(ActionEvent e) {
-        finishedOK = false;
-        exzArcDialog.dispose();
+        this.finishedOK = false;
+        this.exzArcDialog.dispose();
     }
 
+    /**
+     * @return the exzArcDialog
+     */
+    public JDialog getExzArcDialog() {
+        return this.exzArcDialog;
+    }
 
-	/**
-	 * @return the exzArcDialog
-	 */
-	public JDialog getExzArcDialog() {
-		return exzArcDialog;
-	}
-
-
-	/**
-	 * @param exzArcDialog the exzArcDialog to set
-	 */
-	public void setExzArcDialog(JDialog exzArcDialog) {
-		this.exzArcDialog = exzArcDialog;
-	}
+    /**
+     * @param exzArcDialog the exzArcDialog to set
+     */
+    public void setExzArcDialog(JDialog exzArcDialog) {
+        this.exzArcDialog = exzArcDialog;
+    }
 
 }

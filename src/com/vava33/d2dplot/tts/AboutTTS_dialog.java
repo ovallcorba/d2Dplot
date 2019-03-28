@@ -32,9 +32,9 @@ import net.miginfocom.swing.MigLayout;
 
 public class AboutTTS_dialog {
 
-    private JDialog aboutTTSdialog;
+    private final JDialog aboutTTSdialog;
     private JButton btnUsersGuide;
-    private JPanel contentPanel;
+    private final JPanel contentPanel;
     private JLabel lblTalplogo;
     private JEditorPane textPane;
     private JScrollPane scrollPane;
@@ -42,148 +42,155 @@ public class AboutTTS_dialog {
     /**
      * Launch the application.
      */
-//    public static void main(String[] args) {
-//        try {
-//            About_dialog dialog = new About_dialog();
-//            dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-//            dialog.setVisible(true);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
+    //    public static void main(String[] args) {
+    //        try {
+    //            About_dialog dialog = new About_dialog();
+    //            dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+    //            dialog.setVisible(true);
+    //        } catch (Exception e) {
+    //            e.printStackTrace();
+    //        }
+    //    }
 
     /**
      * Create the dialog.
      */
     public AboutTTS_dialog(JFrame parent) {
-    	contentPanel=new JPanel();
-    	aboutTTSdialog = new JDialog(parent,"About TTS software",true);
-    	aboutTTSdialog.setIconImage(new ImageIcon(getClass().getResource("/img/tts_icon120x120.png")).getImage());
-    	aboutTTSdialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        int width = 680;
-        int height = 780;
-        int x = (screen.width - width) / 2;
-        int y = (screen.height - height) / 2;
-        aboutTTSdialog.setBounds(x, y, width, height);
-        aboutTTSdialog.setResizable(false);
-        aboutTTSdialog.getContentPane().setLayout(new BorderLayout());
+        this.contentPanel = new JPanel();
+        this.aboutTTSdialog = new JDialog(parent, "About TTS software", true);
+        this.aboutTTSdialog
+                .setIconImage(new ImageIcon(this.getClass().getResource("/img/tts_icon120x120.png")).getImage());
+        this.aboutTTSdialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        final Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        final int width = 680;
+        final int height = 780;
+        final int x = (screen.width - width) / 2;
+        final int y = (screen.height - height) / 2;
+        this.aboutTTSdialog.setBounds(x, y, width, height);
+        this.aboutTTSdialog.setResizable(false);
+        this.aboutTTSdialog.getContentPane().setLayout(new BorderLayout());
         this.contentPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
-        aboutTTSdialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
-        contentPanel.setLayout(new MigLayout("", "[grow]", "[64px][grow]"));
+        this.aboutTTSdialog.getContentPane().add(this.contentPanel, BorderLayout.CENTER);
+        this.contentPanel.setLayout(new MigLayout("", "[grow]", "[64px][grow]"));
         {
-            lblTalplogo = new JLabel("** LOGO **");
-            contentPanel.add(lblTalplogo, "flowx,cell 0 0,alignx center,aligny center");
+            this.lblTalplogo = new JLabel("** LOGO **");
+            this.contentPanel.add(this.lblTalplogo, "flowx,cell 0 0,alignx center,aligny center");
         }
         {
-            JPanel buttonPane = new JPanel();
-            aboutTTSdialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
+            final JPanel buttonPane = new JPanel();
+            this.aboutTTSdialog.getContentPane().add(buttonPane, BorderLayout.SOUTH);
             {
                 {
                     this.btnUsersGuide = new JButton("User's Guide");
                     this.btnUsersGuide.addActionListener(new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent arg0) {
-                            do_btnUsersGuide_actionPerformed(arg0);
+                            AboutTTS_dialog.this.do_btnUsersGuide_actionPerformed(arg0);
                         }
                     });
                     buttonPane.setLayout(new MigLayout("", "[][grow]", "[]"));
                     buttonPane.add(this.btnUsersGuide, "cell 0 0,alignx left,aligny top");
                 }
             }
-            JButton okButton = new JButton("Close");
+            final JButton okButton = new JButton("Close");
             okButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent arg0) {
-                    do_okButton_actionPerformed(arg0);
+                    AboutTTS_dialog.this.do_okButton_actionPerformed(arg0);
                 }
             });
             okButton.setActionCommand("OK");
             buttonPane.add(okButton, "cell 1 0,alignx right,aligny top");
-            aboutTTSdialog.getRootPane().setDefaultButton(okButton);
+            this.aboutTTSdialog.getRootPane().setDefaultButton(okButton);
         }
 
         // posem el logo escalat
-        Image img = Toolkit.getDefaultToolkit().getImage(AboutTTS_dialog.class.getResource("/img/tts_splash_760x120.png"));
-        Image newimg = img.getScaledInstance(650, -100, java.awt.Image.SCALE_SMOOTH);
-        ImageIcon logo = new ImageIcon(newimg);
-        lblTalplogo.setText("");
-        lblTalplogo.setIcon(logo);
+        final Image img = Toolkit.getDefaultToolkit()
+                .getImage(AboutTTS_dialog.class.getResource("/img/tts_splash_760x120.png"));
+        final Image newimg = img.getScaledInstance(650, -100, java.awt.Image.SCALE_SMOOTH);
+        final ImageIcon logo = new ImageIcon(newimg);
+        this.lblTalplogo.setText("");
+        this.lblTalplogo.setIcon(logo);
         {
-            scrollPane = new JScrollPane();
-            scrollPane.setViewportBorder(null);
-            scrollPane.setOpaque(false);
-            contentPanel.add(scrollPane, "cell 0 1,grow");
+            this.scrollPane = new JScrollPane();
+            this.scrollPane.setViewportBorder(null);
+            this.scrollPane.setOpaque(false);
+            this.contentPanel.add(this.scrollPane, "cell 0 1,grow");
             {
-                textPane = new JEditorPane();
-                textPane.setOpaque(false);
-                scrollPane.setViewportView(textPane);
+                this.textPane = new JEditorPane();
+                this.textPane.setOpaque(false);
+                this.scrollPane.setViewportView(this.textPane);
             }
         }
 
         // this.setIconImage(new
         // ImageIcon(getClass().getResource("/img/icona.png")).getImage());
-        
+
         //llegim el fitxer html per poblar la label:
-        
-        textPane.setContentType("text/html");
-        textPane.setEditorKit(JEditorPane.createEditorKitForContentType("text/html"));
-        textPane.setEditable(false);
-        
-        textPane.addHyperlinkListener(new HyperlinkListener() {
+
+        this.textPane.setContentType("text/html");
+        this.textPane.setEditorKit(JEditorPane.createEditorKitForContentType("text/html"));
+        this.textPane.setEditable(false);
+
+        this.textPane.addHyperlinkListener(new HyperlinkListener() {
+            @Override
             public void hyperlinkUpdate(HyperlinkEvent e) {
-                if(e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                    if(Desktop.isDesktopSupported()) {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    if (Desktop.isDesktopSupported()) {
                         try {
                             Desktop.getDesktop().browse(e.getURL().toURI());
-                        } catch (Exception e1) {
-                            if(D2Dplot_global.isDebug())e1.printStackTrace();
+                        } catch (final Exception e1) {
+                            if (D2Dplot_global.isDebug())
+                                e1.printStackTrace();
                         }
                     }
                 }
             }
         });
-        java.net.URL aboutURL = AboutTTS_dialog.class.getResource("/img/tts_about.html");
+        final java.net.URL aboutURL = AboutTTS_dialog.class.getResource("/img/tts_about.html");
         if (aboutURL != null) {
             try {
-                textPane.setPage(aboutURL);
-            } catch (IOException e) {
+                this.textPane.setPage(aboutURL);
+            } catch (final IOException e) {
                 System.err.println("Attempted to read a bad URL: " + aboutURL);
             }
         } else {
-            System.err.println("Couldn't find file: " + aboutURL);
+            System.err.println("Couldn't find file");
         }
-        
-        scrollPane.getViewport().setOpaque(false);
-       
+
+        this.scrollPane.getViewport().setOpaque(false);
+
     }
 
     protected void do_btnUsersGuide_actionPerformed(ActionEvent arg0) {
-        if (D2Dplot_global.getTTSsoftwareFolder().trim().isEmpty())return;
-        File userGuideFile = new File(D2Dplot_global.getTTSsoftwareFolder()+FileUtils.getSeparator()+TTS.getUserguidefile());
-        try{
-            if(Desktop.isDesktopSupported()){ // s'obre amb el programa per defecte
+        if (D2Dplot_global.getTTSsoftwareFolder().trim().isEmpty())
+            return;
+        final File userGuideFile = new File(
+                D2Dplot_global.getTTSsoftwareFolder() + FileUtils.getSeparator() + TTS.getUserguidefile());
+        try {
+            if (Desktop.isDesktopSupported()) { // s'obre amb el programa per defecte
                 Desktop.getDesktop().open(userGuideFile);
                 return;
-            }else{
-                new ProcessBuilder("cmd","/c",userGuideFile.getAbsolutePath()).start();
+            } else {
+                new ProcessBuilder("cmd", "/c", userGuideFile.getAbsolutePath()).start();
                 return;
             }
-        } catch (Exception ex) {
-            if(D2Dplot_global.isDebug())ex.printStackTrace();
-            JOptionPane.showMessageDialog(aboutTTSdialog,
+        } catch (final Exception ex) {
+            if (D2Dplot_global.isDebug())
+                ex.printStackTrace();
+            JOptionPane.showMessageDialog(this.aboutTTSdialog,
                     "Sorry, unable to open user's guide with default pdf viewer. \n"
-                    + "Please open it manually from the program folder",
-                    "TTS software User's Guide",
-                    JOptionPane.PLAIN_MESSAGE);
+                            + "Please open it manually from the program folder",
+                    "TTS software User's Guide", JOptionPane.PLAIN_MESSAGE);
         }
 
     }
 
     protected void do_okButton_actionPerformed(ActionEvent arg0) {
-    	aboutTTSdialog.dispose();
+        this.aboutTTSdialog.dispose();
     }
+
     public void setVisible(boolean vis) {
-    	aboutTTSdialog.setVisible(vis);
+        this.aboutTTSdialog.setVisible(vis);
     }
 }

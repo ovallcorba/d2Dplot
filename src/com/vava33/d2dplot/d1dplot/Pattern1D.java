@@ -17,58 +17,59 @@ public class Pattern1D {
 
     //prf exclusive
     private boolean isPrf = false;
-    private static boolean plotwithbkg=false; //static perque afectara a totes les series!
-    private static int hkloff=-10;//pixels
-    private static int hklticksize=6;
-    private static boolean prfFullprofColors=false;
-    
+    private static boolean plotwithbkg = false; //static perque afectara a totes les series!
+    private static int hkloff = -10;//pixels
+    private static int hklticksize = 6;
+    private static boolean prfFullprofColors = false;
+
     //create empty pattern
-    public Pattern1D(){
-        commentLines = new ArrayList<String>();
-        setSeries(new ArrayList<DataSerie>());
+    public Pattern1D() {
+        this.commentLines = new ArrayList<String>();
+        this.setSeries(new ArrayList<DataSerie>());
         this.setOriginal_wavelength(-1f);
     }
-    
-    public void AddDataSerie(DataSerie ds){
+
+
+    public void addDataSerie(DataSerie ds) {
 
         globalNseries = globalNseries + 1;
         ds.setColor(getNextColor());
         this.getSeries().add(ds);
         ds.setPatt1D(this); //important que estigui aqui baix
     }
-    
-    public void removeDataSerie(DataSerie ds){
+
+    public void removeDataSerie(DataSerie ds) {
         this.getSeries().remove(ds);
         globalNseries = globalNseries - 1;
     }
-    
-    public void removeDataSerie(int index){
+
+    public void removeDataSerie(int index) {
         this.getSeries().remove(index);
         globalNseries = globalNseries - 1;
     }
-    
-    public int getNseriesPattern(){
+
+    public int getNseriesPattern() {
         return this.series.size();
     }
-    
-    public void removeAllSeries(){
+
+    public void removeAllSeries() {
         globalNseries = globalNseries - this.series.size();
         this.series.clear();
     }
-   
-    public static Color getNextColor(){
+
+    public static Color getNextColor() {
         //aqui segons el "TEMA" s'assignarà el color
-        if (PlotPanel.isLightTheme()){
-            int ncol = (globalNseries-1)%D2Dplot_global.lightColors.length;
+        if (PlotPanel.isLightTheme()) {
+            final int ncol = (globalNseries - 1) % D2Dplot_global.lightColors.length;
             return D2Dplot_global.parseColorName(D2Dplot_global.lightColors[ncol]);
-        }else{
-            int ncol = (globalNseries-1)%D2Dplot_global.DarkColors.length;
-            return D2Dplot_global.parseColorName(D2Dplot_global.DarkColors[ncol]);
+        } else {
+            final int ncol = (globalNseries - 1) % D2Dplot_global.darkColors.length;
+            return D2Dplot_global.parseColorName(D2Dplot_global.darkColors[ncol]);
         }
     }
-    
+
     public File getFile() {
-        return file;
+        return this.file;
     }
 
     public void setFile(File file) {
@@ -76,7 +77,7 @@ public class Pattern1D {
     }
 
     public ArrayList<String> getCommentLines() {
-        return commentLines;
+        return this.commentLines;
     }
 
     public void setCommentLines(ArrayList<String> commentLines) {
@@ -84,35 +85,35 @@ public class Pattern1D {
     }
 
     public ArrayList<DataSerie> getSeries() {
-        return series;
+        return this.series;
     }
 
-    public DataSerie getSerie(int index){
-        return series.get(index);
+    public DataSerie getSerie(int index) {
+        return this.series.get(index);
     }
-    
-    public Iterator<DataSerie> getSeriesIterator(){
-        return series.iterator();
+
+    public Iterator<DataSerie> getSeriesIterator() {
+        return this.series.iterator();
     }
-    
-    public int getNseries(){
-        return series.size();
+
+    public int getNseries() {
+        return this.series.size();
     }
-    
-    public int indexOfSerie(DataSerie ds){
-        return series.indexOf(ds);
+
+    public int indexOfSerie(DataSerie ds) {
+        return this.series.indexOf(ds);
     }
-    
+
     public void setSeries(ArrayList<DataSerie> series) {
         this.series = series;
     }
 
     public double getOriginal_wavelength() {
-        return original_wavelength;
+        return this.original_wavelength;
     }
 
     public boolean isPrf() {
-        return isPrf;
+        return this.isPrf;
     }
 
     public void setPrf(boolean isPrf) {
