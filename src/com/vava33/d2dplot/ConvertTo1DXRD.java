@@ -58,7 +58,7 @@ public class ConvertTo1DXRD {
     private final JTextField txtZeroval;
 
     private final ImagePanel ip;
-    private File maskfile;
+//    private File maskfile;
     private final JButton btnClose;
 
     com.vava33.d2dplot.d1dplot.Pattern1D p1;
@@ -468,13 +468,13 @@ public class ConvertTo1DXRD {
         this.patt1D = patt1d;
     }
 
-    public File getMaskfile() {
-        return this.maskfile;
-    }
-
-    public void setMaskfile(File maskfile) {
-        this.maskfile = maskfile;
-    }
+//    public File getMaskfile() {
+//        return this.maskfile;
+//    }
+//
+//    public void setMaskfile(File maskfile) {
+//        this.maskfile = maskfile;
+//    }
 
     public void dispose() {
         this.D1dialog.dispose();

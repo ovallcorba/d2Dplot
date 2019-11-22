@@ -16,7 +16,7 @@ public class Patt2Dzone implements Comparable<Patt2Dzone> {
     //    !  - ybkg: intensitat del fons (mitjana dels 20 punts de menor intensitat)
     //    !  - ybkgdesv: desviacio de la intensitat del fons (entre els 20 punts)
 
-    int ysum, npix, ymax;
+    int ysum, npix, ymax, ymin;
     float ymean, ymeandesv, ybkg, ybkgdesv;
     int intradPix, bkgpt;
     float azimAngle;
@@ -68,6 +68,14 @@ public class Patt2Dzone implements Comparable<Patt2Dzone> {
 
     public void setYmax(int ymax) {
         this.ymax = ymax;
+    }
+    
+    public int getYmin() {
+        return this.ymin;
+    }
+
+    public void setYmin(int ymin) {
+        this.ymin = ymin;
     }
 
     public float getYmean() {

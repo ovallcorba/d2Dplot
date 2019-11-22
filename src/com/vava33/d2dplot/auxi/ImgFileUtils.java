@@ -58,11 +58,11 @@ public final class ImgFileUtils {
     private static VavaLogger log = D2Dplot_global.getVavaLogger(className);
 
     public static enum SupportedReadExtensions {
-        BIN, IMG, SPR, GFRM, EDF, D2D, TIF, CBF;
+        BIN, IMG, SPR, GFRM, EDF, D2D, TIF, TIFF, CBF;
     }
 
     public static enum SupportedWriteExtensions {
-        D2D, EDF, IMG, BIN, TIF;
+        D2D, EDF, IMG, BIN, TIF, SPR;
     }
 
     //canvi HashMap per LinkedHashMap per tal de mantenir l'ordre d'inserció (sino era depenent del hash")
@@ -73,6 +73,7 @@ public final class ImgFileUtils {
         formatInfo.put("edf", "EDF Data file (*.edf)");
         formatInfo.put("img", "IMG Data file (*.img)");
         formatInfo.put("tif", "TIFF image format (*.tif)");
+        formatInfo.put("tiff", "TIFF image format (*.tiff)");
         formatInfo.put("bin", "D2Dplot BIN Data file (*.bin)");
         formatInfo.put("spr", "Spreadsheet (ascii) data file (*.spr)");
         formatInfo.put("gfrm", "Bruker (GADDS) data file (*.gfrm)");
@@ -205,6 +206,9 @@ public final class ImgFileUtils {
         case TIF:
             patt2D = ImgFileUtils.readTIFF(d2File);
             break;
+        case TIFF:
+            patt2D = ImgFileUtils.readTIFF(d2File);
+            break;
         case CBF:
             patt2D = ImgFileUtils.readCBF(d2File);
             break;
@@ -273,6 +277,9 @@ public final class ImgFileUtils {
             break;
         case TIF:
             fout = writeTIFF(d2File, patt2D, forceExt);
+            break;
+        case SPR:
+            fout = writeSPR(d2File, patt2D, forceExt);
             break;
         default:
             log.warning("Unknown format to write");
@@ -1232,7 +1239,7 @@ public final class ImgFileUtils {
         int count = 0;
         for (int j = 0; j < patt2D.getDimY(); j++) { // per cada fila (Y)
             for (int i = 0; i < patt2D.getDimX(); i++) { // per cada columna (X)
-                final int inten = sp.getPixel(i, j); //TODO Comprovar si es i,j o j,i
+                final int inten = (int) sp.getPixelValue(i, j); // Comprovar si es i,j o j,i
                 patt2D.setInten(i, j, inten, true);
                 count++;
                 if (inten > patt2D.getMaxI())
@@ -1242,6 +1249,8 @@ public final class ImgFileUtils {
             }
         }
 
+        log.debug(String.format("maxI=%d minI=%d", patt2D.getMaxI(), patt2D.getMinI()));
+        
         final long end = System.nanoTime();
         patt2D.setMillis((float) ((end - start) / 1000000d));
         patt2D.setPixCount(count);
@@ -2037,7 +2046,8 @@ public final class ImgFileUtils {
     private static File writeTIFF(File d2File, Pattern2D patt2D, boolean forceExt) {
         final ImageProcessor ip = new FloatProcessor(patt2D.getIntenAsIntArray());
         //    	ip.setIntArray(patt2D.getIntenAsIntArray());
-        final ImagePlus ipl = new ImagePlus("tiff file", ip.convertToShort(true));
+//        final ImagePlus ipl = new ImagePlus("tiff file", ip.convertToShort(true));
+        final ImagePlus ipl = new ImagePlus("tiff file", ip.convertToByte(true));
 
         //    	ColorProcessor cp = new ColorProcessor(img);
         //    	ImagePlus ip = new ImagePlus("tiff file",cp.convertToByte(false));
@@ -2049,6 +2059,39 @@ public final class ImgFileUtils {
             d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".tif"));
         fs.saveAsTiff(d2File.getAbsolutePath());
 
+        return d2File;
+    }
+    
+    private static File writeSPR(File d2File, Pattern2D patt2D, boolean forceExt) {
+        if (forceExt)
+            d2File = new File(FileUtils.getFNameNoExt(d2File).concat(".spr"));
+
+        try {
+
+            // ESCRIBIM PRIMER LA PART ASCII
+            final PrintWriter output = new PrintWriter(new BufferedWriter(new FileWriter(d2File)));
+            // ESCRIBIM AL FITXER:
+            output.println(String.format(" %7d %7d", patt2D.getDimX(), patt2D.getDimY()));
+            //ara cada linia una "fila" de la imatge
+            
+            for (int j = 0; j < patt2D.getDimY(); j++) { // per cada fila (Y)
+                //iniciem stringbuilder
+                StringBuilder row = new StringBuilder();
+                for (int i = 0; i < patt2D.getDimX(); i++) { // per cada columna (X)
+                    //afegim intensitats en format exp
+                    row.append(String.format("%.5E", (double)patt2D.getInten(i, j))+" ");
+                }
+                //escribim linia
+                output.println(row.toString().trim());
+            }
+            
+            output.close();
+        }catch (final Exception e) {
+            if (D2Dplot_global.isDebug())
+                e.printStackTrace();
+            log.warning("Error saving SPR file");
+            return null;
+        }
         return d2File;
     }
 
@@ -2497,6 +2540,11 @@ public final class ImgFileUtils {
                     patt2D.setTiltDeg(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
                     continue;
                 }
+                if (FileUtils.containsIgnoreCase(line, "MASK")) {
+                    mskf = new File(line.substring(iigual, ipcoma).trim());
+                    log.debug("mskf=" + mskf.toString());
+                    continue;
+                }
                 if (ir != null) {
                     log.fine("inside ir");
                     if (FileUtils.containsIgnoreCase(line, "SUBADU")) {
@@ -2527,13 +2575,20 @@ public final class ImgFileUtils {
                         radBins = Integer.parseInt(line.substring(iigual, ipcoma).trim());
                         continue;
                     }
-                    if (FileUtils.containsIgnoreCase(line, "MASK")) {
-                        mskf = new File(line.substring(iigual, ipcoma).trim());
-                        log.debug("mskf=" + mskf.toString());
-                        continue;
-                    }
                 }
             }
+            if (mskf != null) {
+                //apply mask pixels
+                if (mskf.exists())
+                    log.fine("mask file exists");
+                log.fine("applying mask");
+                final Pattern2D msk = ImgFileUtils.readPatternFile(mskf, false);
+                //                    patt2D.copyMaskPixelsFromImage(msk);
+                patt2D.copyExZonesFromImage(msk); //TODO:comprovar que funcioni, he canviat el metode, ja posa al patt2d el maskfile
+            } else {
+                log.fine("mskf is null");
+            }
+            
             if (ir != null) {
                 final float t2i = (float) patt2D.calc2T(patt2D.getCentrX() + inner, patt2D.getCentrY(), true);
                 ir.setTxtT2i(t2i);
@@ -2545,19 +2600,6 @@ public final class ImgFileUtils {
                     step = patt2D.calcMinStepsizeBy2Theta4Directions();
                 ir.setTxtStep(step);
                 log.debug(Float.toString(ir.getTxtCakefin()));
-                //aplicar mascara
-                if (mskf != null) {
-                    //apply mask pixels
-                    if (mskf.exists())
-                        log.fine("mask file exists");
-                    log.fine("applying mask");
-                    final Pattern2D msk = ImgFileUtils.readPatternFile(mskf, false);
-                    //                    patt2D.copyMaskPixelsFromImage(msk);
-                    patt2D.copyExZonesFromImage(msk); //TODO:comprovar que funcioni, he canviat el metode
-                    ir.setMaskfile(mskf);
-                } else {
-                    log.fine("mskf is null");
-                }
             }
             scCALFile.close();
         } catch (final Exception e) {

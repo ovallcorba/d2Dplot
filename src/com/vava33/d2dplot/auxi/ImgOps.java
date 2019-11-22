@@ -1559,6 +1559,7 @@ public final class ImgOps {
         int npix = 0;
         int ysum = 0;
         int ymax = 0;
+        int ymin = Integer.MAX_VALUE;
         final ArrayList<Integer> minint = new ArrayList<Integer>(bkgpt); //vector amb les bkgpt intensitats menors
         final ArrayList<Integer> intensitats = new ArrayList<Integer>(); //vector on guardarem les intensitats per calcular desv.estd
         float ymean = 0;
@@ -1600,27 +1601,31 @@ public final class ImgOps {
                 }
 
                 //si hem arribat aqu� es que hem se sumar la intensitat del pixel
-                ysum = ysum + patt2D.getInten(i, j);
-                if (ymax < patt2D.getInten(i, j))
-                    ymax = patt2D.getInten(i, j);
+                int inten = patt2D.getInten(i, j);
+                ysum = ysum + inten;
+                if (ymax < inten)
+                    ymax = inten;
+                if (ymin > inten)
+                    ymin = inten;
                 for (int k = 0; k < bkgpt; k++) {
                     //TODO:si val zero no considerem (s'hauria de reconsiderar...)
                     //if(patt2D.getIntenB2(i, j)==0)break;
-                    if (patt2D.getInten(i, j) < minint.get(k)) {
-                        minint.set(k, patt2D.getInten(i, j));
+                    if (inten < minint.get(k)) {
+                        minint.set(k, inten);
                         break; //sortim del for, ja hem utilitzat la intensitat
                     }
                 }
 
                 npix = npix + 1;
-                intensitats.add(patt2D.getInten(i, j));
+                intensitats.add(inten);
 
                 //afegit el 25/4/2017
                 pixelList.add(patt2D.getPixel(i, j));
 
                 //debug
                 if (debug)
-                    patt2D.setInten(i, j, -1, false);
+//                    patt2D.setInten(i, j, -1, false);
+                    patt2D.getPixel(i, j).setExcluded(true);
             }
         }
 
@@ -1657,6 +1662,7 @@ public final class ImgOps {
         }
 
         final Patt2Dzone pz = new Patt2Dzone(npix, ysum, ymax, ymean, ymeandesv, ybkg, ybkgdesv);
+        pz.setYmin(ymin);//afegit Abril 2019 per això no està al constructor
         pz.setIntradPix(intRadPixels);
         pz.setAzimAngle(azimApertureDeg);
         pz.setBkgpt(bkgpt);

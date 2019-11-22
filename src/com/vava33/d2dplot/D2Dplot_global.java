@@ -29,7 +29,7 @@ public final class D2Dplot_global {
     public static final int saturInt = Integer.MAX_VALUE;
     public static final int saturTiff_or_Pilatus = 1048573;
     public static final int version = 1904; //nomes canviare la versio global quan faci un per distribuir
-    public static final int build_date = 190404; //nomes canviare la versio global quan faci un per distribuir
+    public static final int build_date = 191122; //nomes canviare la versio global quan faci un per distribuir
     //    public static final String welcomeMSG = "d2Dplot v"+version+" ("+build_date+") by OV";
 //    public static final String welcomeMSG = "d2Dplot v" + version + " (" + build_date + ") by O.Vallcorba\n\n"
 //            + " Report of errors, suggestions or comments about the program are appreciated.\n";
@@ -69,6 +69,7 @@ public final class D2Dplot_global {
     private static String workdir = System.getProperty("user.dir");
     private static Integer def_Width = 768;
     private static Integer def_Height = 1024;
+    public static final boolean developing = false; 
 
     //DB
     public static String DBfile;

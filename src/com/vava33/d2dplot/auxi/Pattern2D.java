@@ -43,6 +43,7 @@ public class Pattern2D {
     private ArrayList<PolyExZone> polyExZones;
     private ArrayList<ArcExZone> arcExZones;
     private ArrayList<Point> ExZpaintPixels;
+    private File maskfile; //en cas que s'hagi aplicat una mascara guardem el path aqui
     private int exz_margin = 0; //per salvar el bin (zones excloses)
     private int exz_threshold = 0; //per salvar el bin (zones excloses)
     private int exz_detcircle = 0; //cercle del detector
@@ -160,7 +161,8 @@ public class Pattern2D {
         final long start = System.nanoTime();
         for (int j = 0; j < this.getDimY(); j++) { // per cada fila (Y)
             for (int i = 0; i < this.getDimX(); i++) { // per cada columna (X)
-                this.pixs.add(new Pixel(i, j, 0));
+//                this.pixs.add(new Pixel(i, j, 0));
+                this.pixs.add(new Pixel(i, j));
             }
         }
         log.debug("pixs size=" + this.pixs.size());
@@ -192,6 +194,7 @@ public class Pattern2D {
         this.setPolyExZones(im.getPolyExZones());
         this.recalcExcludedPixels();
         this.recalcMaxMinI();
+        this.setMaskfile(im.getImgfile());
     }
 
     public void zeroIntensities() {
@@ -737,7 +740,7 @@ public class Pattern2D {
         float vPCx = this.getCentrX() + newX;
         float vPCy = this.getCentrY() - newY;
 
-        log.writeNameNums("CONFIG", true, "azimDeg,azimRad,t2deg,newX,newY,vPCx,vPCy", azimDegrees, azimRad, t2deg,
+        log.writeNameNums("FINE", true, "azimDeg,azimRad,t2deg,newX,newY,vPCx,vPCy", azimDegrees, azimRad, t2deg,
                 newX, newY, vPCx, vPCy);
 
         boolean found = false;
@@ -756,7 +759,7 @@ public class Pattern2D {
         if (found) {
             vPCx = vPCx - newX;
             vPCy = vPCy + newY;
-            log.writeNameNums("CONFIG", true, "FOUND vPCx,vPCy", vPCx, vPCy);
+            log.writeNameNums("FINE", true, "FOUND vPCx,vPCy", vPCx, vPCy);
             return new Point2D.Float(vPCx, vPCy);
         } else {
             log.debug("pixel from azimut and 2theta not found");
@@ -1393,6 +1396,14 @@ public class Pattern2D {
 
     public void setSinrot(float sinrot) {
         this.sinrot = sinrot;
+    }
+
+    public File getMaskfile() {
+        return maskfile;
+    }
+
+    public void setMaskfile(File maskfile) {
+        this.maskfile = maskfile;
     }
 
 }
