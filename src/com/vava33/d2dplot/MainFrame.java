@@ -182,6 +182,7 @@ public class MainFrame {
     private final JMenuItem mntmReset;
     private final JMenuItem mntmCheckForUpdates;
     Border etchedborder = BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
+    private JMenuItem mntmAzimtheta;
 
     /**
      * Launch the application. ES POT PASSAR COM A ARGUMENT EL DIRECTORI DE TREBALL ON S'OBRIRAN PER DEFECTE ELS DIALEGS
@@ -465,6 +466,14 @@ public class MainFrame {
             }
         });
         this.mnImageOps.add(this.mntmAzimuthalIntegration);
+        
+        mntmAzimtheta = new JMenuItem("Azim2theta");
+        mntmAzimtheta.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                do_mntmAzimtheta_actionPerformed(e);
+            }
+        });
+        mnImageOps.add(mntmAzimtheta);
         this.mntmHpTools.setMnemonic('h');
         this.mnImageOps.add(this.mntmHpTools);
 
@@ -932,6 +941,10 @@ public class MainFrame {
             this.checkNewVersion(false);
 
         //        mainF.pack();
+        
+        if (!D2Dplot_global.developing) { //coses a amagar al fer release
+            mntmAzimtheta.setVisible(false);
+        }
     }
 
     //tanco tot
@@ -1203,7 +1216,7 @@ public class MainFrame {
             String data = bona.split(".zip")[0];
             data = data.split("win_")[1];
             final int webVersion = Integer.parseInt(data);
-            if (webVersion != D2Dplot_global.build_date) {
+            if (webVersion > D2Dplot_global.build_date) {
                 //              FileUtils.InfoDialog(this, "New d2Dplot version is available ("+webVersion+"). Please download at\nhttps://www.cells.es/en/beamlines/bl04-mspd/preparing-your-experiment", "New version available!");
                 final boolean yes = FileUtils.YesNoDialog(this.mainF,
                         "New d2Dplot version is available (" + webVersion + "). Please download at\n" + url,
@@ -1212,7 +1225,7 @@ public class MainFrame {
                     FileUtils.openURL(url);
                 }
             }
-            if ((webVersion == D2Dplot_global.build_date) && (dialogShowNo)) {
+            if ((webVersion <= D2Dplot_global.build_date) && (dialogShowNo)) {
                 FileUtils.InfoDialog(this.mainF,
                         "You have the last version of d2Dplot (" + D2Dplot_global.build_date + ").",
                         "d2Dplot is up to date");
@@ -2129,9 +2142,17 @@ public class MainFrame {
     public ConvertTo1DXRD getIrWin() {
         return this.irWin;
     }
+    
+    public AzimuthalPlot getAzWin() {
+        return this.iazWin;
+    }
 
     public void setIrWin(ConvertTo1DXRD irWin) {
         this.irWin = irWin;
+    }
+    
+    public void setAzWin(AzimuthalPlot azWin) {
+        this.iazWin = azWin;
     }
 
     public PeakSearch getpksearchframe() {
@@ -2139,4 +2160,9 @@ public class MainFrame {
     }
 
 
+    protected void do_mntmAzimtheta_actionPerformed(ActionEvent e) {
+        final Azimuthal2Th sid = new Azimuthal2Th(this.getMainF(), this.patt2D,
+                "2D image");
+        sid.setVisible(true);
+    }
 }

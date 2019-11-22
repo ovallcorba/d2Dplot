@@ -53,7 +53,7 @@ public class AzimuthalPlot {
     private final JButton btnIntegrar;
 
     private ImagePanel ip;
-    private File maskfile;
+//    private File maskfile;
     private final JButton btnClose;
     private final JLabel lblInfo;
 
@@ -84,7 +84,7 @@ public class AzimuthalPlot {
         this.contentPane.add(this.lblCakeIni, "cell 2 0,alignx trailing");
 
         this.txtT2w = new JTextField();
-        this.txtT2w.setText("0.05");
+        this.txtT2w.setText("0.2");
         this.contentPane.add(this.txtT2w, "cell 3 0,growx");
 
         this.btnIntegrar = new JButton("Plot");
@@ -99,7 +99,7 @@ public class AzimuthalPlot {
         this.contentPane.add(this.lblCakeEnd, "cell 4 0,alignx trailing");
 
         this.txtAzStep = new JTextField();
-        this.txtAzStep.setText("0.5");
+        this.txtAzStep.setText("1.0");
         this.contentPane.add(this.txtAzStep, "cell 5 0,growx");
         this.contentPane.add(this.btnIntegrar, "cell 6 0,growx");
 
@@ -167,7 +167,7 @@ public class AzimuthalPlot {
             }
         }
     }
-
+    
     public float getTxtT2() {
         try {
             return Float.parseFloat(this.txt_2t.getText());
@@ -201,6 +201,16 @@ public class AzimuthalPlot {
         return -1f;
     }
 
+    public void setTxtT2(float t2) {
+        this.txt_2t.setText(Float.toString(t2));
+    }
+    public void setTxtT2w(float t2w) {
+        this.txtT2w.setText(Float.toString(t2w));
+    }
+    public void setTxtAzStep(float st) {
+        this.txtAzStep.setText(Float.toString(st));
+    }
+    
     private void plotPattern(Pattern1D p, boolean norm, boolean appendPatt, String seriesName) {
 
         final DataSerie ds = new DataSerie();
@@ -246,35 +256,58 @@ public class AzimuthalPlot {
         }
 
         final EllipsePars e = ImgOps.getElliPars(this.getIp().getPatt2D(), FastMath.toRadians(t2));
-        final ArrayList<Point2D.Float> punts = e.getEllipsePoints(0, 360, Azstep);
-
+//        final ArrayList<Point2D.Float> punts = e.getEllipsePoints(0, 360, Azstep);
+        final ArrayList<Point2D.Float> punts = e.getEllipsePoints(0+(Azstep/2.f), 360+(Azstep/2.f), Azstep);
+        log.debug("azstep="+Azstep+" npoints="+punts.size());
         final Iterator<Point2D.Float> itrp = punts.iterator();
 
         final Pattern1D patt1Daz = new Pattern1D(0, 360, Azstep);
         int count = 0;
+        //per contar el max, min i average intensity de l'anell
+        int pixelCount=0;
+        long accumIntensity=0;
+        int maxPixI=Integer.MIN_VALUE;
+        int minPixI=Integer.MAX_VALUE;
+        
         while (itrp.hasNext()) {
             final Point2D.Float p = itrp.next();
-            final Patt2Dzone z = ImgOps.yArcTilt(this.getIp().getPatt2D(), FastMath.round(p.x), FastMath.round(p.y),
-                    t2w / 2.f, Azstep / 2.f, true, 0, false);
-            patt1Daz.getPoint(count).setIntensity(z.getYsum());
+            Patt2Dzone z = ImgOps.yArcTilt(this.getIp().getPatt2D(), FastMath.round(p.x), FastMath.round(p.y),
+                    t2w+(t2w*0.05f), Azstep+(Azstep*0.05f), true, 0, false); //yArcTilt ja divideix entre 2!! amplio una mica per "solapar"
+            
+            //debug farem 1 3 i 5 true debug
+//            if ((count == 0)||(count==2)||(count==4)) {
+//                z = ImgOps.yArcTilt(this.getIp().getPatt2D(), FastMath.round(p.x), FastMath.round(p.y),
+//                        t2w, Azstep, true, 0, true); //provo reduir a 1.5 per crear una mica de solapament (smoothing)                
+//            }
+            
+            
+            
+            patt1Daz.getPoint(count).setIntensity((float)z.getYsum()/(float)z.getNpix());
+            log.debug(String.format("Punt=%d, Ysum=%d, Npix=%d inten=%.3f", count, z.getYsum(),z.getNpix(),patt1Daz.getPoint(count).getIntensity()));
             patt1Daz.getPoint(count).setCounts(z.getYsum());
-            patt1Daz.getPoint(count).setNpix(1);
+            patt1Daz.getPoint(count).setNpix(z.getNpix());
             patt1Daz.getPoint(count).setDesv(z.getYmeandesv());
             count = count + 1;
+            
+            pixelCount=pixelCount+z.getNpix();
+            accumIntensity = accumIntensity + z.getYsum();
+            if (z.getYmax()>maxPixI)maxPixI=z.getYmax();
+            if (z.getYmin()<minPixI)minPixI=z.getYmin();
         }
 
+        //TROBO INTERESSANT DONAR EL MAX-MIN i PROMIG D'INTENSITAT DE L'ANELL PER SABER SI ES UNA POLS!! ho posare al comentari de moment
+        float ymean = accumIntensity/pixelCount;
+        
         //ja tindrem el pattern1D
-        final String comment = String.format("Az.Integr.(0-360º) at t2=%.2fº (t2win=%.2fº, step=%.2fº)", t2, t2w,
-                Azstep);
-        this.lblInfo.setText(
-                String.format("Azimuthal integration (0-360º) at t2=%.2fº (t2win=%.2fº, step=%.2fº)", t2, t2w, Azstep));
+        final String comment = String.format("Az.Integr.(0-360º) at t2=%.2fº (t2win=%.2fº, step=%.2fº) Ymax=%d Ymin=%d Ymean=%.1f", t2, t2w,
+                Azstep,maxPixI,minPixI,ymean);
+        this.lblInfo.setText(comment);
         patt1Daz.setComment(comment);
         this.patt1D.add(patt1Daz);
         this.p1.removeAllSeries();
         this.plotpanel.getPatterns().clear();
         this.plotpanel.getPatterns().add(this.p1);
-        this.plotPattern(this.patt1D.get(this.patt1D.size() - 1), false, false, comment);
-
+        this.plotPattern(this.patt1D.get(this.patt1D.size() - 1), true, false, String.format("t2=%.2fº t2w=%.2fº step=%.2fº", t2, t2w, Azstep)); //he posat norm true Apr 2019 que es com ha de ser
     }
 
     public ArrayList<Pattern1D> getPatt1D() {
@@ -283,14 +316,6 @@ public class AzimuthalPlot {
 
     public void setPatt1D(ArrayList<Pattern1D> patt1d) {
         this.patt1D = patt1d;
-    }
-
-    public File getMaskfile() {
-        return this.maskfile;
-    }
-
-    public void setMaskfile(File maskfile) {
-        this.maskfile = maskfile;
     }
 
     protected void do_btnClose_actionPerformed(ActionEvent e) {
@@ -318,5 +343,7 @@ public class AzimuthalPlot {
     public void setVisible(boolean vis) {
         this.azimDialog.setVisible(vis);
     }
+    
+    
 
 }

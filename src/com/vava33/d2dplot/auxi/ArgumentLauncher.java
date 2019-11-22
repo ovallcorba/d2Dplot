@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 
+import com.vava33.d2dplot.AzimuthalPlot;
 import com.vava33.d2dplot.Calibration;
 import com.vava33.d2dplot.ConvertTo1DXRD;
 import com.vava33.d2dplot.D2Dplot_global;
@@ -77,11 +78,16 @@ public final class ArgumentLauncher {
             ConsoleWritter.stat("          Displays directly a tts-inco SOL file (same filename as the input image)");
             ConsoleWritter.stat("");
             ConsoleWritter.stat("      -rint [CALfile] [-outdat DATfile]");
-            ConsoleWritter.stat("          Performs radial integration.");
+            ConsoleWritter.stat("          Conversion to 1D-PXRD");
             ConsoleWritter.stat(
                     "          · If no CALfile is specified, calibration parameters are taken from the image header.");
             ConsoleWritter
                     .stat("          · If no DATfile is specified, same name as the input image (but .dat) is used.");
+            ConsoleWritter.stat("");
+            ConsoleWritter.stat("      -aint t2 t2win step  [-outdat DATfile] [-cal CALfile]");
+            ConsoleWritter.stat("          Azhimuthal plot");
+            ConsoleWritter.stat(
+                    "          · t2 t2win step are the 2-theta, tolerance and azimuthal step for the plot (in deg)");
             ConsoleWritter.stat("");
             ConsoleWritter.stat("      -cal 0/1/2... [dist] [wave] [-outcal [CALfile]]");
             ConsoleWritter.stat("          Instrumental Parameter Calibration.");
@@ -190,7 +196,7 @@ public final class ArgumentLauncher {
         //radial integration
         ifound = getArgLindexOf(argL, "-rint");
         if (ifound >= 0) {
-            ConsoleWritter.stat("RINT option found, performing Radial Integration");
+            ConsoleWritter.stat("RINT option found, performing conversion to 1D-PXRD");
 
             //followed by CAL file
             final StringBuilder calpath = new StringBuilder();
@@ -243,8 +249,8 @@ public final class ArgumentLauncher {
             ConsoleWritter.stat(String.format("   end azim:   %.1f", mf.getIrWin().getTxtCakefin()));
             ConsoleWritter.stat(String.format("   subadu:     %.1f", mf.getIrWin().getTxtZeroval()));
             ConsoleWritter.stat("");
-            if (mf.getIrWin().getMaskfile() != null) {
-                ConsoleWritter.stat(String.format("   maskfile:   %s", mf.getIrWin().getMaskfile().toString()));
+            if (mf.getPatt2D().getMaskfile() != null) {
+                ConsoleWritter.stat(String.format("   maskfile:   %s", mf.getPatt2D().getMaskfile().toString()));
             }
 
             mf.getIrWin().getTxtAzimBins();
@@ -286,6 +292,123 @@ public final class ArgumentLauncher {
 
         }
 
+        ifound = getArgLindexOf(argL, "-aint");
+        if (ifound >= 0) {
+            ConsoleWritter.stat("AINT option found, performing Azimuthal plot");
+
+            //dialog
+            if (mf.getAzWin() == null) {
+                mf.setAzWin(new AzimuthalPlot(mf.getMainF(), mf.getPanelImatge()));
+                if (mf.getMainF().isVisible()) {
+                    mf.getAzWin().setVisible(true);
+                }
+            }
+            
+            //followed by t2 t2win step
+            float t2 = mf.getAzWin().getTxtT2();
+            float t2win = mf.getAzWin().getTxtT2w();
+            float step = mf.getAzWin().getTxtAzStep();
+            try {
+                t2 = Float.parseFloat(argL.get(ifound + 1));
+            } catch (final Exception e) {
+                ConsoleWritter.stat("2-theta is mandatory, aborting");
+                return;
+            }
+            try {
+                t2win = Float.parseFloat(argL.get(ifound + 2));
+                step = Float.parseFloat(argL.get(ifound + 3));
+            } catch (final Exception e) {
+                ConsoleWritter.stat("Error reading t2win and step, using defaults");
+            }
+            
+            mf.getAzWin().setTxtT2(t2);
+            mf.getAzWin().setTxtT2w(t2win);
+            mf.getAzWin().setTxtAzStep(step);
+
+            //calibration file (option -cal)
+            String calpathS = "";
+            int ifound2 = getArgLindexOf(argL, "-cal");
+            if (ifound2 >=0) {
+                final StringBuilder calpath = new StringBuilder();
+                for (int k = ifound + 1; k < argL.size(); k++) {
+                    if (argL.get(k).startsWith("-"))
+                        break; //is starting another option
+                    calpath.append(argL.get(k)).append(" ");
+                }
+                calpathS = calpath.toString().trim();
+            }
+            if (!calpathS.isEmpty()) {
+                File calFile = new File(calpathS);
+                if (!calFile.exists()) {
+                    //try to find to the same path as Imgfile
+                    calFile = new File(mf.getPatt2D().getImgfile().getParent() + D2Dplot_global.separator + calFile.getName());
+                }
+                if (calFile.exists()) {
+                    //llegim les opcions i apliquem a irwin
+                    ConsoleWritter.stat(String.format("** Using parameters from CAL file: %s **", calpathS));
+                    ImgFileUtils.readCALfile(mf.getPatt2D(), calFile, null);
+                }else {
+                    ConsoleWritter.stat("** NO CAL file given or found, using values from header **");
+                }
+            }else {
+                ConsoleWritter.stat("** NO CAL file given or found, using values from header **");
+            }
+            
+            //integ parameters
+            ConsoleWritter.stat("");
+            ConsoleWritter.stat(String.format("   x-beam center: %.3f", mf.getPatt2D().getCentrX()));
+            ConsoleWritter.stat(String.format("   y-beam center: %.3f", mf.getPatt2D().getCentrY()));
+            ConsoleWritter.stat(String.format("   distance:      %.3f", mf.getPatt2D().getDistMD()));
+            ConsoleWritter.stat(String.format("   wavelength:    %.4f", mf.getPatt2D().getWavel()));
+            ConsoleWritter.stat(String.format("   tilt rotation: %.1f", mf.getPatt2D().getRotDeg()));
+            ConsoleWritter.stat(String.format("   angle of tilt: %.2f", mf.getPatt2D().getTiltDeg()));
+            ConsoleWritter.stat("");
+            ConsoleWritter.stat(String.format("   t2:      %.3f", t2));
+            ConsoleWritter.stat(String.format("   t2win:   %.3f", t2win));
+            ConsoleWritter.stat(String.format("   step:    %.4f", step));
+            ConsoleWritter.stat("");
+            if (mf.getPatt2D().getMaskfile() != null) {
+                ConsoleWritter.stat(String.format("   maskfile:   %s", mf.getPatt2D().getMaskfile().toString()));
+            }
+            
+            //INTEGRACIO            
+            mf.getAzWin().do_btnIntegrartilt_actionPerformed(null);
+
+            //ara el outfile (optional -outdat)
+            String outpathS = FileUtils.canviExtensio(mf.getPatt2D().getImgfile(), "dat").toString();
+            ifound2 = getArgLindexOf(argL, "-outdat");
+            if (ifound2 >= 0) {
+                final StringBuilder outpath = new StringBuilder();
+                for (int k = ifound2 + 1; k < argL.size(); k++) {
+                    if (argL.get(k).startsWith("-"))
+                        break; //is starting another option
+                    outpath.append(argL.get(k)).append(" ");
+                }
+                outpathS = outpath.toString().trim();
+                if (outpathS.isEmpty())
+                    outpathS = FileUtils.canviExtensio(mf.getPatt2D().getImgfile(), "dat").toString();
+
+            }
+            log.debug("outpathdat=" + outpathS);
+            
+
+            //ESCRIBIM FITXER
+            if (mf.getAzWin().getPatt1D().size() > 1) {
+                ConsoleWritter.stat(String.format("Writting output DAT files with base name: %s",
+                        FileUtils.getFNameNoExt(outpathS)));
+            } else {
+                ConsoleWritter.stat(String.format("Writting output DAT file: %s", outpathS));
+            }
+            try {
+                mf.getAzWin().savePatterns(new File(outpathS));
+            } catch (final Exception e) {
+                if (D2Dplot_global.isDebug())
+                    e.printStackTrace();
+                ConsoleWritter.stat("Error writting output DAT file(s)");
+            }
+        }
+
+        
         ifound = getArgLindexOf(argL, "-cal");
         if (ifound >= 0) {
             ConsoleWritter.stat(
