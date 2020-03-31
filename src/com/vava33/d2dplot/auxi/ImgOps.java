@@ -23,12 +23,13 @@ import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.util.FastMath;
 
+import com.vava33.cellsymm.PDDatabase.searchDBWorker;
 import com.vava33.d2dplot.D2Dplot_global;
 import com.vava33.d2dplot.MainFrame;
 import com.vava33.d2dplot.PeakSearch;
 import com.vava33.d2dplot.auxi.ImgFileUtils.EdfHeaderPatt2D;
 import com.vava33.d2dplot.auxi.ImgFileUtils.SupportedWriteExtensions;
-import com.vava33.d2dplot.auxi.PDDatabase.SearchDBWorker;
+//import com.vava33.d2dplot.auxi.PDDatabase.SearchDBWorker;
 import com.vava33.d2dplot.auxi.Pattern1D.PointPatt1D;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.VavaLogger;
@@ -106,7 +107,7 @@ public final class ImgOps {
             i = i + 1;
         }
 
-        final float[] intens = radialIntegrationVarious2th(dataIn, t2list, tstep, false, false, true, null);
+        final double[] intens = radialIntegrationVarious2th(dataIn, t2list, tstep, false, false, true, null);
         log.debug(Arrays.toString(intens));
 
         final Pattern2D dataOut = new Pattern2D(dataIn, false);
@@ -122,7 +123,7 @@ public final class ImgOps {
                     log.debug("t2i>t2max");
                 }
                 n = (int) FastMath.round(t2i / tstep);
-                final float Imean = intens[n];
+                final double Imean = intens[n];
                 if (dataIn.getInten(i, j) > (Imean + 1.5 * (FastMath.sqrt(Imean)))) {
                     dataOut.setInten(i, j, (int) (Imean), false);
                 } else {
@@ -2174,8 +2175,8 @@ public final class ImgOps {
 
     //Retorna els promitjos d'intensitat d'anells centrats en diverses t2[] i considerant una amplada tol2t
     //considera tilt/rot. Aixo es per evitar fer moltes passades si es volen varies t2.
-    public static float[] radialIntegrationVarious2th(Pattern2D patt2D, float[] t2, float tol2tdeg, boolean corrLP,
-            boolean corrIAng, boolean normNpix, SearchDBWorker sw) {
+    public static double[] radialIntegrationVarious2th(Pattern2D patt2D, float[] t2, float tol2tdeg, boolean corrLP,
+            boolean corrIAng, boolean normNpix, searchDBWorker sw) {
         if (tol2tdeg < 0) { //default value
             tol2tdeg = 0.1f;
         }
@@ -2184,10 +2185,10 @@ public final class ImgOps {
             return null;
         }
 
-        final float[] sum = new float[t2.length]; //valor de intensitat suma
+        final double[] sum = new double[t2.length]; //valor de intensitat suma
         final int[] npix = new int[t2.length];
-        final float[] t2ini = new float[t2.length];
-        final float[] t2fin = new float[t2.length];
+        final double[] t2ini = new double[t2.length];
+        final double[] t2fin = new double[t2.length];
 
         //establim 2tini/fin i inicialitzem sum, npix
         for (int i = 0; i < t2.length; i++) {
