@@ -230,6 +230,9 @@ public final class ImgFileUtils {
                 patt2D.setDistMD(D2Dplot_global.getDistMD());
                 patt2D.setTiltDeg(D2Dplot_global.getTilt());
                 patt2D.setRotDeg(D2Dplot_global.getRot());
+                patt2D.setWavel(D2Dplot_global.getWave());
+                patt2D.setPixSx(D2Dplot_global.getPixSx());
+                patt2D.setPixSy(D2Dplot_global.getPixSy());
             }
 
             // debug:
@@ -2468,6 +2471,8 @@ public final class ImgFileUtils {
             output.println(String.format("CALFIL = %s [d2Dplot]", patt2D.getImgfile().getAbsolutePath()));
             output.println(String.format("X-BEAM CENTRE = %.2f", c.getRefCX()));
             output.println(String.format("Y-BEAM CENTRE = %.2f", c.getRefCY()));
+            output.println(String.format("X-PIX SIZE (mm) = %.5f", patt2D.getPixSx()));
+            output.println(String.format("Y-PIX SIZE (mm) = %.5f", patt2D.getPixSy()));
             output.println(String.format("DISTANCE = %.3f", c.getRefMD()));
             output.println(String.format("WAVELENGTH = %.5f", patt2D.getWavel()));
             output.println(String.format("TILT ROTATION = %.2f", c.getRefRotDeg()));
@@ -2526,6 +2531,14 @@ public final class ImgFileUtils {
                 }
                 if (FileUtils.containsIgnoreCase(line, "DISTANCE")) {
                     patt2D.setDistMD(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (FileUtils.containsIgnoreCase(line, "X-PIX")) {
+                    patt2D.setPixSx(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
+                    continue;
+                }
+                if (FileUtils.containsIgnoreCase(line, "Y-PIX")) {
+                    patt2D.setPixSy(Float.parseFloat(line.substring(iigual, ipcoma).trim()));
                     continue;
                 }
                 if (FileUtils.containsIgnoreCase(line, "WAVELENGTH")) {
@@ -3070,7 +3083,7 @@ public final class ImgFileUtils {
                 if (!sameDir) {
                     final String nomNewFile = FileUtils.canviExtensio(this.flist[i], format.toString().toLowerCase())
                             .getName();
-                    final String fullNewFile = outdir.getPath().concat(FileUtils.getSeparator()).concat(nomNewFile);
+                    final String fullNewFile = outdir.getPath().concat(FileUtils.fileSeparator).concat(nomNewFile);
                     out = new File(fullNewFile);
                 }
 

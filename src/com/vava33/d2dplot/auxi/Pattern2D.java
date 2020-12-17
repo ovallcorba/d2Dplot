@@ -46,6 +46,7 @@ public class Pattern2D {
     private File maskfile; //en cas que s'hagi aplicat una mascara guardem el path aqui
     private int exz_margin = 0; //per salvar el bin (zones excloses)
     private int exz_threshold = 0; //per salvar el bin (zones excloses)
+    private boolean exz_considerEqualThreshold = false;
     private int exz_detcircle = 0; //cercle del detector
 
     // Variables relacionades amb el fitxer
@@ -244,7 +245,7 @@ public class Pattern2D {
     }
 
     public double calc2T(float col_px, float row_py, boolean degrees) {
-
+        
         final double distMDpix = (this.getDistMD() / this.getPixSx()) / this.costilt;
         final float vCPx = col_px - this.getCentrX();
         final float vCPy = this.getCentrY() - row_py;
@@ -337,8 +338,13 @@ public class Pattern2D {
             return true;
 
         // primer mirem que la Y ESTIGUI PER SOBRE EL THRESHOLD
-        if (this.getInten(x, y) < this.exz_threshold)
-            return true;
+        if(exz_considerEqualThreshold) {
+            if (this.getInten(x, y) <= this.exz_threshold)
+                return true;
+        }else {
+            if (this.getInten(x, y) < this.exz_threshold)
+                return true;
+        }
 
         // després comprovem el marge
         if (x <= this.exz_margin || x >= this.dimX - this.exz_margin)
@@ -1404,6 +1410,14 @@ public class Pattern2D {
 
     public void setMaskfile(File maskfile) {
         this.maskfile = maskfile;
+    }
+
+    public boolean isExz_considerEqualThreshold() {
+        return exz_considerEqualThreshold;
+    }
+
+    public void setExz_considerEqualThreshold(boolean exz_considerEqualThreshold) {
+        this.exz_considerEqualThreshold = exz_considerEqualThreshold;
     }
 
 }

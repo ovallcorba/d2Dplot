@@ -109,6 +109,7 @@ public class ExZones {
     private JButton btnUndo;
     private JButton clearAll;
     private JButton btnReadMaskbin;
+    private JCheckBox chckbxNewCheckBox;
 
     /**
      * Create the dialog.
@@ -138,7 +139,7 @@ public class ExZones {
                 this.contentPanel.add(this.panel_left, "cell 0 0,grow");
                 {
                     this.chckbxExZones = new JCheckBox("Show/Edit Excluded Zones");
-                    this.panel_left.setLayout(new MigLayout("", "[][grow][grow]", "[][][][][][grow][grow][][]"));
+                    this.panel_left.setLayout(new MigLayout("", "[][grow][]", "[][][][][][grow][grow][][]"));
                     this.chckbxExZones.setSelected(true);
                     this.panel_left.add(this.chckbxExZones, "cell 0 0 2 1,alignx left,aligny center");
                 }
@@ -231,6 +232,15 @@ public class ExZones {
                         this.txtThreshold.setText("0");
                         this.panel_left.add(this.txtThreshold, "cell 1 3,growx,aligny center");
                         this.txtThreshold.setColumns(10);
+                    }
+                    {
+                        chckbxNewCheckBox = new JCheckBox("Less or equal");
+                        chckbxNewCheckBox.addItemListener(new ItemListener() {
+                            public void itemStateChanged(ItemEvent e) {
+                                do_chckbxNewCheckBox_itemStateChanged(e);
+                            }
+                        });
+                        panel_left.add(chckbxNewCheckBox, "cell 2 3");
                     }
                     {
                         this.lblDetectorCircularRadius = new JLabel("Detector Circular Radius=");
@@ -956,5 +966,9 @@ public class ExZones {
         this.chckbxExZones.setSelected(false);
         this.getIPanel().actualitzarVista();
         this.exzDialog.dispose();
+    }
+    
+    protected void do_chckbxNewCheckBox_itemStateChanged(ItemEvent e) {
+        this.getPatt2D().setExz_considerEqualThreshold(chckbxNewCheckBox.isSelected());
     }
 }

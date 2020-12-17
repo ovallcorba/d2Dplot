@@ -166,7 +166,7 @@ public class AboutTTS_dialog {
         if (D2Dplot_global.getTTSsoftwareFolder().trim().isEmpty())
             return;
         final File userGuideFile = new File(
-                D2Dplot_global.getTTSsoftwareFolder() + FileUtils.getSeparator() + TTS.getUserguidefile());
+                D2Dplot_global.getTTSsoftwareFolder() + FileUtils.fileSeparator + TTS.getUserguidefile());
         try {
             if (Desktop.isDesktopSupported()) { // s'obre amb el programa per defecte
                 Desktop.getDesktop().open(userGuideFile);

@@ -330,7 +330,7 @@ public class ImageParameters {
         D2Dplot_global.setKeepCalibration(this.chckbxKeepCalib.isSelected());
         if (D2Dplot_global.isKeepCalibration()) {
             D2Dplot_global.setCalib(patt2D.getDistMD(), patt2D.getCentrX(), patt2D.getCentrY(), patt2D.getTiltDeg(),
-                    patt2D.getRotDeg());
+                    patt2D.getRotDeg(), patt2D.getWavel(), patt2D.getPixSx(), patt2D.getPixSy());
         }
         if (this.ip != null)
             this.ip.actualitzarVista();

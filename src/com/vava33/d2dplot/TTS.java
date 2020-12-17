@@ -71,10 +71,10 @@ public class TTS {
     private static final int min_logo_width = 600;
     private static final String code = "110606";
 
-    private static final String incoExecPath = FileUtils.getSeparator() + "bin" + FileUtils.getSeparator() + "tts_inco";
-    private static final String mergeExecPath = FileUtils.getSeparator() + "bin" + FileUtils.getSeparator()
+    private static final String incoExecPath = FileUtils.fileSeparator + "bin" + FileUtils.fileSeparator + "tts_inco";
+    private static final String mergeExecPath = FileUtils.fileSeparator + "bin" + FileUtils.fileSeparator
             + "tts_merge";
-    private static final String celrefExecPath = FileUtils.getSeparator() + "bin" + FileUtils.getSeparator()
+    private static final String celrefExecPath = FileUtils.fileSeparator + "bin" + FileUtils.fileSeparator
             + "tts_celref";
     private static String incoExec = "";
     private static String mergeExec = "";
@@ -1056,12 +1056,12 @@ public class TTS {
     private boolean checkForExistingMaskBIN() {
         //        File msk = FileUtils.canviNomFitxer(this.getCurrentTSD(), "MASK");
         //        msk = FileUtils.canviExtensio(msk, "BIN");
-        File msk = new File(this.getCurrentTSD().getParentFile() + FileUtils.getSeparator() + TTS.maskFileName);
+        File msk = new File(this.getCurrentTSD().getParentFile() + FileUtils.fileSeparator + TTS.maskFileName);
         log.debug("msk=" + msk.toString());
         if (msk.exists())
             return true;
         //test uppercase
-        String upp = this.getCurrentTSD().getParentFile() + FileUtils.getSeparator() + TTS.maskFileName;
+        String upp = this.getCurrentTSD().getParentFile() + FileUtils.fileSeparator + TTS.maskFileName;
         upp = upp.toUpperCase();
         log.debug("msk=" + upp);
         msk = new File(upp);
