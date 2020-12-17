@@ -28,6 +28,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JCheckBox;
@@ -43,11 +44,11 @@ import javax.swing.event.ChangeListener;
 import org.apache.commons.math3.util.FastMath;
 
 import com.vava33.cellsymm.HKLrefl;
+import com.vava33.cellsymm.PDCompound;
 import com.vava33.d2dplot.auxi.ArcExZone;
 import com.vava33.d2dplot.auxi.EllipsePars;
 import com.vava33.d2dplot.auxi.ImgOps;
 import com.vava33.d2dplot.auxi.OrientSolucio;
-import com.vava33.d2dplot.auxi.PDCompound;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.d2dplot.auxi.Peak;
 import com.vava33.d2dplot.auxi.Pixel;
@@ -95,7 +96,7 @@ public class ImagePanel {
     private final boolean allowDINCO = true;
     private final boolean allowSelPoints = true;
     private final boolean allowPKsearch = true;
-    private boolean showQuickListCompoundRings = false; //aquest es l'unic de control en aquest cas
+//    private boolean showQuickListCompoundRings = false; //aquest es l'unic de control en aquest cas
     private boolean showDBCompoundRings = false; //aquest es l'unic de control en aquest cas
 
     //el diagrama i el frame
@@ -114,8 +115,8 @@ public class ImagePanel {
     private PeakSearch PKsearch;
     //	private Rectangle2D.Float currentRect;
     private PolyExZone currentPol;
-    private PDCompound quickListCompound = null;
-    private PDCompound dbCompound = null;
+//    private PDCompound quickListCompound = null;
+    private List<PDCompound> dbCompounds;
 
     //UI elements
     private JPanel imagePanel;
@@ -472,45 +473,25 @@ public class ImagePanel {
         }
     }
 
-    public void setShowQuickListCompoundRings(boolean show, PDCompound c) {
-        if (this.getPatt2D() == null) {
-            return;
-        }
-        this.showQuickListCompoundRings = show;
-        if (c == null) {
-            this.showQuickListCompoundRings = false;
-            this.quickListCompound = null;
-            return;
-        }
-        if (this.getPatt2D().getWavel() <= 0) {
-            log.warning("Wavelength missing");
-            this.showQuickListCompoundRings = false;
-            this.quickListCompound = null;
-            log.debug("setShowRings: NO WAVELENGTH");
-            return;
-        }
-        this.quickListCompound = c;
-        this.actualitzarVista();
-    }
 
-    public void setShowDBCompoundRings(boolean show, PDCompound c) {
+    public void setShowDBCompoundRings(boolean show, List<PDCompound> comps) {
         if (this.getPatt2D() == null) {
             return;
         }
         this.showDBCompoundRings = show;
-        if (c == null) {
+        if (comps == null) {
             this.showDBCompoundRings = false;
-            this.dbCompound = null;
+            this.dbCompounds = null;
             return;
         }
         if (this.getPatt2D().getWavel() <= 0) {
             log.warning("Wavelength missing");
             this.showDBCompoundRings = false;
-            this.dbCompound = null;
+            this.dbCompounds = null;
             log.debug("setShowRings: NO WAVELENGTH");
             return;
         }
-        this.dbCompound = c;
+        this.dbCompounds = comps;
         this.actualitzarVista();
     }
 
@@ -1330,10 +1311,6 @@ public class ImagePanel {
         return this.showDBCompoundRings;
     }
 
-    private boolean isShowQuickListCompoundRings() {
-        return this.showQuickListCompoundRings;
-    }
-
     public void setSubimage(BufferedImage subimage) {
         this.subimage = subimage;
     }
@@ -1945,14 +1922,40 @@ public class ImagePanel {
                     this.drawPuntsEllipses(g1);
                 }
 
-                if (ImagePanel.this.isShowQuickListCompoundRings()) {
-                    if (ImagePanel.this.quickListCompound != null)
-                        this.drawPDCompoundRings(g1, ImagePanel.this.quickListCompound, this.colorQLcomp);
-                }
 
                 if (ImagePanel.this.isShowDBCompoundRings()) {
-                    if (ImagePanel.this.dbCompound != null)
-                        this.drawPDCompoundRings(g1, ImagePanel.this.dbCompound, this.colorDBcomp);
+                    if (ImagePanel.this.dbCompounds != null) {
+                    	if (!ImagePanel.this.dbCompounds.isEmpty()) {
+                    		//max dibuixem 4 --> missatge passat a Database al listvaluechanged
+//                    		if (ImagePanel.this.dbCompounds.size()>4) {
+//                            	log.info("Only the reflections of the first 4 selected compounds will be shown");
+//                            }
+                    		int nc = 0;
+                    		for (PDCompound pdc:ImagePanel.this.dbCompounds) {
+                    			Color col = this.colorDBcomp;
+                    			switch(nc) {
+                    			case 1:
+                    				col = this.colorQLcomp;
+                    				break;
+                    			case 2:
+                    				col = FileUtils.getComplementary(this.colorDBcomp);
+                    				break;
+                    			case 3:
+                    				col = FileUtils.getComplementary(this.colorQLcomp);
+                    			default:
+                    				break;
+                    			}
+                    			this.drawPDCompoundRings(g1, pdc, col);
+                    			nc++;
+                    			if (nc>=4)break;
+                    		}
+                    		
+//                    		this.drawPDCompoundRings(g1, ImagePanel.this.dbCompounds, this.colorDBcomp);
+                    	}
+
+                            
+                    }
+                        
                 }
 
                 //draw beam center

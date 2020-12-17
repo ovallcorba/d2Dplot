@@ -28,13 +28,9 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Date;
-import java.util.Iterator;
-
 import javax.swing.BorderFactory;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -65,8 +61,6 @@ import com.vava33.cellsymm.CellSymm_global;
 import com.vava33.d2dplot.auxi.ArgumentLauncher;
 import com.vava33.d2dplot.auxi.ImgFileUtils;
 import com.vava33.d2dplot.auxi.ImgOps;
-import com.vava33.d2dplot.auxi.PDCompound;
-import com.vava33.d2dplot.auxi.PDDatabase;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.jutils.FileUtils;
 import com.vava33.jutils.LogJTextArea;
@@ -128,12 +122,8 @@ public class MainFrame {
     private final JButton btnNext;
     private final JButton btnPrev;
     private final JPanel panel_2;
-    private final JCheckBox chckbxShowRings;
-    private static JComboBox<PDCompound> combo_LATdata;
     private final JButton btnDbdialog;
     private final JPanel panel_3;
-    private final JButton btnAddLat;
-    private final JSeparator separator_1;
     private final JMenuBar menuBar;
     private final JMenu mnFile;
     private final JMenuItem mntmAbout;
@@ -258,7 +248,8 @@ public class MainFrame {
                     } else {
                         log.info("Exiting...");
                         frame.mainF.dispose();
-                        return;
+//                        return;
+                        System.exit(0);
                     }
                 } catch (final Exception e) {
                     if (D2Dplot_global.isDebug())
@@ -299,7 +290,7 @@ public class MainFrame {
 
         this.mntmOpen = new JMenuItem("Open Image");
         this.mntmOpen.setMnemonic('o');
-        this.mntmOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_MASK));
+        this.mntmOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
         this.mntmOpen.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -310,7 +301,7 @@ public class MainFrame {
 
         this.mntmSaveImage = new JMenuItem("Save Image");
         this.mntmSaveImage.setMnemonic('s');
-        this.mntmSaveImage.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_MASK));
+        this.mntmSaveImage.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
         this.mntmSaveImage.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -389,7 +380,7 @@ public class MainFrame {
         });
         this.mnFile.add(this.mntmReset);
         this.mntmQuit.setMnemonic('q');
-        this.mntmQuit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_MASK));
+        this.mntmQuit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
         this.mnFile.add(this.mntmQuit);
 
         this.mnImageOps = new JMenu("Image");
@@ -397,7 +388,7 @@ public class MainFrame {
         this.menuBar.add(this.mnImageOps);
 
         this.mntmInstrumentalParameters = new JMenuItem("Instrumental Parameters");
-        this.mntmInstrumentalParameters.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_I, InputEvent.CTRL_MASK));
+        this.mntmInstrumentalParameters.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_I, InputEvent.CTRL_DOWN_MASK));
         this.mntmInstrumentalParameters.setMnemonic('i');
         this.mntmInstrumentalParameters.addActionListener(new ActionListener() {
             @Override
@@ -439,7 +430,7 @@ public class MainFrame {
 
         this.mntmRadialIntegration = new JMenuItem("Conversion to 1D PXRD");
         this.mntmRadialIntegration.setToolTipText("Debye rings integration (cakes)");
-        this.mntmRadialIntegration.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_MASK));
+        this.mntmRadialIntegration.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK));
         this.mntmRadialIntegration.setMnemonic('1');
         this.mntmRadialIntegration.addActionListener(new ActionListener() {
             @Override
@@ -548,7 +539,7 @@ public class MainFrame {
                 MainFrame.this.do_mntmDatabase_actionPerformed(e);
             }
         });
-        this.mntmDatabase.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_MASK));
+        this.mntmDatabase.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK));
         this.mntmDatabase.setMnemonic('d');
         this.mnPhaseId.add(this.mntmDatabase);
 
@@ -806,39 +797,12 @@ public class MainFrame {
                 TitledBorder.LEADING, TitledBorder.TOP, null, new Color(51, 51, 51)));
         this.panel_controls.add(this.panel_3, "cell 0 3,grow");
         this.panel_3.setLayout(
-                new MigLayout("fill, insets 2, hidemode 3", "[120px]", "[5px:20px][][5px:20px][5px:20px][]"));
+                new MigLayout("fill, insets 2, hidemode 3", "[120px]", "[5px:20px]"));
 
         this.btnDbdialog = new JButton("Database");
         this.btnDbdialog.setMargin(new Insets(2, 2, 2, 2));
         this.panel_3.add(this.btnDbdialog, "cell 0 0,growx,aligny center");
 
-        this.separator_1 = new JSeparator();
-        this.panel_3.add(this.separator_1, "cell 0 1,growx,aligny center");
-
-        this.chckbxShowRings = new JCheckBox("Quicklist");
-        this.panel_3.add(this.chckbxShowRings, "cell 0 2,growx,aligny center");
-
-        combo_LATdata = new JComboBox<PDCompound>();
-        combo_LATdata.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent arg0) {
-                MainFrame.this.do_combo_showRings_itemStateChanged(arg0);
-            }
-        });
-        this.panel_3.add(combo_LATdata, "cell 0 3,growx,aligny center");
-        combo_LATdata.setModel(new DefaultComboBoxModel<PDCompound>(new PDCompound[] {}));
-
-        this.btnAddLat = new JButton("Add to List");
-        this.btnAddLat.setVisible(false);
-        this.btnAddLat.setEnabled(false);
-        this.panel_3.add(this.btnAddLat, "cell 0 4,growx,aligny center");
-
-        this.chckbxShowRings.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent arg0) {
-                MainFrame.this.do_chckbxShowRings_itemStateChanged(arg0);
-            }
-        });
         this.btnDbdialog.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
@@ -908,12 +872,6 @@ public class MainFrame {
         D2Dplot_global.initPars();
         D2Dplot_global.init_ApplyColorsToIPanel(this.getPanelImatge());
         D2Dplot_global.checkDBs();
-        final boolean ok = PDDatabase.populateQuickList(false);
-        if (ok) {
-            log.info(String.format("QuickList DB file: %s", PDDatabase.getLocalQL()));
-        }
-        combo_LATdata.setPrototypeDisplayValue(new PDCompound("Silicon")); //mida minima
-        updateQuickList();
 
         //MIDES BUTONS
         this.btnInstParameters.setPreferredSize(new Dimension(110, 30));
@@ -1022,6 +980,7 @@ public class MainFrame {
         //TODO ADDD NEW THINGS IF NECESSARY
     }
 
+
     private void updatePanels() {
         if (this.paramDialog != null) { //actualitza els camps
             this.updateIparameters();
@@ -1126,16 +1085,16 @@ public class MainFrame {
         }
     }
 
-    public PDCompound getQuickListCompound() {
-        log.debug("getQuickListCompound CALLED");
-        try {
-            final PDCompound pdc = (PDCompound) combo_LATdata.getSelectedItem();
-            return pdc;
-        } catch (final Exception e) {
-            log.debug("error in quicklist casting to PDCompound");
-            return null;
-        }
-    }
+//    public PDCompound getQuickListCompound() {
+//        log.debug("getQuickListCompound CALLED");
+//        try {
+//            final PDCompound pdc = (PDCompound) combo_LATdata.getSelectedItem();
+//            return pdc;
+//        } catch (final Exception e) {
+//            log.debug("error in quicklist casting to PDCompound");
+//            return null;
+//        }
+//    }
 
     public void setViewExZ(boolean state) {
         this.chckbxPaintExz.setSelected(state);
@@ -1250,30 +1209,6 @@ public class MainFrame {
         log.debug("WINDOW CLOSING CALLED");
         D2Dplot_global.writeParFile();
 
-        //SECOND SAVE QL FILE IF MODIFIED
-        if (PDDatabase.isQLmodified()) {
-            //prompt and save QL file if necessary
-            final Object[] options = { "Yes", "No" };
-            final int n = JOptionPane.showOptionDialog(this.mainF,
-                    "QuickList has changed, overwrite current default file?", "Update QL", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE, null, //do not use a custom Icon
-                    options, //the titles of buttons
-                    options[1]); //default button title
-            if (n == JOptionPane.YES_OPTION) {
-                final PDDatabase.SaveDBfileWorker saveDBFwk = new PDDatabase.SaveDBfileWorker(
-                        new File(PDDatabase.getLocalQL()), true);
-                saveDBFwk.execute();
-                int maxCount = 20; //maximum wait 10 seconds
-                while (!saveDBFwk.isDone() || maxCount <= 0) {
-                    try {
-                        Thread.sleep(500);
-                        maxCount = maxCount - 1;
-                    } catch (final InterruptedException e1) {
-                        e1.printStackTrace();
-                    }
-                }
-            }
-        }
         this.mainF.dispose();
     }
 
@@ -1521,7 +1456,7 @@ public class MainFrame {
         if (this.dbDialog == null) {
             this.dbDialog = new Database(this.mainF, this.getPanelImatge());
         }
-        this.dbDialog.setVisible(true);
+        this.dbDialog.visible(true);
         this.panelImatge.setDBdialog(this.dbDialog);
     }
 
@@ -1940,15 +1875,6 @@ public class MainFrame {
         this.checkNewVersion(true);
     }
 
-    protected void do_chckbxShowRings_itemStateChanged(ItemEvent arg0) {
-        if (combo_LATdata.getItemCount() > 0) {
-            log.debug("do_chckbxShowRings_itemStateChanged CALLED");
-            this.panelImatge.setShowQuickListCompoundRings(this.chckbxShowRings.isSelected(),
-                    this.getQuickListCompound());
-        }
-
-    }
-
     protected void do_chckbxIndex_itemStateChanged(ItemEvent e) {
         this.panelImatge.pintaImatge();
     }
@@ -1969,13 +1895,6 @@ public class MainFrame {
         this.panelImatge.setPaintExZ(this.chckbxPaintExz.isSelected());
         log.debug("do_chckbxPaintExz_itemStateChanged called");
         this.panelImatge.pintaImatge();
-    }
-
-    protected void do_combo_showRings_itemStateChanged(ItemEvent arg0) {
-        if (arg0.getStateChange() == ItemEvent.SELECTED) {
-            this.panelImatge.setShowQuickListCompoundRings(this.chckbxShowRings.isSelected(),
-                    this.getQuickListCompound());
-        }
     }
 
     protected void do_lblOpened_mouseReleased(MouseEvent e) {
@@ -2048,14 +1967,6 @@ public class MainFrame {
 
     public static void setWorkdir(String wdir) {
         D2Dplot_global.setWorkdir(wdir);
-    }
-
-    public static void updateQuickList() {
-        final Iterator<PDCompound> itrC = PDDatabase.getQuickListIterator();
-        combo_LATdata.removeAllItems();
-        while (itrC.hasNext()) {
-            combo_LATdata.addItem(itrC.next());
-        }
     }
 
     /**

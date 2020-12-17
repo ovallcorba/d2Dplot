@@ -13,9 +13,9 @@ import java.util.Locale;
 import java.util.Scanner;
 
 import com.vava33.cellsymm.CellSymm_global;
+import com.vava33.cellsymm.PDDatabase;
 import com.vava33.d2dplot.auxi.CalibOps;
 import com.vava33.d2dplot.auxi.Calibrant;
-import com.vava33.d2dplot.auxi.PDDatabase;
 import com.vava33.d2dplot.auxi.Pattern2D;
 import com.vava33.d2dplot.auxi.PuntClick;
 import com.vava33.d2dplot.auxi.PuntSolucio;
@@ -28,8 +28,8 @@ public final class D2Dplot_global {
     public static final int satur65 = (Short.MAX_VALUE * 2) + 1;
     public static final int saturInt = Integer.MAX_VALUE;
     public static final int saturTiff_or_Pilatus = 1048573;
-    public static final int version = 1904; //nomes canviare la versio global quan faci un per distribuir
-    public static final int build_date = 191122; //nomes canviare la versio global quan faci un per distribuir
+    public static final int version = 2101; //nomes canviare la versio global quan faci un per distribuir
+    public static final int build_date = 201217; //nomes canviare la versio global quan faci un per distribuir
     //    public static final String welcomeMSG = "d2Dplot v"+version+" ("+build_date+") by OV";
 //    public static final String welcomeMSG = "d2Dplot v" + version + " (" + build_date + ") by O.Vallcorba\n\n"
 //            + " Report of errors, suggestions or comments about the program are appreciated.\n";
@@ -56,7 +56,7 @@ public final class D2Dplot_global {
     public static VavaLogger log;
 
     public static boolean keepCalibration = false;
-    public static float distMD, centX, centY, tilt, rot;
+    public static float distMD, centX, centY, tilt, rot, wave, pixSx, pixSy;
 
     //*** parametres que es poden canviar a les opcions *****
     //global
@@ -73,7 +73,6 @@ public final class D2Dplot_global {
 
     //DB
     public static String DBfile;
-    public static String QLfile;
     private static Float minDspacingToSearch;
 
     //Calib
@@ -92,8 +91,8 @@ public final class D2Dplot_global {
     private static Color colorBoundariesEllipses;
     private static Color colorPeakSearch;
     private static Color colorPeakSearchSelected;
-    private static Color colorQLcomp;
     private static Color colorDBcomp;
+    private static Color colorDBcomp2;
     private static Color colorEXZ;
     private static Color colorSATUR;
 
@@ -126,7 +125,6 @@ public final class D2Dplot_global {
         //now initilize the others with the NONE value
         //DB (dels DBfiles ja s'encarrega checkDBs
         DBfile = null;
-        QLfile = null;
         minDspacingToSearch = null;
         CellSymm_global.initSpaceGroups(); //cal iniciar-ho aqui sino peta
 
@@ -147,8 +145,8 @@ public final class D2Dplot_global {
         colorSATUR = null;
         colorPeakSearch = null;
         colorPeakSearchSelected = null;
-        colorQLcomp = null;
         colorDBcomp = null;
+        colorDBcomp2 = null;
 
         //puntClick
         colorClickPointsCircle = null;
@@ -277,13 +275,8 @@ public final class D2Dplot_global {
         } else {
             PDDatabase.setLocalDB(DBfile);
         }
-        if (QLfile == null) {
-            QLfile = PDDatabase.getLocalQL();
-        } else {
-            PDDatabase.setLocalQL(QLfile);
-        }
     }
-
+    
     public static void init_ApplyColorsToIPanel(ImagePanel ip) {
 
         if (colorCallibEllipses == null) {
@@ -326,10 +319,10 @@ public final class D2Dplot_global {
         } else {
             ip.getPanelImatge().setColorPeakSearchSelected(colorPeakSearchSelected);
         }
-        if (colorQLcomp == null) {
-            colorQLcomp = ip.getPanelImatge().getColorQLcomp();
+        if (colorDBcomp2 == null) {
+            colorDBcomp2 = ip.getPanelImatge().getColorQLcomp();
         } else {
-            ip.getPanelImatge().setColorQLcomp(colorQLcomp);
+            ip.getPanelImatge().setColorQLcomp(colorDBcomp2);
         }
         if (colorDBcomp == null) {
             colorDBcomp = ip.getPanelImatge().getColorDBcomp();
@@ -363,11 +356,6 @@ public final class D2Dplot_global {
                         workdir = sworkdir;
                 }
 
-                if (FileUtils.containsIgnoreCase(line, "QuickListDB")) {
-                    final String sQLfile = (line.substring(iigual, line.trim().length()).trim());
-                    if (new File(sQLfile).exists())
-                        QLfile = sQLfile;
-                }
                 if (FileUtils.containsIgnoreCase(line, "CompoundDB")) {
                     final String sDBfile = (line.substring(iigual, line.trim().length()).trim());
                     if (new File(sDBfile).exists())
@@ -456,13 +444,13 @@ public final class D2Dplot_global {
                     if (cvalue != null)
                         colorClickPointsCircle = cvalue;
                 }
-                if (FileUtils.containsIgnoreCase(line, "colorQLcomp")) {
+                if (FileUtils.containsIgnoreCase(line, "colorDBcomp2")) {
                     final String value = (line.substring(iigual, line.trim().length()).trim());
                     final Color cvalue = parseColorName(value);
                     if (cvalue != null)
-                        colorQLcomp = cvalue;
+                    	colorDBcomp2 = cvalue;
                 }
-                if (FileUtils.containsIgnoreCase(line, "colorDBcomp")) {
+                if (FileUtils.containsIgnoreCase(line, "colorDBcomp1")) {
                     final String value = (line.substring(iigual, line.trim().length()).trim());
                     final Color cvalue = parseColorName(value);
                     if (cvalue != null)
@@ -664,11 +652,10 @@ public final class D2Dplot_global {
             output.println("colorSaturatedPixels = " + getColorName(colorSATUR));
 
             output.println("# Compound DB");
-            output.println("defQuickListDB = " + QLfile);
             output.println("defCompoundDB = " + DBfile);
             output.println(String.format(Locale.ROOT, "%s = %.4f", "minDspacingToSearch", minDspacingToSearch));
-            output.println("colorQLcomp = " + getColorName(colorQLcomp));
-            output.println("colorDBcomp = " + getColorName(colorDBcomp));
+            output.println("colorDBcomp1 = " + getColorName(colorDBcomp));
+            output.println("colorDBcomp2 = " + getColorName(colorDBcomp2));
 
             output.println("# TTS");
             output.println(String.format("%s = %d", "hklfontSize", hklfontSize));
@@ -951,6 +938,30 @@ public final class D2Dplot_global {
         D2Dplot_global.rot = rot;
     }
 
+    public static float getWave() {
+        return wave;
+    }
+
+    public static void setWave(float wave) {
+        D2Dplot_global.wave = wave;
+    }
+
+    public static float getPixSx() {
+        return pixSx;
+    }
+
+    public static void setPixSx(float pixSx) {
+        D2Dplot_global.pixSx = pixSx;
+    }
+
+    public static float getPixSy() {
+        return pixSy;
+    }
+
+    public static void setPixSy(float pixSy) {
+        D2Dplot_global.pixSy = pixSy;
+    }
+
     public static Color getColorEXZ() {
         return colorEXZ;
     }
@@ -967,12 +978,15 @@ public final class D2Dplot_global {
         D2Dplot_global.colorSATUR = colorSATUR;
     }
 
-    public static void setCalib(float dist, float cX, float cY, float tilt, float rot) {
+    public static void setCalib(float dist, float cX, float cY, float tilt, float rot, float wave, float pixXmm, float pixYmm) {
         setRot(rot);
         setTilt(tilt);
         setCentX(cX);
         setCentY(cY);
         setDistMD(dist);
+        setWave(wave);
+        setPixSx(pixXmm);
+        setPixSy(pixYmm);
     }
 
     public static void printAllOptions(String loglevel) {
@@ -999,11 +1013,10 @@ public final class D2Dplot_global {
         log.printmsg(loglevel, "colorSaturatedPixels = " + getColorName(colorSATUR));
 
         log.printmsg(loglevel, "# Compound DB");
-        log.printmsg(loglevel, "defQuickListDB = " + QLfile);
         log.printmsg(loglevel, "defCompoundDB = " + DBfile);
         log.printmsg(loglevel, String.format("%s = %.4f", "minDspacingToSearch", minDspacingToSearch));
-        log.printmsg(loglevel, "colorQLcomp = " + getColorName(colorQLcomp));
-        log.printmsg(loglevel, "colorDBcomp = " + getColorName(colorDBcomp));
+        log.printmsg(loglevel, "colorDBcomp1 = " + getColorName(colorDBcomp));
+        log.printmsg(loglevel, "colorDBcomp2 = " + getColorName(colorDBcomp2));
 
         log.printmsg(loglevel, "# TTS");
         log.printmsg(loglevel, String.format("%s = %d", "hklfontSize", hklfontSize));
